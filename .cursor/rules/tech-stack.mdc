@@ -1,0 +1,22 @@
+---
+description: Project tech stack — PHP, HTML, CSS, MySQL, RESTful API, no JavaScript
+alwaysApply: true
+---
+
+# Tech Stack
+
+This project uses:
+
+- **Backend**: PHP
+- **Markup & styling**: HTML, CSS
+- **Database**: MySQL
+- **API**: RESTful API (implemented in PHP)
+- **No JavaScript**: Do not add or suggest JavaScript. Keep all behavior server-side (PHP) and presentation in HTML/CSS only.
+
+When suggesting code, features, or fixes:
+
+- Use PHP for logic, APIs, and database access (MySQLi or PDO).
+- Use HTML for structure and semantic markup.
+- Use CSS for layout and styling.
+- Design APIs as RESTful (proper HTTP methods, status codes, JSON or other clear response format).
+- Do not introduce JavaScript; rely on form submissions, links, and server-rendered HTML for interactivity.
