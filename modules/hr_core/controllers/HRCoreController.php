@@ -13,24 +13,24 @@ set_exception_handler(function (Throwable $e) {
     exit;
 });
 
-require_once __DIR__ . '/../../config/Database.php';
-require_once __DIR__ . '/../../config/Auth.php';
-require_once __DIR__ . '/../../config/Response.php';
-require_once __DIR__ . '/../../config/Request.php';
-require_once __DIR__ . '/../../config/BaseController.php';
-require_once __DIR__ . '/../../config/BaseModel.php';
-require_once __DIR__ . '/../../config/AuditLogger.php';
+require_once __DIR__ . '/../../../config/Database.php';
+require_once __DIR__ . '/../../../config/Auth.php';
+require_once __DIR__ . '/../../../config/Response.php';
+require_once __DIR__ . '/../../../config/Request.php';
+require_once __DIR__ . '/../../../config/BaseController.php';
+require_once __DIR__ . '/../../../config/BaseModel.php';
+require_once __DIR__ . '/../../../config/AuditLogger.php';
 
 // Import all models
-require_once __DIR__ . '/models/Employee.php';
-require_once __DIR__ . '/models/Department.php';
-require_once __DIR__ . '/models/JobTitle.php';
-require_once __DIR__ . '/models/EmploymentType.php';
-require_once __DIR__ . '/models/Location.php';
-require_once __DIR__ . '/models/EmployeeDocument.php';
-require_once __DIR__ . '/models/EmployeeMovement.php';
-require_once __DIR__ . '/models/OnboardingChecklist.php';
-require_once __DIR__ . '/models/EmployeeRole.php';
+require_once __DIR__ . '/../models/Employee.php';
+require_once __DIR__ . '/../models/Department.php';
+require_once __DIR__ . '/../models/JobTitle.php';
+require_once __DIR__ . '/../models/EmploymentType.php';
+require_once __DIR__ . '/../models/Location.php';
+require_once __DIR__ . '/../models/EmployeeDocument.php';
+require_once __DIR__ . '/../models/EmployeeMovement.php';
+require_once __DIR__ . '/../models/OnboardingChecklist.php';
+require_once __DIR__ . '/../models/EmployeeRole.php';
 
 class HRCoreController extends BaseController {
     protected $employeeModel;
@@ -110,7 +110,7 @@ class HRCoreController extends BaseController {
         }
 
         // Log audit trail
-        $this->auditLogger->log('employee_view', 'Employee viewed', $id, $this->user->user_id);
+        $this->auditLogger->log('employee_view', 'Employee viewed', $id, $this->user['user_id']);
 
         $this->respondSuccess($employee);
     }
@@ -178,7 +178,7 @@ class HRCoreController extends BaseController {
         }
 
         // Log audit trail
-        $this->auditLogger->log('employee_create', 'Employee created: ' . $input['first_name'] . ' ' . $input['last_name'], $employeeId, $this->user->user_id);
+        $this->auditLogger->log('employee_create', 'Employee created: ' . $input['first_name'] . ' ' . $input['last_name'], $employeeId, $this->user['user_id']);
 
         $this->respondSuccess(['employee_id' => $employeeId], 'Employee created successfully', 201);
     }
@@ -235,7 +235,7 @@ class HRCoreController extends BaseController {
         $this->employeeModel->update($id, $data);
         
         // Log audit trail
-        $this->auditLogger->log('employee_update', 'Employee updated', $id, $this->user->user_id);
+        $this->auditLogger->log('employee_update', 'Employee updated', $id, $this->user['user_id']);
         
         $this->respondSuccess(null, 'Employee updated successfully');
     }
@@ -268,7 +268,7 @@ class HRCoreController extends BaseController {
         $this->employeeModel->update($id, $data);
         
         // Log audit trail
-        $this->auditLogger->log('employee_delete', 'Employee terminated', $id, $this->user->user_id);
+        $this->auditLogger->log('employee_delete', 'Employee terminated', $id, $this->user['user_id']);
         
         $this->respondSuccess(null, 'Employee terminated successfully');
     }
@@ -425,7 +425,7 @@ class HRCoreController extends BaseController {
         $deptId = $this->departmentModel->create($data);
         
         // Log audit trail
-        $this->auditLogger->log('department_create', 'Department created: ' . $input['department_name'], $deptId, $this->user->user_id);
+        $this->auditLogger->log('department_create', 'Department created: ' . $input['department_name'], $deptId, $this->user['user_id']);
         
         $this->respondSuccess(['department_id' => $deptId], 'Department created successfully', 201);
     }
@@ -470,7 +470,7 @@ class HRCoreController extends BaseController {
         $this->departmentModel->update($id, $data);
         
         // Log audit trail
-        $this->auditLogger->log('department_update', 'Department updated', $id, $this->user->user_id);
+        $this->auditLogger->log('department_update', 'Department updated', $id, $this->user['user_id']);
         
         $this->respondSuccess(null, 'Department updated successfully');
     }
@@ -492,7 +492,7 @@ class HRCoreController extends BaseController {
         $this->departmentModel->update($id, $data);
         
         // Log audit trail
-        $this->auditLogger->log('department_delete', 'Department deactivated', $id, $this->user->user_id);
+        $this->auditLogger->log('department_delete', 'Department deactivated', $id, $this->user['user_id']);
         
         $this->respondSuccess(null, 'Department deleted successfully');
     }
@@ -544,7 +544,7 @@ class HRCoreController extends BaseController {
             'expiry_date' => $input['expiry_date'] ?? null,
             'remarks' => $input['remarks'] ?? null,
             'version' => 1,
-            'uploaded_by' => $this->user->user_id,
+            'uploaded_by' => $this->user['user_id'],
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s')
         ];
@@ -552,7 +552,7 @@ class HRCoreController extends BaseController {
         $docId = $this->documentModel->create($data);
         
         // Log audit trail
-        $this->auditLogger->log('document_upload', 'Document uploaded: ' . $input['document_name'], $docId, $this->user->user_id);
+        $this->auditLogger->log('document_upload', 'Document uploaded: ' . $input['document_name'], $docId, $this->user['user_id']);
         
         $this->respondSuccess(['document_id' => $docId], 'Document uploaded successfully', 201);
     }
@@ -639,7 +639,7 @@ class HRCoreController extends BaseController {
         $movementId = $this->movementModel->create($data);
         
         // Log audit trail
-        $this->auditLogger->log('movement_create', 'Employee movement created', $movementId, $this->user->user_id);
+        $this->auditLogger->log('movement_create', 'Employee movement created', $movementId, $this->user['user_id']);
         
         $this->respondSuccess(['movement_id' => $movementId], 'Movement request created successfully', 201);
     }
@@ -668,10 +668,10 @@ class HRCoreController extends BaseController {
             return;
         }
 
-        $this->movementModel->approve($id, $this->user->user_id);
+        $this->movementModel->approve($id, $this->user['user_id']);
         
         // Log audit trail
-        $this->auditLogger->log('movement_approve', 'Movement approved', $id, $this->user->user_id);
+        $this->auditLogger->log('movement_approve', 'Movement approved', $id, $this->user['user_id']);
         
         $this->respondSuccess(null, 'Movement approved successfully');
     }
@@ -692,7 +692,7 @@ class HRCoreController extends BaseController {
         $this->movementModel->reject($id);
         
         // Log audit trail
-        $this->auditLogger->log('movement_reject', 'Movement rejected', $id, $this->user->user_id);
+        $this->auditLogger->log('movement_reject', 'Movement rejected', $id, $this->user['user_id']);
         
         $this->respondSuccess(null, 'Movement rejected successfully');
     }
@@ -752,7 +752,7 @@ class HRCoreController extends BaseController {
         $itemId = $this->onboardingModel->create($data);
         
         // Log audit trail
-        $this->auditLogger->log('onboarding_create', 'Onboarding item created', $itemId, $this->user->user_id);
+        $this->auditLogger->log('onboarding_create', 'Onboarding item created', $itemId, $this->user['user_id']);
         
         $this->respondSuccess(['checklist_item_id' => $itemId], 'Checklist item created successfully', 201);
     }
@@ -770,10 +770,10 @@ class HRCoreController extends BaseController {
             return;
         }
 
-        $this->onboardingModel->completeItem($id, $this->user->user_id);
+        $this->onboardingModel->completeItem($id, $this->user['user_id']);
         
         // Log audit trail
-        $this->auditLogger->log('onboarding_complete', 'Onboarding item completed', $id, $this->user->user_id);
+        $this->auditLogger->log('onboarding_complete', 'Onboarding item completed', $id, $this->user['user_id']);
         
         $this->respondSuccess(null, 'Checklist item completed successfully');
     }
@@ -830,7 +830,7 @@ class HRCoreController extends BaseController {
         $titleId = $this->jobTitleModel->create($data);
         
         // Log audit trail
-        $this->auditLogger->log('job_title_create', 'Job title created: ' . $input['title'], $titleId, $this->user->user_id);
+        $this->auditLogger->log('job_title_create', 'Job title created: ' . $input['title'], $titleId, $this->user['user_id']);
         
         $this->respondSuccess(['job_title_id' => $titleId], 'Job title created successfully', 201);
     }
@@ -879,7 +879,7 @@ class HRCoreController extends BaseController {
         $locId = $this->locationModel->create($data);
         
         // Log audit trail
-        $this->auditLogger->log('location_create', 'Location created: ' . $input['location_name'], $locId, $this->user->user_id);
+        $this->auditLogger->log('location_create', 'Location created: ' . $input['location_name'], $locId, $this->user['user_id']);
         
         $this->respondSuccess(['location_id' => $locId], 'Location created successfully', 201);
     }
@@ -921,10 +921,10 @@ class HRCoreController extends BaseController {
             return;
         }
 
-        $this->roleModel->assignRole($input['user_id'], $input['role_id'], $this->user->user_id);
+        $this->roleModel->assignRole($input['user_id'], $input['role_id'], $this->user['user_id']);
         
         // Log audit trail
-        $this->auditLogger->log('role_assign', 'Role assigned', $input['user_id'], $this->user->user_id);
+        $this->auditLogger->log('role_assign', 'Role assigned', $input['user_id'], $this->user['user_id']);
         
         $this->respondSuccess(null, 'Role assigned successfully', 201);
     }
@@ -947,7 +947,7 @@ class HRCoreController extends BaseController {
         $this->roleModel->revokeRole($userId, $roleId);
         
         // Log audit trail
-        $this->auditLogger->log('role_revoke', 'Role revoked', $userId, $this->user->user_id);
+        $this->auditLogger->log('role_revoke', 'Role revoked', $userId, $this->user['user_id']);
         
         $this->respondSuccess(null, 'Role revoked successfully');
     }

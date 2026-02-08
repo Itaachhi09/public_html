@@ -1,4 +1,4 @@
-<?php
+.<?php
 /**
  * Work Schedule Model - HR Core Master Data
  * Bridges schedules to attendance and payroll
@@ -28,6 +28,30 @@ class WorkSchedule extends BaseModel {
             GROUP BY ws.schedule_id
             ORDER BY ws.schedule_name ASC
         ";
+        $stmt = $this->db->prepare($query);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get all active schedules with pagination
+     */
+    public function getAllActive($limit = null, $offset = 0) {
+        $query = "
+            SELECT 
+                ws.*,
+                COALESCE(COUNT(DISTINCT ea.employee_id), 0) as assigned_count
+            FROM {$this->table} ws
+            LEFT JOIN employee_assignments ea ON ws.schedule_id = ea.schedule_id AND ea.status = 'Active'
+            WHERE ws.status = 'Active'
+            GROUP BY ws.schedule_id
+            ORDER BY ws.schedule_name ASC
+        ";
+        
+        if ($limit) {
+            $query .= ' LIMIT ' . intval($limit) . ' OFFSET ' . intval($offset);
+        }
+        
         $stmt = $this->db->prepare($query);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

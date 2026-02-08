@@ -4,8 +4,8 @@
  * Generates various HR reports with PDF export capability
  */
 
-require_once __DIR__ . '/../../config/Database.php';
-require_once __DIR__ . '/../../config/Response.php';
+require_once __DIR__ . '/../../../config/Database.php';
+require_once __DIR__ . '/../../../config/Response.php';
 
 class HRReportGenerator {
     private $db;

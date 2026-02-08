@@ -1046,36 +1046,136 @@ $notifications = 3;
           <i class='bx bx-chevron-down'></i>
         </div>
         <div class="nav-submenu">
-          <a href="#" onclick="loadPayrollPage(event, 'payroll_processing')" class="nav-subitem">
-            <i class='bx bx-money'></i>
-            <span>Payroll Processing</span>
+          <a href="#" onclick="loadPayrollPage(event, 'setup_configuration')" class="nav-subitem">
+            <i class='bx bx-cog'></i>
+            <span>Setup & Configuration</span>
           </a>
-          <a href="#" onclick="loadPayrollPage(event, 'salaries')" class="nav-subitem">
-            <i class='bx bx-receipt'></i>
-            <span>Salaries</span>
+          <a href="#" onclick="loadPayrollPage(event, 'employee_payroll_profile')" class="nav-subitem">
+            <i class='bx bx-user'></i>
+            <span>Employee Payroll Profile</span>
           </a>
-          <a href="#" onclick="loadPayrollPage(event, 'payslips')" class="nav-subitem">
+          <a href="#" onclick="loadPayrollPage(event, 'earnings_management')" class="nav-subitem">
+            <i class='bx bx-trending-up'></i>
+            <span>Earnings Management</span>
+          </a>
+          <a href="#" onclick="loadPayrollPage(event, 'deductions_management')" class="nav-subitem">
+            <i class='bx bx-trending-down'></i>
+            <span>Deductions Management</span>
+          </a>
+          <a href="#" onclick="loadPayrollPage(event, 'tax_contributions_engine')" class="nav-subitem">
+            <i class='bx bx-calculator'></i>
+            <span>Tax & Contributions Engine</span>
+          </a>
+          <a href="#" onclick="loadPayrollPage(event, 'payroll_processing_approval')" class="nav-subitem">
+            <i class='bx bx-check-circle'></i>
+            <span>Processing & Approval</span>
+          </a>
+          <a href="#" onclick="loadPayrollPage(event, 'payslip_management')" class="nav-subitem">
             <i class='bx bx-file-blank'></i>
-            <span>Payslips</span>
+            <span>Payslip Management</span>
+          </a>
+          <a href="#" onclick="loadPayrollPage(event, 'disbursement_bank_files')" class="nav-subitem">
+            <i class='bx bx-bank'></i>
+            <span>Disbursement & Bank Files</span>
+          </a>
+          <a href="#" onclick="loadPayrollPage(event, 'government_reports_compliance')" class="nav-subitem">
+            <i class='bx bx-clipboard'></i>
+            <span>Government Reports & Compliance</span>
+          </a>
+          <a href="#" onclick="loadPayrollPage(event, 'payroll_adjustments_special_pay')" class="nav-subitem">
+            <i class='bx bx-adjust'></i>
+            <span>Adjustments & Special Pay</span>
+          </a>
+          <a href="#" onclick="loadPayrollPage(event, 'security_audit_trail')" class="nav-subitem">
+            <i class='bx bx-lock'></i>
+            <span>Security & Audit Trail</span>
           </a>
         </div>
       </div>
 
-      <!-- ATTENDANCE -->
+      <!-- COMPENSATION -->
       <div class="nav-group">
-        <div class="nav-group-header" onclick="toggleNavGroup(this)" data-tooltip="Attendance">
-          <i class='bx bxs-calendar-check'></i>
-          <span>ATTENDANCE</span>
+        <div class="nav-group-header" onclick="toggleNavGroup(this)" data-tooltip="Compensation">
+          <i class='bx bxs-briefcase'></i>
+          <span>COMPENSATION</span>
           <i class='bx bx-chevron-down'></i>
         </div>
         <div class="nav-submenu">
-          <a href="#" onclick="loadAttendance(event)" class="nav-subitem">
-            <i class='bx bx-time-five'></i>
-            <span>Time Tracking</span>
+          <a href="#" onclick="loadCompensationPage(event, 'compensation_structure')" class="nav-subitem">
+            <i class='bx bx-building'></i>
+            <span>Compensation Structure</span>
           </a>
-          <a href="#" onclick="loadAttendance(event)" class="nav-subitem">
-            <i class='bx bx-calendar-minus'></i>
-            <span>Leaves</span>
+          <a href="#" onclick="loadCompensationPage(event, 'salary_planning')" class="nav-subitem">
+            <i class='bx bx-line-chart'></i>
+            <span>Salary Planning</span>
+          </a>
+          <a href="#" onclick="loadCompensationPage(event, 'salary_adjustment')" class="nav-subitem">
+            <i class='bx bx-adjust'></i>
+            <span>Salary Adjustment</span>
+          </a>
+          <a href="#" onclick="loadCompensationPage(event, 'allowances_benefits')" class="nav-subitem">
+            <i class='bx bx-gift'></i>
+            <span>Allowances & Benefits</span>
+          </a>
+          <a href="#" onclick="loadCompensationPage(event, 'incentives_bonus')" class="nav-subitem">
+            <i class='bx bx-star'></i>
+            <span>Incentives & Bonus</span>
+          </a>
+          <a href="#" onclick="loadCompensationPage(event, 'pay_bonds_contracts')" class="nav-subitem">
+            <i class='bx bx-file'></i>
+            <span>Pay Bonds & Contracts</span>
+          </a>
+          <a href="#" onclick="loadCompensationPage(event, 'compensation_approval')" class="nav-subitem">
+            <i class='bx bx-check-circle'></i>
+            <span>Approval Workflow</span>
+          </a>
+          <a href="#" onclick="loadCompensationPage(event, 'compensation_versioning')" class="nav-subitem">
+            <i class='bx bx-history'></i>
+            <span>Version History</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- HMO -->
+      <div class="nav-section-title">BENEFITS</div>
+      <div class="nav-group">
+        <div class="nav-group-header" onclick="toggleNavGroup(this)" data-tooltip="HMO">
+          <i class='bx bxs-health'></i>
+          <span>HMO</span>
+          <i class='bx bx-chevron-down'></i>
+        </div>
+        <div class="nav-submenu">
+          <a href="#" onclick="loadHMOPage(event, 'providers')" class="nav-subitem">
+            <i class='bx bx-building'></i>
+            <span>HMO Providers</span>
+          </a>
+          <a href="#" onclick="loadHMOPage(event, 'plans')" class="nav-subitem">
+            <i class='bx bx-briefcase'></i>
+            <span>Plans & Coverage</span>
+          </a>
+          <a href="#" onclick="loadHMOPage(event, 'enrollment')" class="nav-subitem">
+            <i class='bx bx-user-check'></i>
+            <span>Employee Enrollment</span>
+          </a>
+          <a href="#" onclick="loadHMOPage(event, 'premiums')" class="nav-subitem">
+            <i class='bx bx-money'></i>
+            <span>Premium & Cost Sharing</span>
+          </a>
+          <a href="#" onclick="loadHMOPage(event, 'claims')" class="nav-subitem">
+            <i class='bx bx-receipt'></i>
+            <span>Claims & Utilization</span>
+          </a>
+          <a href="#" onclick="loadHMOPage(event, 'billing')" class="nav-subitem">
+            <i class='bx bx-money'></i>
+            <span>Billing & Reconciliation</span>
+          </a>
+          <a href="#" onclick="loadHMOPage(event, 'lifeevents')" class="nav-subitem">
+            <i class='bx bx-calendar'></i>
+            <span>Eligibility & Life Events</span>
+          </a>
+          <a href="#" onclick="loadHMOPage(event, 'documents')" class="nav-subitem">
+            <i class='bx bx-file'></i>
+            <span>HMO Documents & IDs</span>
           </a>
         </div>
       </div>
@@ -1089,13 +1189,17 @@ $notifications = 3;
           <i class='bx bx-chevron-down'></i>
         </div>
         <div class="nav-submenu">
-          <a href="#" onclick="loadAnalytics(event)" class="nav-subitem">
-            <i class='bx bx-chart'></i>
-            <span>Reports</span>
+          <a href="#" onclick="loadAnalyticsPage(event, 'dashboard')" class="nav-subitem" data-page="dashboard">
+            <i class='bx bxs-dashboard'></i>
+            <span>Dashboard</span>
           </a>
-          <a href="#" onclick="loadAnalytics(event)" class="nav-subitem">
+          <a href="#" onclick="loadAnalyticsPage(event, 'metrics')" class="nav-subitem" data-page="metrics">
             <i class='bx bx-line-chart'></i>
-            <span>Custom Dashboards</span>
+            <span>Metrics</span>
+          </a>
+          <a href="#" onclick="loadAnalyticsPage(event, 'reports')" class="nav-subitem" data-page="reports">
+            <i class='bx bx-file'></i>
+            <span>Reports</span>
           </a>
         </div>
       </div>
@@ -1122,48 +1226,76 @@ $notifications = 3;
       <!-- Default Dashboard Content -->
       <section style="padding: 0;">
         <!-- KPI Cards -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; padding: 1.5rem;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; padding: 1.5rem;" id="dashboard-stats">
+          <!-- Total Employees Card -->
           <div class="card">
             <div class="card-header">
               <div style="flex: 1;">
                 <p class="card-subtitle">Total Employees</p>
-                <h2 style="font-size: 32px; font-weight: 700; margin: 0.5rem 0 0 0; color: var(--primary);">450</h2>
-                <p style="font-size: 12px; color: var(--success); margin: 0.5rem 0 0 0; font-weight: 500;">↑ 5% from last month</p>
+                <h2 style="font-size: 32px; font-weight: 700; margin: 0.5rem 0 0 0; color: var(--primary);" id="stat-total-employees">-</h2>
+                <p style="font-size: 12px; color: var(--success); margin: 0.5rem 0 0 0; font-weight: 500;" id="stat-employee-change">-</p>
               </div>
               <div style="width: 56px; height: 56px; background: rgba(34, 197, 94, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0;">👥</div>
             </div>
           </div>
 
+          <!-- New Hires Card -->
           <div class="card">
             <div class="card-header">
               <div style="flex: 1;">
                 <p class="card-subtitle">New Hires (This Month)</p>
-                <h2 style="font-size: 32px; font-weight: 700; margin: 0.5rem 0 0 0; color: var(--primary);">12</h2>
-                <p style="font-size: 12px; color: var(--text-light); margin: 0.5rem 0 0 0; font-weight: 500;">On track for Q1</p>
+                <h2 style="font-size: 32px; font-weight: 700; margin: 0.5rem 0 0 0; color: var(--primary);" id="stat-new-hires">-</h2>
+                <p style="font-size: 12px; color: var(--text-light); margin: 0.5rem 0 0 0; font-weight: 500;">This month</p>
               </div>
               <div style="width: 56px; height: 56px; background: rgba(34, 197, 94, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0;">✨</div>
             </div>
           </div>
 
+          <!-- On Leave Card -->
           <div class="card">
             <div class="card-header">
               <div style="flex: 1;">
                 <p class="card-subtitle">Employees On Leave</p>
-                <h2 style="font-size: 32px; font-weight: 700; margin: 0.5rem 0 0 0; color: var(--warning);">23</h2>
-                <p style="font-size: 12px; color: var(--text-light); margin: 0.5rem 0 0 0; font-weight: 500;">Today</p>
+                <h2 style="font-size: 32px; font-weight: 700; margin: 0.5rem 0 0 0; color: var(--warning);" id="stat-on-leave">-</h2>
+                <p style="font-size: 12px; color: var(--text-light); margin: 0.5rem 0 0 0; font-weight: 500;">Current status</p>
               </div>
               <div style="width: 56px; height: 56px; background: rgba(251, 191, 36, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0;">🏖️</div>
             </div>
           </div>
 
+          <!-- Pending Approvals Card -->
           <div class="card">
             <div class="card-header">
               <div style="flex: 1;">
                 <p class="card-subtitle">Pending Approvals</p>
-                <h2 style="font-size: 32px; font-weight: 700; margin: 0.5rem 0 0 0; color: var(--danger);">8</h2>
+                <h2 style="font-size: 32px; font-weight: 700; margin: 0.5rem 0 0 0; color: var(--danger);" id="stat-pending-approvals">-</h2>
                 <p style="font-size: 12px; color: var(--text-light); margin: 0.5rem 0 0 0; font-weight: 500;">Awaiting action</p>
               </div>
               <div style="width: 56px; height: 56px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0;">⏳</div>
+            </div>
+          </div>
+
+          <!-- Departments Card -->
+          <div class="card">
+            <div class="card-header">
+              <div style="flex: 1;">
+                <p class="card-subtitle">Active Departments</p>
+                <h2 style="font-size: 32px; font-weight: 700; margin: 0.5rem 0 0 0; color: var(--primary);" id="stat-departments">-</h2>
+                <p style="font-size: 12px; color: var(--text-light); margin: 0.5rem 0 0 0; font-weight: 500;">Organization units</p>
+              </div>
+              <div style="width: 56px; height: 56px; background: rgba(30, 64, 175, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0;">🏢</div>
+            </div>
+          </div>
+
+          <!-- Pending Movements Card -->
+          <div class="card">
+            <div class="card-header">
+              <div style="flex: 1;">
+                <p class="card-subtitle">Pending Movements</p>
+                <h2 style="font-size: 32px; font-weight: 700; margin: 0.5rem 0 0 0; color: var(--primary);" id="stat-pending-movements">-</h2>
+                <p style="font-size: 12px; color: var(--text-light); margin: 0.5rem 0 0 0; font-weight: 500;">Transfers & Promotions</p>
+              </div>
+              <div style="width: 56px; height: 56px; background: rgba(59, 130, 246, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 28px; flex-shrink: 0;">➡️</div>
             </div>
           </div>
         </div>
@@ -1290,9 +1422,38 @@ $notifications = 3;
         shifts: 'Shift Management',
         schedules: 'Work Schedules',
         // Payroll
-        payroll_processing: 'Payroll Processing',
-        salaries: 'Salaries Management',
-        payslips: 'Payslips'
+        setup_configuration: 'Setup & Configuration',
+        employee_payroll_profile: 'Employee Payroll Profile',
+        earnings_management: 'Earnings Management',
+        deductions_management: 'Deductions Management',
+        tax_contributions_engine: 'Tax & Contributions Engine',
+        payroll_processing_approval: 'Processing & Approval',
+        payslip_management: 'Payslip Management',
+        disbursement_bank_files: 'Disbursement & Bank Files',
+        government_reports_compliance: 'Government Reports & Compliance',
+        payroll_adjustments_special_pay: 'Adjustments & Special Pay',
+        security_audit_trail: 'Security & Audit Trail',
+        // Compensation
+        compensation_structure: 'Compensation Structure',
+        salary_planning: 'Salary Planning',
+        salary_adjustment: 'Salary Adjustment',
+        allowances_benefits: 'Allowances & Benefits',
+        incentives_bonus: 'Incentives & Bonus',
+        pay_bonds_contracts: 'Pay Bonds & Contracts',
+        compensation_approval: 'Approval Workflow',
+        compensation_versioning: 'Version History',
+        // HMO
+        providers: 'HMO Providers',
+        plans: 'HMO Plans & Coverage',
+        enrollment: 'Employee HMO Enrollment',
+        premiums: 'Premium & Cost Sharing',
+        claims: 'Claims & Utilization',
+        billing: 'Billing & Reconciliation',
+        lifeevents: 'Eligibility & Life Events',
+        // Analytics
+        dashboard: 'Analytics Dashboard',
+        metrics: 'Analytics Metrics',
+        reports: 'Analytics Reports'
       };
 
       const pageTitle = document.getElementById('page-title');
@@ -1399,9 +1560,34 @@ $notifications = 3;
               roles: () => window.loadRoles?.(),
               shifts: () => window.loadShifts?.(),
               schedules: () => window.loadSchedules?.(),
-              payroll_processing: () => window.loadPayrollRuns?.(),
-              salaries: () => window.loadSalaries?.(),
-              payslips: () => window.loadPayslips?.()
+              // Payroll
+              setup_configuration: () => window.loadSetup?.(),
+              employee_payroll_profile: () => window.loadEmployeePayrollProfiles?.(),
+              earnings_management: () => window.loadEarnings?.(),
+              deductions_management: () => window.loadDeductions?.(),
+              tax_contributions_engine: () => window.loadTaxEngine?.(),
+              payroll_processing_approval: () => window.loadPayrollApprovals?.(),
+              payslip_management: () => window.loadPayslips?.(),
+              disbursement_bank_files: () => window.loadDisbursement?.(),
+              government_reports_compliance: () => window.loadGovernmentReports?.(),
+              payroll_adjustments_special_pay: () => window.loadAdjustments?.(),
+              security_audit_trail: () => window.loadAuditTrail?.(),
+              // Compensation
+              compensation_structure: () => window.loadCompensationStructure?.(),
+              salary_planning: () => window.loadSalaryPlanning?.(),
+              salary_adjustment: () => window.loadSalaryAdjustment?.(),
+              allowances_benefits: () => window.loadAllowancesBenefits?.(),
+              incentives_bonus: () => window.loadIncentivesBonus?.(),
+              pay_bonds_contracts: () => window.loadPayBondsContracts?.(),
+              compensation_approval: () => window.loadCompensationApproval?.(),
+              compensation_versioning: () => window.loadCompensationVersioning?.(),
+              // HMO
+              providers: () => window.loadAllProviders?.(),
+              plans: () => window.loadActivePlans?.(),
+              enrollment: () => window.loadActiveEnrollments?.(),
+              claims: () => window.loadAllClaims?.(),
+              billing: () => window.loadReconciliations?.(),
+              lifeevents: () => window.loadLifeEvents?.()
             };
             
             if (loadFunctions[page]) {
@@ -1437,6 +1623,18 @@ $notifications = 3;
       loadModule(event, page, 'payroll');
     }
 
+    function loadCompensationPage(event, page) {
+      loadModule(event, page, 'compensation');
+    }
+
+    function loadHMOPage(event, page) {
+      loadModule(event, page, 'hmo');
+    }
+
+    function loadAnalyticsPage(event, page) {
+      loadModule(event, page, 'analytics');
+    }
+
     // Load dashboard
     function loadDashboard(event) {
       event.preventDefault();
@@ -1458,18 +1656,6 @@ $notifications = 3;
 
       // Reload page to show default dashboard
       location.reload();
-    }
-
-    function loadAttendance(event) {
-      event.preventDefault();
-      document.getElementById('page-title').textContent = 'Attendance';
-      document.getElementById('content-area').innerHTML = '<div class="card"><h2>Attendance Module</h2><p>Attendance module coming soon</p></div>';
-    }
-
-    function loadAnalytics(event) {
-      event.preventDefault();
-      document.getElementById('page-title').textContent = 'Analytics';
-      document.getElementById('content-area').innerHTML = '<div class="card"><h2>Analytics Module</h2><p>Analytics module coming soon</p></div>';
     }
 
     // ===== GLOBAL SEARCH FUNCTIONALITY =====
@@ -1660,6 +1846,52 @@ $notifications = 3;
       if (!e.target.closest('.navbar-icon-btn[onclick*="showNotifications"]')) {
         document.querySelectorAll('[data-notification-panel]').forEach(el => el.remove());
       }
+    });
+
+    // ===== DASHBOARD STATISTICS =====
+    /**
+     * Load dashboard statistics from API
+     */
+    function loadDashboardStats() {
+      fetch('dashboard_api.php?action=getStats')
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            const stats = data.data;
+            
+            // Update Total Employees
+            document.getElementById('stat-total-employees').textContent = stats.totalEmployees.toLocaleString();
+            const changeClass = stats.percentChange >= 0 ? 'var(--success)' : 'var(--danger)';
+            const changeSymbol = stats.percentChange >= 0 ? '↑' : '↓';
+            document.getElementById('stat-employee-change').textContent = `${changeSymbol} ${Math.abs(stats.percentChange)}% from last month`;
+            document.getElementById('stat-employee-change').style.color = stats.percentChange >= 0 ? 'var(--success)' : 'var(--danger)';
+            
+            // Update New Hires This Month
+            document.getElementById('stat-new-hires').textContent = stats.newHiresThisMonth.toLocaleString();
+            
+            // Update On Leave
+            document.getElementById('stat-on-leave').textContent = stats.onLeaveToday.toLocaleString();
+            
+            // Update Pending Approvals
+            document.getElementById('stat-pending-approvals').textContent = stats.pendingApprovals.toLocaleString();
+            
+            // Update Total Departments
+            document.getElementById('stat-departments').textContent = stats.totalDepartments.toLocaleString();
+            
+            // Update Pending Movements
+            document.getElementById('stat-pending-movements').textContent = stats.pendingMovements.toLocaleString();
+          } else {
+            console.error('Failed to load dashboard stats:', data.message);
+          }
+        })
+        .catch(error => console.error('Error loading dashboard stats:', error));
+    }
+
+    // Load stats when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      loadDashboardStats();
+      // Refresh stats every 5 minutes
+      setInterval(loadDashboardStats, 5 * 60 * 1000);
     });
 
     // Logout function

@@ -4,11 +4,11 @@
  * Manages shifts, work schedules, and other reference data
  */
 
-require_once __DIR__ . '/../../config/Database.php';
-require_once __DIR__ . '/../../config/Response.php';
-require_once __DIR__ . '/../../config/BaseController.php';
-require_once __DIR__ . '/models/Shift.php';
-require_once __DIR__ . '/models/WorkSchedule.php';
+require_once __DIR__ . '/../../../config/Database.php';
+require_once __DIR__ . '/../../../config/Response.php';
+require_once __DIR__ . '/../../../config/BaseController.php';
+require_once __DIR__ . '/../models/Shift.php';
+require_once __DIR__ . '/../models/WorkSchedule.php';
 
 class HRMasterDataController extends BaseController {
     private $shiftModel;

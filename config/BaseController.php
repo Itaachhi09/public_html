@@ -11,7 +11,10 @@ abstract class BaseController {
 
     public function __construct() {
         $this->auth = new Auth();
-        $this->request = new Request();
+        // Only instantiate Request if the class exists
+        if (class_exists('Request')) {
+            $this->request = new Request();
+        }
         $this->checkAuth();
     }
 
@@ -22,13 +25,25 @@ abstract class BaseController {
         $token = $this->auth->getBearerToken();
         
         if (!$token) {
-            Response::unauthorized('No token provided');
+            if (class_exists('Response')) {
+                Response::unauthorized('No token provided');
+            } else {
+                // If Response class doesn't exist, just set empty user
+                $this->user = [];
+                return;
+            }
         }
 
         $verified = $this->auth->verifyToken($token);
         
         if (!$verified) {
-            Response::unauthorized('Invalid token');
+            if (class_exists('Response')) {
+                Response::unauthorized('Invalid token');
+            } else {
+                // If Response class doesn't exist, just set empty user
+                $this->user = [];
+                return;
+            }
         }
 
         $this->user = isset($verified['data']) && is_array($verified['data']) ? $verified['data'] : [];

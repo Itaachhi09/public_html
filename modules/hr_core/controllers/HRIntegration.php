@@ -4,8 +4,8 @@
  * Handles API integrations with Payroll, Compensation, HMO, and Analytics modules
  */
 
-require_once __DIR__ . '/../../config/Database.php';
-require_once __DIR__ . '/../../config/Response.php';
+require_once __DIR__ . '/../../../config/Database.php';
+require_once __DIR__ . '/../../../config/Response.php';
 
 class HRIntegration {
     private $db;

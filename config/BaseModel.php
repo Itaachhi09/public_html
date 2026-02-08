@@ -151,5 +151,51 @@ abstract class BaseModel {
         }
         return $record;
     }
+
+    /**
+     * Direct query execution - returns all results
+     */
+    public function query($sql, $params = []) {
+        try {
+            $stmt = $this->db->prepare($sql);
+            if (!empty($params)) {
+                $stmt->execute($params);
+            } else {
+                $stmt->execute();
+            }
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            throw new Exception("Query execution failed: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Direct query execution for single result
+     */
+    public function queryOne($sql, $params = []) {
+        try {
+            $stmt = $this->db->prepare($sql);
+            if (!empty($params)) {
+                $stmt->execute($params);
+            } else {
+                $stmt->execute();
+            }
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            throw new Exception("Query execution failed: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Execute query with parameters (INSERT, UPDATE, DELETE)
+     */
+    public function execute($sql, $params = []) {
+        try {
+            $stmt = $this->db->prepare($sql);
+            return $stmt->execute($params);
+        } catch (PDOException $e) {
+            throw new Exception("Query execution failed: " . $e->getMessage());
+        }
+    }
 }
 ?>
