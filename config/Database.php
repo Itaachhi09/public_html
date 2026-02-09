@@ -2,7 +2,11 @@
 /**
  * Database Configuration and Connection Class
  * Microservices Database Manager
+ * Timezone: Asia/Manila (Philippines UTC+8)
  */
+
+// Set PHP timezone to Philippines
+date_default_timezone_set('Asia/Manila');
 
 class Database {
     private $host = 'localhost';
@@ -21,6 +25,9 @@ class Database {
                 $this->password
             );
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            
+            // Set MySQL session timezone to Asia/Manila
+            $this->conn->exec("SET @@session.time_zone = '+08:00'");
         } catch (PDOException $e) {
             throw new RuntimeException('Database connection failed: ' . $e->getMessage(), 0, $e);
         }

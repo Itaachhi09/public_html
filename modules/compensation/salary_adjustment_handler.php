@@ -1,13 +1,14 @@
 <?php
 /**
  * Salary Adjustment Form Handler
- * Create adjustment records (pending); approve/reject. No JS; server-side only.
+ * Create adjustment records (pending); approve/reject. AJAX JSON response.
  */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 if (empty($_SESSION['token'])) {
-    header('Location: ../../index.php');
+    header('HTTP/1.1 401 Unauthorized');
+    echo json_encode(['error' => 'Not authenticated']);
     exit;
 }
 
@@ -75,10 +76,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $err = 'Invalid adjustment.';
         }
     }
+    
+    // Return JSON response
+    header('Content-Type: application/json');
+    echo json_encode([
+        'success' => empty($err),
+        'message' => $msg ?: $err,
+        'action' => $action
+    ]);
+    exit;
 }
 
-$params = ['ref' => 'compensation', 'page' => 'salary_adjustment'];
-if ($msg) $params['msg'] = urlencode($msg);
-if ($err) $params['err'] = urlencode($err);
-header('Location: ../../dashboard.php?' . http_build_query($params));
+// No POST request
+header('HTTP/1.1 400 Bad Request');
+echo json_encode(['error' => 'No POST data']);
 exit;

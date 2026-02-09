@@ -450,6 +450,75 @@
     color: #1e3a8a;
     font-family: 'Courier New', monospace;
   }
+
+  /* Modal Styles for Payroll Details */
+  .payroll-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .payroll-modal-overlay.active {
+    display: flex;
+  }
+
+  .payroll-modal {
+    background: white;
+    border-radius: 8px;
+    max-width: 900px;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+  }
+
+  .payroll-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+  }
+
+  .payroll-modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+  }
+
+  .payroll-modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #9ca3af;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .payroll-modal-close:hover {
+    color: #1f2937;
+    background: #e5e7eb;
+    border-radius: 4px;
+  }
+
+  .payroll-modal-body {
+    padding: 2rem;
+  }
 </style>
 
 <div class="processing-container">
@@ -497,11 +566,7 @@
           </p>
         </div>
         <div class="payroll-actions">
-          <form method="GET" style="display: inline;">
-            <input type="hidden" name="action" value="view">
-            <input type="hidden" name="payroll_id" value="PAYROLL-2026-01-16">
-            <button type="submit" class="btn btn-secondary btn-sm">View Details</button>
-          </form>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayrollModal('PAYROLL-2026-01-16', 'January 2026 Period 2', '8', '85500.00')">View Details</button>
         </div>
       </div>
 
@@ -516,11 +581,7 @@
           </p>
         </div>
         <div class="payroll-actions">
-          <form method="GET" style="display: inline;">
-            <input type="hidden" name="action" value="view">
-            <input type="hidden" name="payroll_id" value="PAYROLL-2026-01-01">
-            <button type="submit" class="btn btn-secondary btn-sm">View Details</button>
-          </form>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayrollModal('PAYROLL-2026-01-01', 'January 2026 Period 1', '8', '83200.00')">View Details</button>
         </div>
       </div>
     </div>
@@ -880,3 +941,99 @@
   </div>
 
 </div>
+
+<!-- Modal for Payroll Details View -->
+<div class="payroll-modal-overlay" id="payroll-modal-overlay" onclick="if(event.target === this) window.closePayrollModal()">
+  <div class="payroll-modal">
+    <div class="payroll-modal-header">
+      <h2 class="payroll-modal-title" id="payroll-modal-title">Payroll Details</h2>
+      <button type="button" class="payroll-modal-close" onclick="window.closePayrollModal()">×</button>
+    </div>
+    <div class="payroll-modal-body" id="payroll-modal-body">
+      <!-- Content will be injected here -->
+    </div>
+  </div>
+</div>
+
+<script>
+// Payroll Modal Functions
+window.openPayrollModal = function(payrollId, periodName, employeeCount, grossAmount) {
+  const modal = document.getElementById('payroll-modal-overlay');
+  const title = document.getElementById('payroll-modal-title');
+  const body = document.getElementById('payroll-modal-body');
+  
+  title.textContent = 'Payroll Details - ' + periodName;
+  
+  // Sample payroll details data
+  let html = '<div style="padding: 1rem;">';
+  html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">';
+  html += '<div><label style="font-size: 12px; color: #6b7280; font-weight: 600;">Payroll ID</label><div style="font-size: 16px; color: #1f2937; font-weight: 600;">' + payrollId + '</div></div>';
+  html += '<div><label style="font-size: 12px; color: #6b7280; font-weight: 600;">Period</label><div style="font-size: 16px; color: #1f2937; font-weight: 600;">' + periodName + '</div></div>';
+  html += '<div><label style="font-size: 12px; color: #6b7280; font-weight: 600;">Employees</label><div style="font-size: 16px; color: #1f2937; font-weight: 600;">' + employeeCount + '</div></div>';
+  html += '<div><label style="font-size: 12px; color: #6b7280; font-weight: 600;">Total Gross</label><div style="font-size: 16px; color: #1f2937; font-weight: 600; font-family: monospace;">₱' + parseFloat(grossAmount).toLocaleString('en-US', {minimumFractionDigits: 2}) + '</div></div>';
+  html += '</div>';
+  
+  html += '<div style="border-top: 2px solid #e5e7eb; padding-top: 1.5rem; margin-top: 1.5rem;">';
+  html += '<h3 style="margin: 0 0 1rem 0; font-size: 14px; font-weight: 600; color: #1f2937;">Summary by Employee</h3>';
+  html += '<div style="overflow-x: auto;">';
+  html += '<table style="width: 100%; font-size: 12px; border-collapse: collapse;">';
+  html += '<thead><tr style="background: #f3f4f6;">';
+  html += '<th style="padding: 0.75rem; text-align: left; border-bottom: 2px solid #d1d5db; font-weight: 600;">Employee</th>';
+  html += '<th style="padding: 0.75rem; text-align: right; border-bottom: 2px solid #d1d5db; font-weight: 600;">Basic</th>';
+  html += '<th style="padding: 0.75rem; text-align: right; border-bottom: 2px solid #d1d5db; font-weight: 600;">Gross</th>';
+  html += '<th style="padding: 0.75rem; text-align: right; border-bottom: 2px solid #d1d5db; font-weight: 600;">Deductions</th>';
+  html += '<th style="padding: 0.75rem; text-align: right; border-bottom: 2px solid #d1d5db; font-weight: 600;">Net</th>';
+  html += '</tr></thead>';
+  html += '<tbody>';
+  
+  // Sample employee data
+  const employees = [
+    {name: 'John Doe (EMP-001)', basic: '6,000.00', gross: '11,000.00', ded: '3,350.00', net: '7,650.00'},
+    {name: 'Jane Smith (EMP-002)', basic: '6,000.00', gross: '11,000.00', ded: '3,700.00', net: '7,300.00'},
+    {name: 'Michael Johnson (EMP-003)', basic: '7,000.00', gross: '12,500.00', ded: '4,450.00', net: '8,050.00'},
+    {name: 'Sarah Williams (EMP-004)', basic: '5,000.00', gross: '9,000.00', ded: '2,600.00', net: '6,400.00'},
+    {name: 'Robert Brown (EMP-005)', basic: '5,000.00', gross: '9,000.00', ded: '2,750.00', net: '6,250.00'},
+    {name: 'Emily Davis (EMP-006)', basic: '6,000.00', gross: '11,000.00', ded: '3,575.00', net: '7,425.00'},
+    {name: 'David Martinez (EMP-007)', basic: '5,400.00', gross: '9,700.00', ded: '3,230.00', net: '6,470.00'},
+    {name: 'Jessica Wilson (EMP-008)', basic: '7,500.00', gross: '13,800.00', ded: '4,990.00', net: '8,810.00'}
+  ];
+  
+  employees.forEach(emp => {
+    html += '<tr style="border-bottom: 1px solid #e5e7eb;">';
+    html += '<td style="padding: 0.75rem;">' + emp.name + '</td>';
+    html += '<td style="padding: 0.75rem; text-align: right; font-family: monospace;">₱' + emp.basic + '</td>';
+    html += '<td style="padding: 0.75rem; text-align: right; font-family: monospace;">₱' + emp.gross + '</td>';
+    html += '<td style="padding: 0.75rem; text-align: right; font-family: monospace;">₱' + emp.ded + '</td>';
+    html += '<td style="padding: 0.75rem; text-align: right; font-family: monospace; font-weight: 600;">₱' + emp.net + '</td>';
+    html += '</tr>';
+  });
+  
+  html += '<tr style="background: #f9fafb; font-weight: 600; border-top: 2px solid #d1d5db;">';
+  html += '<td style="padding: 0.75rem;">TOTAL</td>';
+  html += '<td style="padding: 0.75rem; text-align: right; font-family: monospace;">₱48,900.00</td>';
+  html += '<td style="padding: 0.75rem; text-align: right; font-family: monospace;' + (grossAmount === '85500.00' ? '">₱85,500.00' : '">₱83,200.00') + '</td>';
+  html += '<td style="padding: 0.75rem; text-align: right; font-family: monospace;">₱28,500.00</td>';
+  html += '<td style="padding: 0.75rem; text-align: right; font-family: monospace;">₱' + (grossAmount === '85500.00' ? '57,000.00' : '54,700.00') + '</td>';
+  html += '</tr>';
+  html += '</tbody>';
+  html += '</table>';
+  html += '</div>';
+  html += '</div>';
+  
+  body.innerHTML = html;
+  modal.classList.add('active');
+  body.scrollTop = 0;
+};
+
+window.closePayrollModal = function() {
+  const modal = document.getElementById('payroll-modal-overlay');
+  modal.classList.remove('active');
+};
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    window.closePayrollModal();
+  }
+});
+</script>

@@ -1,7 +1,7 @@
 <?php
 /**
- * Incentives and Bonuses View
- * Record workload-based earnings. Log incentive events (employee, duty date, procedure type, quantity, approver). PHP/HTML/CSS only; no JS.
+ * Incentives & Bonuses - Modern Design
+ * Log workload-based earnings with approval workflow
  */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -22,124 +22,227 @@ $employees = $eventModel->query(
 
 $handlerUrl = 'modules/compensation/incentives_bonus_handler.php';
 ?>
-<div class="main-content incentives-bonus-content">
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Incentives &amp; Bonuses</title>
 <style>
-.incentives-bonus-content { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f2937; }
-.ib-header { margin-bottom: 1.5rem; }
-.ib-title { font-size: 1.5rem; font-weight: 600; margin: 0 0 0.25rem 0; }
-.ib-subtitle { font-size: 0.875rem; color: #6b7280; margin: 0; }
-.ib-rules { background: #f0fdf4; border: 1px solid #22c55e; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.5rem; font-size: 0.8125rem; color: #166534; }
-.ib-rules strong { display: block; margin-bottom: 0.25rem; }
-.ib-msg { background: #d1fae5; border: 1px solid #10b981; color: #065f46; padding: 0.5rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.875rem; }
-.ib-err { background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 0.5rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.875rem; }
-.ib-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-.ib-card h3 { font-size: 1rem; font-weight: 600; margin: 0 0 0.75rem 0; padding-bottom: 0.5rem; border-bottom: 1px solid #e5e7eb; }
-.ib-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
-.ib-table th, .ib-table td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #f3f4f6; }
-.ib-table th { font-weight: 600; color: #374151; background: #f9fafb; }
-.ib-table .ib-num { text-align: right; }
-.ib-table .ib-status-pending { color: #b45309; }
-.ib-table .ib-status-approved { color: #047857; }
-.ib-form label { display: block; font-size: 0.75rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem; }
-.ib-form input, .ib-form select { width: 100%; padding: 0.375rem 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; margin-bottom: 0.5rem; box-sizing: border-box; }
-.ib-form .ib-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-.ib-btn { display: inline-block; padding: 0.375rem 0.75rem; font-size: 0.8125rem; font-weight: 500; border-radius: 6px; border: 1px solid transparent; cursor: pointer; text-decoration: none; }
-.ib-btn-primary { background: #1e40af; color: #fff; border-color: #1e40af; }
-.ib-btn-success { background: #047857; color: #fff; }
-.ib-btn-outline { background: #fff; color: #374151; border-color: #d1d5db; }
-.ib-btn-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
-.ib-empty { color: #9ca3af; font-size: 0.875rem; padding: 1rem; text-align: center; }
-.ib-inline-form { display: inline; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: #f5f5f5;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #1f2937;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.container { width: 100%; background: #fff; }
+.header { padding: 16px 24px; border-bottom: 1px solid #e5e7eb; }
+.title { font-size: 17px; font-weight: 600; color: #111827; }
+
+.info-row { padding: 8px 24px; color: #6b7280; font-size: 11px; border-bottom: 1px solid #e5e7eb; }
+
+.content { max-width: 1080px; }
+.msg-bar { padding: 12px 24px; display: flex; gap: 8px; }
+.msg { background: #d1fae5; border-left: 3px solid #10b981; color: #065f46; padding: 8px 12px; border-radius: 3px; font-size: 12px; flex: 1; }
+.err { background: #fee2e2; border-left: 3px solid #ef4444; color: #991b1b; padding: 8px 12px; border-radius: 3px; font-size: 12px; flex: 1; }
+
+.section { padding: 12px 24px; border-bottom: 1px solid #e5e7eb; }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.section-title { font-size: 14px; font-weight: 600; color: #111827; }
+
+.table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 8px; }
+.table th { background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; height: 28px; }
+.table td { padding: 6px 8px; border-bottom: 1px solid #f3f4f6; height: 30px; vertical-align: middle; }
+.table tbody tr:hover { background: #f9fafb; }
+.table .num { text-align: right; }
+
+.status-badge { font-size: 10px; padding: 2px 6px; border-radius: 3px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+.status-pending { background: #fef3c7; color: #b45309; }
+.status-approved { background: #d1fae5; color: #065f46; }
+
+.dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.dot-pending { background: #f59e0b; }
+.dot-approved { background: #10b981; }
+
+.btn { padding: 6px 12px; font-size: 12px; font-weight: 500; border: 1px solid #d1d5db; background: #fff; color: #374151; border-radius: 4px; cursor: pointer; height: 28px; display: inline-flex; align-items: center; }
+.btn:hover { border-color: #9ca3af; background: #f9fafb; }
+.btn-primary { background: #1e40af; color: #fff; border-color: #1e40af; }
+.btn-primary:hover { background: #1c3aa0; }
+.btn-success { background: #10b981; color: #fff; border-color: #10b981; }
+.btn-success:hover { background: #059669; }
+.btn-sm { padding: 4px 8px; font-size: 11px; height: 24px; }
+
+.empty-state { padding: 24px 8px; color: #9ca3af; font-size: 12px; }
+
+.add-form { display: none; background: #f9fafb; padding: 12px; border: 1px solid #e5e7eb; border-radius: 4px; margin-bottom: 8px; }
+.add-form.visible { display: block; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.form-row.full { grid-template-columns: 1fr; }
+.form-group { display: flex; flex-direction: column; gap: 3px; }
+.form-label { font-size: 11px; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.5px; }
+.required { color: #ef4444; }
+
+.form-input, .form-select { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 3px; font-size: 12px; font-family: inherit; color: #1f2937; height: 30px; }
+.form-input:focus, .form-select:focus { outline: none; border-color: #1e40af; box-shadow: 0 0 0 2px rgba(30, 64, 175, 0.1); }
+
+.form-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+.action-icon { cursor: pointer; text-align: center; }
+.action-icon button { background: none; border: none; color: #374151; cursor: pointer; font-size: 14px; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+.action-icon button:hover { color: #1f2937; }
+
+@media (max-width: 768px) {
+    .form-row { grid-template-columns: 1fr; }
+    .section { padding: 12px 16px; }
+}
 </style>
+</head>
+<body>
 
-<div class="ib-header">
-  <h1 class="ib-title">Incentives and Bonuses</h1>
-  <p class="ib-subtitle">Record workload-based earnings. Log incentive events per ER duty: employee, duty date, procedure type, quantity. Only approved incentive types allowed. Each event links to one ER duty. Unapproved records stay inactive. Multiple procedures increase take home; used in ER duty simulation.</p>
-</div>
+<div class="container">
 
-<div class="ib-rules">
-  <strong>Rules</strong>
-  Only approved incentive types allowed. Each event links to one ER duty. Unapproved records stay inactive. Output: validated incentive records for Payroll reference.
-</div>
-
-<?php if (!empty($_GET['msg'])): ?>
-<div class="ib-msg"><?php echo htmlspecialchars(urldecode($_GET['msg'])); ?></div>
-<?php endif; ?>
-<?php if (!empty($_GET['err'])): ?>
-<div class="ib-err"><?php echo htmlspecialchars(urldecode($_GET['err'])); ?></div>
-<?php endif; ?>
-
-<div class="ib-card">
-  <h3>Log incentive event</h3>
-  <form class="ib-form" method="post" action="<?php echo htmlspecialchars($handlerUrl); ?>">
-    <input type="hidden" name="action" value="create">
-    <label>Employee *</label>
-    <select name="employee_id" required>
-      <option value="">Select employee</option>
-      <?php foreach ($employees as $emp): ?>
-      <option value="<?php echo (int)$emp['employee_id']; ?>"><?php echo htmlspecialchars($emp['employee_code'] . ' – ' . $emp['last_name'] . ', ' . $emp['first_name']); ?></option>
-      <?php endforeach; ?>
-    </select>
-    <div class="ib-row">
-      <div>
-        <label>Duty date *</label>
-        <input type="date" name="duty_date" required>
-      </div>
-      <div>
-        <label>Procedure type * (approved only)</label>
-        <select name="procedure_type_id" required>
-          <option value="">Select procedure type</option>
-          <?php foreach ($approvedTypes as $t): ?>
-          <option value="<?php echo (int)$t['id']; ?>"><?php echo htmlspecialchars($t['name'] . ' (' . $t['code'] . ')'); ?></option>
-          <?php endforeach; ?>
-        </select>
-      </div>
+    <!-- Header -->
+    <div class="header">
+        <h1 class="title">Incentives &amp; Bonuses</h1>
     </div>
-    <label>Quantity *</label>
-    <input type="number" name="quantity" min="1" value="1" required>
-    <button type="submit" class="ib-btn ib-btn-primary">Log event (pending approval)</button>
-  </form>
+
+    <!-- Info Row -->
+    <div class="info-row">
+        Only approved procedure types allowed. Each event requires approval before payroll processing.
+    </div>
+
+    <!-- Messages -->
+    <?php if (!empty($_GET['msg']) || !empty($_GET['err'])): ?>
+    <div class="msg-bar">
+        <?php if (!empty($_GET['msg'])): ?>
+        <div class="msg"><?php echo htmlspecialchars(urldecode($_GET['msg'])); ?></div>
+        <?php endif; ?>
+        <?php if (!empty($_GET['err'])): ?>
+        <div class="err"><?php echo htmlspecialchars(urldecode($_GET['err'])); ?></div>
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
+    <div class="content">
+
+        <!-- 1. INCENTIVE EVENTS TABLE (Main View) -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">Incentive Events</div>
+            </div>
+
+            <?php if (empty($events)): ?>
+            <div class="empty-state">No incentive events yet.</div>
+            <?php else: ?>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Procedure</th>
+                        <th class="num">Qty</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th style="width: 50px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($events as $e): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars(($e['last_name'] ?? '') . ', ' . ($e['first_name'] ?? '')); ?></td>
+                        <td><?php echo htmlspecialchars($e['procedure_name'] ?? $e['procedure_code'] ?? '—'); ?></td>
+                        <td class="num"><?php echo (int)$e['quantity']; ?></td>
+                        <td><?php echo htmlspecialchars($e['duty_date']); ?></td>
+                        <td>
+                            <span class="status-badge status-<?php echo strtolower($e['status']); ?>">
+                                <span class="dot dot-<?php echo strtolower($e['status']); ?>"></span>
+                                <?php echo htmlspecialchars($e['status']); ?>
+                            </span>
+                        </td>
+                        <td class="action-icon">
+                            <?php if (strtolower($e['status']) === 'pending'): ?>
+                            <form method="post" action="<?php echo htmlspecialchars($handlerUrl); ?>" style="display: inline;">
+                                <input type="hidden" name="action" value="approve">
+                                <input type="hidden" name="id" value="<?php echo (int)$e['id']; ?>">
+                                <button type="submit" title="Approve">✓</button>
+                            </form>
+                            <?php else: ?>
+                            —
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+        </div>
+
+        <!-- 2. LOG EVENT FORM (Collapsed) -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">Log Event</div>
+                <button class="btn btn-primary btn-sm" onclick="toggleForm('add-event-form'); return false;">+ Log event</button>
+            </div>
+
+            <div id="add-event-form" class="add-form">
+                <form method="post" action="<?php echo htmlspecialchars($handlerUrl); ?>">
+                    <input type="hidden" name="action" value="create">
+
+                    <!-- Top row: Employee, Procedure -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Employee <span class="required">•</span></label>
+                            <select name="employee_id" required class="form-select">
+                                <option value="">Select Employee</option>
+                                <?php foreach ($employees as $emp): ?>
+                                <option value="<?php echo (int)$emp['employee_id']; ?>"><?php echo htmlspecialchars($emp['employee_code'] . ' – ' . $emp['last_name'] . ', ' . $emp['first_name']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Procedure <span class="required">•</span></label>
+                            <select name="procedure_type_id" required class="form-select">
+                                <option value="">Select Procedure</option>
+                                <?php foreach ($approvedTypes as $t): ?>
+                                <option value="<?php echo (int)$t['id']; ?>"><?php echo htmlspecialchars($t['code'] . ' – ' . $t['name']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Second row: Duty Date, Quantity -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Duty Date <span class="required">•</span></label>
+                            <input type="date" name="duty_date" required class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Quantity <span class="required">•</span></label>
+                            <input type="number" name="quantity" required class="form-input" value="1" min="1">
+                        </div>
+                    </div>
+
+                    <div class="form-actions" style="justify-content: flex-end;">
+                        <button type="submit" class="btn btn-primary btn-sm">Log. Pending approval</button>
+                        <button type="button" class="btn btn-sm" onclick="toggleForm('add-event-form'); return false;">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
 </div>
 
-<div class="ib-card">
-  <h3>Incentive events (for Payroll reference)</h3>
-  <?php if (empty($events)): ?>
-  <p class="ib-empty">No incentive events yet. Log one above. Approved records are used for payroll.</p>
-  <?php else: ?>
-  <table class="ib-table">
-    <thead>
-      <tr>
-        <th>Employee</th>
-        <th>Duty date</th>
-        <th>Procedure type</th>
-        <th class="ib-num">Quantity</th>
-        <th>Status</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-    <?php foreach ($events as $e): ?>
-      <tr>
-        <td><?php echo htmlspecialchars(($e['last_name'] ?? '') . ', ' . ($e['first_name'] ?? '') . ' (' . ($e['employee_code'] ?? '') . ')'); ?></td>
-        <td><?php echo htmlspecialchars($e['duty_date']); ?></td>
-        <td><?php echo htmlspecialchars($e['procedure_name'] ?? $e['procedure_code']); ?></td>
-        <td class="ib-num"><?php echo (int)$e['quantity']; ?></td>
-        <td><span class="ib-status-<?php echo $e['status']; ?>"><?php echo htmlspecialchars($e['status']); ?></span></td>
-        <td>
-          <?php if ($e['status'] === 'pending'): ?>
-          <form class="ib-inline-form" method="post" action="<?php echo htmlspecialchars($handlerUrl); ?>">
-            <input type="hidden" name="action" value="approve">
-            <input type="hidden" name="id" value="<?php echo (int)$e['id']; ?>">
-            <button type="submit" class="ib-btn ib-btn-success ib-btn-sm">Approve</button>
-          </form>
-          <?php else: ?>
-          Approved
-          <?php endif; ?>
-        </td>
-      </tr>
-    <?php endforeach; ?>
-    </tbody>
-  </table>
-  <?php endif; ?>
-</div>
-</div>
+<script>
+function toggleForm(id) {
+    document.getElementById(id).classList.toggle('visible');
+}
+</script>
+
+</body>
+</html>

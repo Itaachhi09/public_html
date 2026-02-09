@@ -1,7 +1,7 @@
 <?php
 /**
- * Salary Adjustment View
- * Controlled changes to base pay: create records (Temporary/Permanent), triggers, approval. PHP/HTML/CSS only; no JS.
+ * Salary Adjustment - Modern Design
+ * Controlled changes to base pay with approval workflow
  */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -22,157 +22,367 @@ $employees = $adjustmentModel->query(
 
 $handlerUrl = 'modules/compensation/salary_adjustment_handler.php';
 ?>
-<div class="main-content salary-adjustment-content">
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Salary Adjustment</title>
 <style>
-.salary-adjustment-content { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f2937; }
-.sa-header { margin-bottom: 1.5rem; }
-.sa-title { font-size: 1.5rem; font-weight: 600; margin: 0 0 0.25rem 0; }
-.sa-subtitle { font-size: 0.875rem; color: #6b7280; margin: 0; }
-.sa-rules { background: #eff6ff; border: 1px solid #3b82f6; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.5rem; font-size: 0.8125rem; color: #1e40af; }
-.sa-rules strong { display: block; margin-bottom: 0.25rem; }
-.sa-msg { background: #d1fae5; border: 1px solid #10b981; color: #065f46; padding: 0.5rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.875rem; }
-.sa-err { background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 0.5rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.875rem; }
-.sa-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-.sa-card h3 { font-size: 1rem; font-weight: 600; margin: 0 0 0.75rem 0; padding-bottom: 0.5rem; border-bottom: 1px solid #e5e7eb; }
-.sa-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
-.sa-table th, .sa-table td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #f3f4f6; }
-.sa-table th { font-weight: 600; color: #374151; background: #f9fafb; }
-.sa-table .sa-num { text-align: right; }
-.sa-table .sa-status-pending { color: #b45309; }
-.sa-table .sa-status-approved { color: #047857; }
-.sa-table .sa-status-rejected { color: #b91c1c; }
-.sa-form label { display: block; font-size: 0.75rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem; }
-.sa-form input, .sa-form select, .sa-form textarea { width: 100%; padding: 0.375rem 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; margin-bottom: 0.5rem; box-sizing: border-box; }
-.sa-form textarea { min-height: 60px; resize: vertical; }
-.sa-form .sa-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-.sa-btn { display: inline-block; padding: 0.375rem 0.75rem; font-size: 0.8125rem; font-weight: 500; border-radius: 6px; border: 1px solid transparent; cursor: pointer; text-decoration: none; }
-.sa-btn-primary { background: #1e40af; color: #fff; border-color: #1e40af; }
-.sa-btn-success { background: #047857; color: #fff; }
-.sa-btn-danger { background: #b91c1c; color: #fff; }
-.sa-btn-outline { background: #fff; color: #374151; border-color: #d1d5db; }
-.sa-btn-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
-.sa-empty { color: #9ca3af; font-size: 0.875rem; padding: 1rem; text-align: center; }
-.sa-inline-form { display: inline; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: #f5f5f5;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #1f2937;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.container { width: 100%; background: #fff; }
+.header { padding: 16px 24px; border-bottom: 1px solid #e5e7eb; }
+.title { font-size: 17px; font-weight: 600; color: #111827; }
+
+.info-row { padding: 8px 24px; color: #6b7280; font-size: 11px; border-bottom: 1px solid #e5e7eb; }
+
+.content { max-width: 1080px; }
+.msg-bar { padding: 12px 24px; display: flex; gap: 8px; }
+.msg { background: #d1fae5; border-left: 3px solid #10b981; color: #065f46; padding: 8px 12px; border-radius: 3px; font-size: 12px; flex: 1; }
+.err { background: #fee2e2; border-left: 3px solid #ef4444; color: #991b1b; padding: 8px 12px; border-radius: 3px; font-size: 12px; flex: 1; }
+
+.section { padding: 12px 24px; border-bottom: 1px solid #e5e7eb; }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.section-title { font-size: 14px; font-weight: 600; color: #111827; }
+
+.table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 8px; }
+.table th { background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; height: 28px; }
+.table td { padding: 6px 8px; border-bottom: 1px solid #f3f4f6; height: 30px; vertical-align: middle; }
+.table tbody tr:hover { background: #f9fafb; }
+.table .num { text-align: right; }
+.table .code { font-family: 'Courier New', monospace; background: #f3f4f6; padding: 2px 4px; border-radius: 2px; font-size: 11px; }
+
+.status-badge { font-size: 10px; padding: 2px 6px; border-radius: 3px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+.status-pending { background: #fef3c7; color: #b45309; }
+.status-approved { background: #d1fae5; color: #065f46; }
+.status-rejected { background: #fee2e2; color: #991b1b; }
+
+.dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.dot-pending { background: #b45309; }
+.dot-approved { background: #10b981; }
+.dot-rejected { background: #ef4444; }
+
+.btn { padding: 6px 12px; font-size: 12px; font-weight: 500; border: 1px solid #d1d5db; background: #fff; color: #374151; border-radius: 4px; cursor: pointer; height: 28px; display: inline-flex; align-items: center; }
+.btn:hover { border-color: #9ca3af; background: #f9fafb; }
+.btn-primary { background: #1e40af; color: #fff; border-color: #1e40af; }
+.btn-primary:hover { background: #1c3aa0; }
+.btn-success { background: #10b981; color: #fff; border-color: #10b981; }
+.btn-success:hover { background: #059669; }
+.btn-danger { background: #ef4444; color: #fff; border-color: #ef4444; }
+.btn-danger:hover { background: #dc2626; }
+.btn-sm { padding: 4px 8px; font-size: 11px; height: 24px; }
+
+.empty-state { padding: 24px 8px; color: #9ca3af; font-size: 12px; }
+
+.add-form { display: none; background: #f9fafb; padding: 12px; border: 1px solid #e5e7eb; border-radius: 4px; margin-bottom: 8px; }
+.add-form.visible { display: block; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.form-row.full { grid-template-columns: 1fr; }
+.form-row.three { grid-template-columns: 1fr 1fr 1fr; }
+.form-group { display: flex; flex-direction: column; gap: 3px; }
+.form-label { font-size: 11px; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.5px; }
+.required { color: #ef4444; }
+
+.form-input, .form-select, .form-textarea { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 3px; font-size: 12px; font-family: inherit; color: #1f2937; height: 30px; }
+.form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: #1e40af; box-shadow: 0 0 0 2px rgba(30, 64, 175, 0.1); }
+.form-textarea { height: auto; min-height: 60px; max-height: 60px; resize: none; }
+
+.form-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+.action-btn { display: inline; }
+
+.validation-inline { font-size: 10px; color: #6b7280; margin-top: 2px; }
+.validation-warning { font-size: 10px; color: #ef4444; margin-top: 2px; }
+
+@media (max-width: 768px) {
+    .form-row { grid-template-columns: 1fr; }
+    .form-row.three { grid-template-columns: 1fr; }
+    .section { padding: 12px 16px; }
+}
 </style>
+</head>
+<body>
 
-<div class="sa-header">
-  <h1 class="sa-title">Salary Adjustment</h1>
-  <p class="sa-subtitle">Handle controlled changes to base pay. Create adjustment records (Temporary or Permanent); triggers: Promotion, Approved exception, Policy change. Each change stores date, reason, and approver. No payroll computation.</p>
-</div>
+<div class="container">
 
-<div class="sa-rules">
-  <strong>Rules</strong>
-  Adjustments require approval. Adjustments respect salary bands. Each change stores date, reason, and approver. Clean adjustment history only; no payroll computation.
-</div>
-
-<?php if (!empty($_GET['msg'])): ?>
-<div class="sa-msg"><?php echo htmlspecialchars(urldecode($_GET['msg'])); ?></div>
-<?php endif; ?>
-<?php if (!empty($_GET['err'])): ?>
-<div class="sa-err"><?php echo htmlspecialchars(urldecode($_GET['err'])); ?></div>
-<?php endif; ?>
-
-<div class="sa-card">
-  <h3>Create adjustment record</h3>
-  <form class="sa-form" method="post" action="<?php echo htmlspecialchars($handlerUrl); ?>">
-    <input type="hidden" name="action" value="create">
-    <label>Employee *</label>
-    <select name="employee_id" required>
-      <option value="">Select employee</option>
-      <?php foreach ($employees as $emp): ?>
-      <option value="<?php echo (int)$emp['employee_id']; ?>"><?php echo htmlspecialchars($emp['employee_code'] . ' – ' . $emp['last_name'] . ', ' . $emp['first_name']); ?></option>
-      <?php endforeach; ?>
-    </select>
-    <div class="sa-row">
-      <div>
-        <label>Adjustment type *</label>
-        <select name="adjustment_type" required>
-          <option value="">Select</option>
-          <option value="Temporary">Temporary</option>
-          <option value="Permanent">Permanent</option>
-        </select>
-      </div>
-      <div>
-        <label>Trigger *</label>
-        <select name="trigger_type" required>
-          <option value="">Select</option>
-          <option value="Promotion">Promotion</option>
-          <option value="Approved exception">Approved exception</option>
-          <option value="Policy change">Policy change</option>
-        </select>
-      </div>
+    <!-- Header -->
+    <div class="header">
+        <h1 class="title">Salary Adjustment</h1>
     </div>
-    <div class="sa-row">
-      <div><label>Previous amount (optional)</label><input type="number" name="previous_amount" step="0.01" min="0" placeholder="Current base"></div>
-      <div><label>New amount *</label><input type="number" name="new_amount" step="0.01" min="0" required></div>
+
+    <!-- Info Row -->
+    <div class="info-row">
+        Adjustments require approval. Each change respects salary bands and stores date, reason, and approver information.
     </div>
-    <div class="sa-row">
-      <div><label>Effective date *</label><input type="date" name="effective_date" required></div>
-      <div><label>End date (for Temporary)</label><input type="date" name="end_date"></div>
+
+    <!-- Messages -->
+    <?php if (!empty($_GET['msg']) || !empty($_GET['err'])): ?>
+    <div class="msg-bar">
+        <?php if (!empty($_GET['msg'])): ?>
+        <div class="msg"><?php echo htmlspecialchars(urldecode($_GET['msg'])); ?></div>
+        <?php endif; ?>
+        <?php if (!empty($_GET['err'])): ?>
+        <div class="err"><?php echo htmlspecialchars(urldecode($_GET['err'])); ?></div>
+        <?php endif; ?>
     </div>
-    <label>Salary band (optional; if set, new amount must be within band)</label>
-    <select name="salary_band_id">
-      <option value="">— None —</option>
-      <?php foreach ($bands as $b): ?>
-      <option value="<?php echo (int)$b['id']; ?>"><?php echo htmlspecialchars($b['pay_grade_name'] . ($b['grade_level_name'] ? ' – ' . $b['grade_level_name'] : '') . ' (' . $b['min_salary'] . '–' . $b['max_salary'] . ')'); ?></option>
-      <?php endforeach; ?>
-    </select>
-    <label>Reason *</label>
-    <textarea name="reason" required placeholder="e.g. Promotion to Senior; policy change effective Jan 2025"></textarea>
-    <button type="submit" class="sa-btn sa-btn-primary">Create (pending approval)</button>
-  </form>
+    <?php endif; ?>
+
+    <div class="content">
+
+        <!-- 1. ADJUSTMENT HISTORY (Main View) -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">Adjustment History</div>
+            </div>
+
+            <?php if (empty($adjustments)): ?>
+            <div class="empty-state">No adjustments yet.</div>
+            <?php else: ?>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Type</th>
+                        <th>Old</th>
+                        <th>New</th>
+                        <th>Effective</th>
+                        <th>Status</th>
+                        <th style="width: 50px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($adjustments as $a): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars(($a['last_name'] ?? '') . ', ' . ($a['first_name'] ?? '')); ?></td>
+                        <td><?php echo htmlspecialchars($a['adjustment_type']); ?></td>
+                        <td class="num">₦<?php echo $a['previous_amount'] !== null ? number_format((float)$a['previous_amount'], 0) : '—'; ?></td>
+                        <td class="num">₦<?php echo number_format((float)$a['new_amount'], 0); ?></td>
+                        <td><?php echo htmlspecialchars($a['effective_date']); ?></td>
+                        <td>
+                            <span class="status-badge status-<?php echo strtolower($a['status']); ?>">
+                                <span class="dot dot-<?php echo strtolower($a['status']); ?>"></span>
+                                <?php echo htmlspecialchars($a['status']); ?>
+                            </span>
+                        </td>
+                        <td style="text-align: center;">
+                            <?php if (strtolower($a['status']) === 'pending'): ?>
+                            <form class="action-btn" method="post" action="<?php echo htmlspecialchars($handlerUrl); ?>" style="display: inline;">
+                                <input type="hidden" name="action" value="approve">
+                                <input type="hidden" name="id" value="<?php echo (int)$a['id']; ?>">
+                                <button type="submit" class="btn btn-success btn-sm" title="Approve">✓</button>
+                            </form>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+        </div>
+
+        <!-- 2. CREATE ADJUSTMENT (Collapsed) -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">Create Adjustment</div>
+                <button class="btn btn-primary btn-sm" onclick="toggleForm('add-adjustment-form'); return false;">+ New Adjustment</button>
+            </div>
+
+            <div id="add-adjustment-form" class="add-form">
+                <form method="post" action="<?php echo htmlspecialchars($handlerUrl); ?>">
+                    <input type="hidden" name="action" value="create">
+                    
+                    <!-- Top row: Employee, Type -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Employee <span class="required">•</span></label>
+                            <select name="employee_id" required class="form-select">
+                                <option value="">Select Employee</option>
+                                <?php foreach ($employees as $emp): ?>
+                                <option value="<?php echo (int)$emp['employee_id']; ?>"><?php echo htmlspecialchars($emp['employee_code'] . ' – ' . $emp['last_name'] . ', ' . $emp['first_name']); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Type <span class="required">•</span></label>
+                            <select name="adjustment_type" required class="form-select">
+                                <option value="">Select Type</option>
+                                <option value="Promotion">Promotion</option>
+                                <option value="Merit increase">Merit increase</option>
+                                <option value="Market alignment">Market alignment</option>
+                                <option value="Temporary allowance">Temporary allowance</option>
+                                <option value="Correction">Correction</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Second row: Trigger, Salary band -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Trigger <span class="required">•</span></label>
+                            <select name="trigger_type" required class="form-select">
+                                <option value="">Select Trigger</option>
+                                <option value="Performance review">Performance review</option>
+                                <option value="Role change">Role change</option>
+                                <option value="Policy update">Policy update</option>
+                                <option value="Management decision">Management decision</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Salary Band (Optional)</label>
+                            <select name="salary_band_id" class="form-select" onchange="showBandRange(this)">
+                                <option value="">— None —</option>
+                                <?php foreach ($bands as $b): ?>
+                                <option value="<?php echo (int)$b['id']; ?>" data-min="<?php echo (float)$b['min_salary']; ?>" data-max="<?php echo (float)$b['max_salary']; ?>"><?php echo htmlspecialchars($b['pay_grade_name'] . ($b['grade_level_name'] ? ' – ' . $b['grade_level_name'] : '')); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div id="band-range" class="validation-inline" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Amounts row: Previous (read-only), New -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Previous Amount</label>
+                            <input type="number" name="previous_amount" class="form-input" placeholder="Read-only" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">New Amount <span class="required">•</span></label>
+                            <input type="number" name="new_amount" required class="form-input" placeholder="Enter new amount" step="1" min="0">
+                            <div id="band-warning" class="validation-warning" style="display: none;"></div>
+                        </div>
+                    </div>
+
+                    <!-- Dates row: Effective, End (if temporary) -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Effective Date <span class="required">•</span></label>
+                            <input type="date" name="effective_date" required class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">End Date (if temporary)</label>
+                            <input type="date" name="end_date" class="form-input">
+                        </div>
+                    </div>
+
+                    <!-- Reason -->
+                    <div class="form-row full">
+                        <div class="form-group">
+                            <label class="form-label">Reason <span class="required">•</span></label>
+                            <textarea name="reason" required class="form-textarea" placeholder="e.g. Promotion to Senior; market adjustment"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="form-actions" style="justify-content: flex-end;">
+                        <button type="submit" class="btn btn-primary btn-sm">Create. Pending approval</button>
+                        <button type="button" class="btn btn-sm" onclick="toggleForm('add-adjustment-form'); return false;">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
 </div>
 
-<div class="sa-card">
-  <h3>Adjustment history</h3>
-  <?php if (empty($adjustments)): ?>
-  <p class="sa-empty">No adjustment records yet. Create one above.</p>
-  <?php else: ?>
-  <table class="sa-table">
-    <thead>
-      <tr>
-        <th>Employee</th>
-        <th>Type</th>
-        <th>Trigger</th>
-        <th class="sa-num">Previous</th>
-        <th class="sa-num">New</th>
-        <th>Effective</th>
-        <th>End</th>
-        <th>Status</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-    <?php foreach ($adjustments as $a): ?>
-      <tr>
-        <td><?php echo htmlspecialchars(($a['last_name'] ?? '') . ', ' . ($a['first_name'] ?? '') . ' (' . ($a['employee_code'] ?? '') . ')'); ?></td>
-        <td><?php echo htmlspecialchars($a['adjustment_type']); ?></td>
-        <td><?php echo htmlspecialchars($a['trigger_type']); ?></td>
-        <td class="sa-num"><?php echo $a['previous_amount'] !== null ? number_format((float)$a['previous_amount'], 2) : '—'; ?></td>
-        <td class="sa-num"><?php echo number_format((float)$a['new_amount'], 2); ?></td>
-        <td><?php echo htmlspecialchars($a['effective_date']); ?></td>
-        <td><?php echo $a['end_date'] ? htmlspecialchars($a['end_date']) : '—'; ?></td>
-        <td><span class="sa-status-<?php echo $a['status']; ?>"><?php echo htmlspecialchars($a['status']); ?></span></td>
-        <td>
-          <?php if ($a['status'] === 'pending'): ?>
-          <form class="sa-inline-form" method="post" action="<?php echo htmlspecialchars($handlerUrl); ?>">
-            <input type="hidden" name="action" value="approve">
-            <input type="hidden" name="id" value="<?php echo (int)$a['id']; ?>">
-            <button type="submit" class="sa-btn sa-btn-success sa-btn-sm">Approve</button>
-          </form>
-          <form class="sa-inline-form" method="post" action="<?php echo htmlspecialchars($handlerUrl); ?>">
-            <input type="hidden" name="action" value="reject">
-            <input type="hidden" name="id" value="<?php echo (int)$a['id']; ?>">
-            <button type="submit" class="sa-btn sa-btn-danger sa-btn-sm">Reject</button>
-          </form>
-          <?php else: ?>
-          —
-          <?php endif; ?>
-        </td>
-      </tr>
-    <?php endforeach; ?>
-    </tbody>
-  </table>
-  <?php endif; ?>
-</div>
-</div>
+<script>
+function toggleForm(id) {
+    document.getElementById(id).classList.toggle('visible');
+}
+
+function showBandRange(select) {
+    const option = select.options[select.selectedIndex];
+    const range = document.getElementById('band-range');
+    
+    if (option.value && option.dataset.min && option.dataset.max) {
+        range.textContent = 'Band range: ₦' + Number(option.dataset.min).toLocaleString() + ' – ₦' + Number(option.dataset.max).toLocaleString();
+        range.style.display = 'block';
+    } else {
+        range.style.display = 'none';
+    }
+}
+
+// Band validation on new amount input
+document.querySelector('input[name="new_amount"]')?.addEventListener('change', function() {
+    const bandSelect = document.querySelector('select[name="salary_band_id"]');
+    const option = bandSelect.options[bandSelect.selectedIndex];
+    const warning = document.getElementById('band-warning');
+    
+    if (option.value && option.dataset.min && option.dataset.max) {
+        const newAmount = parseFloat(this.value);
+        const min = parseFloat(option.dataset.min);
+        const max = parseFloat(option.dataset.max);
+        
+        if (newAmount < min || newAmount > max) {
+            warning.textContent = '⚠ Outside band range. Requires approval.';
+            warning.style.display = 'block';
+        } else {
+            warning.style.display = 'none';
+        }
+    }
+});
+
+// Handle form submissions via AJAX
+document.querySelectorAll('form:not(.action-btn)').forEach(form => {
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const handler = this.getAttribute('action');
+        const action = formData.get('action');
+        
+        fetch(handler, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
+        .then(data => {
+            // Create or update message bar
+            let msgBar = document.querySelector('.msg-bar');
+            if (!msgBar) {
+                msgBar = document.createElement('div');
+                msgBar.className = 'msg-bar';
+                document.querySelector('.content').parentNode.insertBefore(msgBar, document.querySelector('.content'));
+            }
+            
+            if (data.success) {
+                msgBar.innerHTML = `<div class="msg">✓ ${data.message}</div>`;
+                if (action === 'create') {
+                    form.reset();
+                    document.getElementById('add-adjustment-form').classList.remove('visible');
+                }
+            } else {
+                msgBar.innerHTML = `<div class="err">✕ ${data.message}</div>`;
+            }
+            
+            // Reload page after 1.5 seconds to show updated data
+            setTimeout(() => location.reload(), 1500);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            const msgBar = document.querySelector('.msg-bar') || (() => {
+                const bar = document.createElement('div');
+                bar.className = 'msg-bar';
+                document.querySelector('.content').parentNode.insertBefore(bar, document.querySelector('.content'));
+                return bar;
+            })();
+            msgBar.innerHTML = `<div class="err">✕ Error submitting form: ${error.message}</div>`;
+        });
+    });
+});
+</script>
+
+</body>
+</html>

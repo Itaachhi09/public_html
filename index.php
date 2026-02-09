@@ -133,13 +133,19 @@ if (session_status() === PHP_SESSION_NONE) {
         const data = await response.json();
 
         if (data.success) {
-          // Store token for API calls (payroll, HR modules). API returns { data: { token, user } }
-          const token = (data.data && data.data.token) ? data.data.token : data.token;
-          if (token) {
-            localStorage.setItem('token', token);
+          // Check if OTP verification is required (Two-Factor Authentication)
+          if (data.data && data.data.otp_required === true) {
+            // OTP sent, redirect to OTP verification page
+            window.location.href = 'verify-otp.php';
+          } else {
+            // Traditional login (OTP not required) - store token and redirect
+            const token = (data.data && data.data.token) ? data.data.token : data.token;
+            if (token) {
+              localStorage.setItem('token', token);
+            }
+            // Login successful, redirect to dashboard
+            window.location.href = 'dashboard.php';
           }
-          // Login successful, redirect to dashboard
-          window.location.href = 'dashboard.php';
         } else {
           // Login failed
           alert(data.message || 'Login failed. Please try again.');

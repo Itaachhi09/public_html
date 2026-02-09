@@ -476,6 +476,75 @@
     color: #1f2937;
   }
 
+  /* Modal Styles */
+  .payslip-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .payslip-modal-overlay.active {
+    display: flex;
+  }
+
+  .payslip-modal {
+    background: white;
+    border-radius: 8px;
+    max-width: 900px;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+  }
+
+  .payslip-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+  }
+
+  .payslip-modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+  }
+
+  .payslip-modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #9ca3af;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .payslip-modal-close:hover {
+    color: #1f2937;
+    background: #e5e7eb;
+    border-radius: 4px;
+  }
+
+  .payslip-modal-body {
+    padding: 2rem;
+  }
+
   @media print {
     body {
       background: white;
@@ -584,11 +653,7 @@
             <td><span class="badge badge-generated">Generated</span></td>
             <td><span class="badge badge-sent">Sent</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="view">
-                <input type="hidden" name="payslip_id" value="PS-2026-02-001">
-                <button type="submit" class="btn btn-secondary btn-sm">View</button>
-              </form>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayslipModal('PS-2026-02-001', 'EMP-001', 'John Doe')">View</button>
             </td>
           </tr>
           <tr>
@@ -599,11 +664,7 @@
             <td><span class="badge badge-generated">Generated</span></td>
             <td><span class="badge badge-sent">Sent</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="view">
-                <input type="hidden" name="payslip_id" value="PS-2026-02-002">
-                <button type="submit" class="btn btn-secondary btn-sm">View</button>
-              </form>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayslipModal('PS-2026-02-002', 'EMP-002', 'Jane Smith')">View</button>
             </td>
           </tr>
           <tr>
@@ -614,11 +675,7 @@
             <td><span class="badge badge-generated">Generated</span></td>
             <td><span class="badge badge-sent">Sent</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="view">
-                <input type="hidden" name="payslip_id" value="PS-2026-02-003">
-                <button type="submit" class="btn btn-secondary btn-sm">View</button>
-              </form>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayslipModal('PS-2026-02-003', 'EMP-003', 'Michael Johnson')">View</button>
             </td>
           </tr>
           <tr>
@@ -629,11 +686,7 @@
             <td><span class="badge badge-generated">Generated</span></td>
             <td><span class="badge badge-sent">Sent</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="view">
-                <input type="hidden" name="payslip_id" value="PS-2026-02-004">
-                <button type="submit" class="btn btn-secondary btn-sm">View</button>
-              </form>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayslipModal('PS-2026-02-004', 'EMP-004', 'Sarah Williams')">View</button>
             </td>
           </tr>
           <tr>
@@ -644,11 +697,7 @@
             <td><span class="badge badge-generated">Generated</span></td>
             <td><span class="badge badge-sent">Sent</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="view">
-                <input type="hidden" name="payslip_id" value="PS-2026-02-005">
-                <button type="submit" class="btn btn-secondary btn-sm">View</button>
-              </form>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayslipModal('PS-2026-02-005', 'EMP-005', 'Robert Brown')">View</button>
             </td>
           </tr>
           <tr>
@@ -659,11 +708,7 @@
             <td><span class="badge badge-generated">Generated</span></td>
             <td><span class="badge badge-sent">Sent</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="view">
-                <input type="hidden" name="payslip_id" value="PS-2026-02-006">
-                <button type="submit" class="btn btn-secondary btn-sm">View</button>
-              </form>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayslipModal('PS-2026-02-006', 'EMP-006', 'Emily Davis')">View</button>
             </td>
           </tr>
           <tr>
@@ -674,11 +719,7 @@
             <td><span class="badge badge-generated">Generated</span></td>
             <td><span class="badge badge-sent">Sent</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="view">
-                <input type="hidden" name="payslip_id" value="PS-2026-02-007">
-                <button type="submit" class="btn btn-secondary btn-sm">View</button>
-              </form>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayslipModal('PS-2026-02-007', 'EMP-007', 'David Martinez')">View</button>
             </td>
           </tr>
           <tr>
@@ -689,11 +730,7 @@
             <td><span class="badge badge-generated">Generated</span></td>
             <td><span class="badge badge-sent">Sent</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="view">
-                <input type="hidden" name="payslip_id" value="PS-2026-02-008">
-                <button type="submit" class="btn btn-secondary btn-sm">View</button>
-              </form>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayslipModal('PS-2026-02-008', 'EMP-008', 'Jessica Wilson')">View</button>
             </td>
           </tr>
         </tbody>
@@ -1010,3 +1047,85 @@ Payroll Department</textarea>
   </div>
 
 </div>
+
+<!-- Modal for Payslip View -->
+<div class="payslip-modal-overlay" id="payslip-modal-overlay" onclick="if(event.target === this) window.closePayslipModal()">
+  <div class="payslip-modal">
+    <div class="payslip-modal-header">
+      <h2 class="payslip-modal-title" id="payslip-modal-title">Payslip Details</h2>
+      <button type="button" class="payslip-modal-close" onclick="window.closePayslipModal()">×</button>
+    </div>
+    <div class="payslip-modal-body" id="payslip-modal-body">
+      <!-- Content will be injected here -->
+    </div>
+  </div>
+</div>
+
+<script>
+// Payslip Modal Functions
+window.openPayslipModal = function(payslipId, empId, empName) {
+  const modal = document.getElementById('payslip-modal-overlay');
+  const title = document.getElementById('payslip-modal-title');
+  const body = document.getElementById('payslip-modal-body');
+  
+  title.textContent = 'Payslip - ' + empName + ' (' + empId + ')';
+  
+  // Sample payslip data
+  let html = '<div class="payslip-preview" style="padding: 1.5rem; margin: 0;">';
+  html += '<div class="payslip-header" style="margin-bottom: 1rem;">';
+  html += '<div class="company-info"><h3 style="font-size: 14px; margin-bottom: 0.25rem;">Healthcare Hospital Inc.</h3>';
+  html += '<p style="margin: 0; font-size: 11px; color: #6b7280;">Payslip ID: ' + payslipId + '</p></div>';
+  html += '<div class="payslip-title"><h2 style="font-size: 14px; margin: 0;">PAYSLIP</h2>';
+  html += '<p style="margin: 0.25rem 0 0 0; font-size: 11px; color: #6b7280;">Pay Period: February 1-15, 2026</p></div>';
+  html += '</div>';
+  
+  html += '<div class="employee-info" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">';
+  html += '<div><div class="info-item" style="display: flex; justify-content: space-between; border-bottom: 1px solid #e5e7eb; padding: 0.5rem 0;">';
+  html += '<label style="font-size: 12px; color: #6b7280;">Employee ID</label><value style="font-size: 12px;">' + empId + '</value></div>';
+  html += '<div class="info-item" style="display: flex; justify-content: space-between; border-bottom: 1px solid #e5e7eb; padding: 0.5rem 0;">';
+  html += '<label style="font-size: 12px; color: #6b7280;">Name</label><value style="font-size: 12px;">' + empName + '</value></div></div>';
+  html += '<div><div class="info-item" style="display: flex; justify-content: space-between; border-bottom: 1px solid #e5e7eb; padding: 0.5rem 0;">';
+  html += '<label style="font-size: 12px; color: #6b7280;">Pay Date</label><value style="font-size: 12px;">February 22, 2026</value></div>';
+  html += '<div class="info-item" style="display: flex; justify-content: space-between; padding: 0.5rem 0;">';
+  html += '<label style="font-size: 12px; color: #6b7280;">Status</label><value style="font-size: 12px;"><span class="badge badge-generated">Generated</span></value></div></div>';
+  html += '</div>';
+  
+  html += '<div style="border-top: 1px solid #e5e7eb; padding-top: 1rem; margin-top: 1rem;">';
+  html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">';
+  html += '<label>Basic Pay</label><value style="font-family: monospace;">6,000.00</value></div>';
+  html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">';
+  html += '<label>Incentives</label><value style="font-family: monospace;">2,000.00</value></div>';
+  html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; font-weight: 600; border-top: 2px solid #e5e7eb; padding-top: 0.75rem; font-size: 12px;">';
+  html += '<label>Gross Pay</label><value style="font-family: monospace;">11,000.00</value></div>';
+  html += '</div>';
+  
+  html += '<div style="border-top: 1px solid #e5e7eb; padding-top: 1rem; margin-top: 1rem;">';
+  html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">';
+  html += '<label>SSS</label><value style="font-family: monospace;">406.24</value></div>';
+  html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">';
+  html += '<label>PhilHealth</label><value style="font-family: monospace;">247.50</value></div>';
+  html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; font-weight: 600; border-top: 2px solid #e5e7eb; padding-top: 0.75rem; font-size: 12px;">';
+  html += '<label>Total Deductions</label><value style="font-family: monospace;">3,350.00</value></div>';
+  html += '</div>';
+  
+  html += '<div style="border-top: 2px solid #1f2937; padding-top: 1rem; margin-top: 1rem; display: flex; justify-content: space-between; font-weight: 700; font-size: 14px;">';
+  html += '<label>NET PAY</label><value style="font-family: monospace;">7,650.00</value></div>';
+  html += '</div>';
+  
+  body.innerHTML = html;
+  modal.classList.add('active');
+  body.scrollTop = 0;
+};
+
+window.closePayslipModal = function() {
+  const modal = document.getElementById('payslip-modal-overlay');
+  modal.classList.remove('active');
+};
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    window.closePayslipModal();
+  }
+});
+</script>

@@ -322,37 +322,37 @@ $notifications = 3;
       bottom: 0;
       width: 240px;
       background: linear-gradient(180deg, var(--primary) 0%, var(--primary-dark) 100%);
-      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.12);
+      box-shadow: 1px 0 3px rgba(0, 0, 0, 0.08);
       display: flex;
       flex-direction: column;
-      overflow-y: auto;
-      transition: width 0.3s ease;
+      overflow: hidden;
       z-index: 999;
     }
 
     .sidebar.collapsed {
-      width: 72px;
+      width: 240px;
     }
 
     /* Sidebar Top Section */
     .sidebar-top {
-      padding: 1rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 12px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 0.75rem;
+      gap: 8px;
+      flex-shrink: 0;
     }
 
     .sidebar-logo {
-      width: 40px;
-      height: 40px;
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 8px;
+      width: 32px;
+      height: 32px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 24px;
+      font-size: 18px;
       color: white;
       font-weight: bold;
       flex-shrink: 0;
@@ -361,16 +361,18 @@ $notifications = 3;
     .sidebar-status {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 6px;
       flex: 1;
+      min-width: 0;
     }
 
     .status-dot {
-      width: 8px;
-      height: 8px;
+      width: 6px;
+      height: 6px;
       background: var(--success);
       border-radius: 50%;
       animation: pulse 2s infinite;
+      flex-shrink: 0;
     }
 
     @keyframes pulse {
@@ -379,43 +381,50 @@ $notifications = 3;
     }
 
     .status-text {
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.8);
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.75);
       white-space: nowrap;
       overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     .sidebar.collapsed .status-text {
-      display: none;
+      display: block;
     }
 
     .toggle-btn {
       background: rgba(255, 255, 255, 0.1);
       border: none;
       color: white;
-      width: 32px;
-      height: 32px;
-      border-radius: 6px;
+      width: 28px;
+      height: 28px;
+      border-radius: 3px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
-      transition: background 0.2s ease;
+      font-size: 16px;
+      transition: background 180ms ease-in-out;
       flex-shrink: 0;
     }
 
     .toggle-btn:hover {
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .toggle-btn:active {
+      transform: scale(0.98);
+      transition: transform 80ms ease-out;
     }
 
     /* Sidebar Navigation */
     .sidebar-nav {
       flex: 1;
       overflow-y: auto;
-      padding: 1rem 0;
+      overflow-x: hidden;
+      padding: 4px 0;
       scrollbar-width: thin;
-      scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+      scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
     }
 
     .sidebar-nav::-webkit-scrollbar {
@@ -427,63 +436,83 @@ $notifications = 3;
     }
 
     .sidebar-nav::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.15);
       border-radius: 2px;
     }
 
+    .sidebar-nav::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
     .nav-section-title {
-      padding: 0.75rem 1rem;
-      font-size: 10px;
+      padding: 8px 12px;
+      font-size: 9px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 1px;
-      color: rgba(255, 255, 255, 0.5);
-      margin-top: 1.25rem;
+      letter-spacing: 0.8px;
+      color: rgba(255, 255, 255, 0.4);
+      margin-top: 10px;
+      margin-bottom: 4px;
     }
 
     .sidebar.collapsed .nav-section-title {
-      display: none;
+      display: block;
     }
 
     .nav-item {
-      padding: 0.75rem 1rem;
-      margin: 0.25rem 0.5rem;
-      border-radius: 6px;
+      padding: 6px 8px 6px 12px;
+      margin: 2px 4px;
+      border-radius: 3px;
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      color: rgba(255, 255, 255, 0.7);
+      gap: 8px;
+      color: rgba(255, 255, 255, 0.65);
       text-decoration: none;
-      font-size: 14px;
+      font-size: 13px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 180ms ease-in-out;
       position: relative;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      border-left: 2px solid transparent;
     }
 
     .nav-item i {
-      font-size: 16px;
-      min-width: 18px;
+      font-size: 14px;
+      min-width: 16px;
       flex-shrink: 0;
+      transition: transform 180ms ease-in-out;
     }
 
     .nav-item:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: white;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.95);
+    }
+
+    .nav-item:hover i {
+      transform: translateX(2px);
+    }
+
+    .nav-item:active {
+      transform: scale(0.98);
+      transition: transform 80ms ease-out;
     }
 
     .nav-item.active {
-      background: rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.12);
       color: white;
-      border-left: 3px solid white;
-      padding-left: calc(1rem - 3px);
+      border-left-color: var(--primary-light);
+      font-weight: 600;
+    }
+
+    .nav-item.active i {
+      font-weight: 600;
     }
 
     .sidebar.collapsed .nav-item {
-      padding: 0.75rem;
-      margin: 0.25rem auto;
+      padding: 6px 8px;
+      margin: 2px 4px;
       justify-content: center;
     }
 
@@ -492,11 +521,11 @@ $notifications = 3;
     }
 
     .sidebar.collapsed .nav-item.active {
-      border-left: none;
-      padding-left: 0.75rem;
+      border-left: 2px solid var(--primary-light);
+      padding-left: 8px;
     }
 
-    /* Tooltips for Collapsed Sidebar */
+    /* Tooltips for Sidebar */
     .nav-item {
       position: relative;
     }
@@ -507,16 +536,16 @@ $notifications = 3;
       left: 100%;
       top: 50%;
       transform: translateY(-50%);
-      margin-left: 0.5rem;
+      margin-left: 8px;
       background: var(--bg-dark);
       color: white;
-      padding: 0.5rem 0.75rem;
-      border-radius: 4px;
-      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 3px;
+      font-size: 11px;
       white-space: nowrap;
       pointer-events: none;
       z-index: 1001;
-      box-shadow: var(--shadow-lg);
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
     }
 
     /* Nav Items with Submenu */
@@ -525,34 +554,54 @@ $notifications = 3;
     }
 
     .nav-group-header {
-      padding: 0.75rem 1rem;
-      margin: 0.25rem 0.5rem;
-      border-radius: 6px;
+      padding: 6px 8px 6px 12px;
+      margin: 2px 4px;
+      border-radius: 3px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 0.75rem;
-      color: rgba(255, 255, 255, 0.7);
+      gap: 8px;
+      color: rgba(255, 255, 255, 0.65);
       cursor: pointer;
-      font-size: 14px;
-      transition: all 0.2s ease;
+      font-size: 13px;
+      transition: all 180ms ease-in-out;
+      border-left: 2px solid transparent;
+      position: relative;
     }
 
     .nav-group-header:hover {
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.95);
+    }
+
+    .nav-group-header:hover i:first-child {
+      transform: translateX(2px);
+    }
+
+    .nav-group-header:active {
+      transform: scale(0.98);
+      transition: transform 80ms ease-out;
+    }
+
+    .nav-group-header.active {
+      background: rgba(255, 255, 255, 0.12);
       color: white;
+      border-left-color: var(--primary-light);
+      font-weight: 600;
     }
 
     .nav-group-header i:first-child {
-      font-size: 18px;
-      min-width: 20px;
+      font-size: 14px;
+      min-width: 16px;
       flex-shrink: 0;
+      transition: transform 180ms ease-in-out;
     }
 
     .nav-group-header i:last-child {
-      font-size: 16px;
-      transition: transform 0.2s ease;
+      font-size: 14px;
+      transition: transform 180ms ease-in-out;
       margin-left: auto;
+      flex-shrink: 0;
     }
 
     .nav-group-header.active i:last-child {
@@ -569,8 +618,10 @@ $notifications = 3;
 
     .nav-submenu {
       display: none;
-      padding-left: 0;
-      background: rgba(0, 0, 0, 0.1);
+      padding: 0;
+      background: rgba(0, 0, 0, 0.05);
+      border-left: 1px solid rgba(255, 255, 255, 0.05);
+      margin: 2px 0;
     }
 
     .nav-submenu.active {
@@ -578,32 +629,49 @@ $notifications = 3;
     }
 
     .nav-subitem {
-      padding: 0.5rem 1rem 0.5rem 3rem;
-      margin: 0.1rem 0.5rem;
-      border-radius: 4px;
+      padding: 5px 8px 5px 32px;
+      margin: 1px 0;
+      border-radius: 0;
       display: flex;
       align-items: center;
-      gap: 0.5rem;
-      color: rgba(255, 255, 255, 0.6);
+      gap: 8px;
+      color: rgba(255, 255, 255, 0.55);
       text-decoration: none;
-      font-size: 13px;
+      font-size: 12px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 180ms ease-in-out;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      border-left: 2px solid transparent;
+    }
+
+    .nav-subitem i {
+      font-size: 12px;
+      min-width: 14px;
+      flex-shrink: 0;
+      transition: transform 180ms ease-in-out;
     }
 
     .nav-subitem:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .nav-subitem:hover i {
+      transform: translateX(2px);
+    }
+
+    .nav-subitem:active {
+      transform: scale(0.98);
+      transition: transform 80ms ease-out;
     }
 
     .nav-subitem.active {
       color: white;
-      background: rgba(255, 255, 255, 0.15);
-      border-left: 2px solid white;
-      padding-left: calc(3rem - 2px);
+      background: rgba(255, 255, 255, 0.1);
+      border-left-color: var(--primary-light);
+      font-weight: 600;
     }
 
     .sidebar.collapsed .nav-submenu {
@@ -612,26 +680,45 @@ $notifications = 3;
 
     /* Sidebar Footer */
     .sidebar-footer {
-      padding: 1rem;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 8px 4px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
       margin-top: auto;
+      flex-shrink: 0;
     }
 
     .sidebar-footer a {
       display: flex;
       align-items: center;
-      gap: 0.75rem;
-      color: rgba(255, 255, 255, 0.7);
+      gap: 8px;
+      color: rgba(255, 255, 255, 0.65);
       text-decoration: none;
-      font-size: 14px;
-      transition: all 0.2s ease;
-      padding: 0.5rem;
-      border-radius: 4px;
+      font-size: 13px;
+      transition: all 180ms ease-in-out;
+      padding: 6px 8px 6px 12px;
+      border-radius: 3px;
+      margin: 2px 4px;
+      border-left: 2px solid transparent;
     }
 
     .sidebar-footer a:hover {
-      background: rgba(255, 255, 255, 0.1);
-      color: white;
+      background: rgba(255, 255, 255, 0.08);
+      color: rgba(255, 255, 255, 0.95);
+    }
+
+    .sidebar-footer a:hover i {
+      transform: translateX(2px);
+    }
+
+    .sidebar-footer a:active {
+      transform: scale(0.98);
+      transition: transform 80ms ease-out;
+    }
+
+    .sidebar-footer a i {
+      font-size: 14px;
+      min-width: 16px;
+      flex-shrink: 0;
+      transition: transform 180ms ease-in-out;
     }
 
     .sidebar.collapsed .sidebar-footer a span {
@@ -642,14 +729,14 @@ $notifications = 3;
     .main-container {
       margin-top: 64px;
       margin-left: 240px;
-      transition: margin-left 0.3s ease;
+      transition: margin-left 180ms ease-in-out;
       flex: 1;
       display: flex;
       flex-direction: column;
     }
 
     .main-container.expanded {
-      margin-left: 72px;
+      margin-left: 240px;
     }
 
     .page-header {
@@ -815,35 +902,35 @@ $notifications = 3;
       }
 
       .sidebar {
-        width: 72px;
+        width: 240px;
       }
 
       .sidebar.collapsed {
-        width: 72px;
+        width: 240px;
       }
 
       .toggle-btn {
-        display: none;
+        display: flex;
       }
 
       .main-container {
-        margin-left: 72px;
+        margin-left: 240px;
       }
 
       .main-container.expanded {
-        margin-left: 72px;
+        margin-left: 240px;
       }
 
       .nav-section-title {
-        display: none;
+        display: block;
       }
 
       .nav-item span, .nav-group-header span {
-        display: none;
+        display: inline;
       }
 
       .user-info {
-        display: none;
+        display: flex;
       }
 
       .search-bar {
@@ -1353,11 +1440,9 @@ $notifications = 3;
   <script>
     // ===== SIDEBAR & NAVIGATION =====
     function toggleSidebar() {
-      const sidebar = document.getElementById('sidebar');
-      const mainContainer = document.getElementById('main-container');
-      
-      sidebar.classList.toggle('collapsed');
-      mainContainer.classList.toggle('expanded');
+      // Sidebar is now fixed at 240px, no collapse
+      // This function kept for backward compatibility
+      event.preventDefault();
     }
 
     function toggleNavGroup(headerElement) {

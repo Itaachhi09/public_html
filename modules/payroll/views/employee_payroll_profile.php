@@ -307,6 +307,75 @@
     font-size: 14px;
     margin: 0;
   }
+
+  /* Profile Modal Styles */
+  .profile-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .profile-modal-overlay.active {
+    display: flex;
+  }
+
+  .profile-modal {
+    background: white;
+    border-radius: 8px;
+    max-width: 600px;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+  }
+
+  .profile-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f9fafb;
+  }
+
+  .profile-modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+  }
+
+  .profile-modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #9ca3af;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .profile-modal-close:hover {
+    color: #1f2937;
+    background: #e5e7eb;
+    border-radius: 4px;
+  }
+
+  .profile-modal-body {
+    padding: 2rem;
+  }
 </style>
 
 <div class="profile-container">
@@ -353,11 +422,7 @@
             <td><span class="status-badge status-active">Active</span></td>
             <td><span class="status-badge status-active">Configured</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="edit">
-                <input type="hidden" name="employee_id" value="EMP-001">
-                <button type="submit" class="btn btn-secondary">View/Edit</button>
-              </form>
+              <button type="button" class="btn btn-secondary" onclick="window.openProfileModal('EMP-001', 'John Doe', 'edit')">View/Edit</button>
             </td>
           </tr>
           <tr>
@@ -367,11 +432,7 @@
             <td><span class="status-badge status-active">Active</span></td>
             <td><span class="status-badge status-active">Configured</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="edit">
-                <input type="hidden" name="employee_id" value="EMP-002">
-                <button type="submit" class="btn btn-secondary">View/Edit</button>
-              </form>
+              <button type="button" class="btn btn-secondary" onclick="window.openProfileModal('EMP-002', 'Jane Smith', 'edit')">View/Edit</button>
             </td>
           </tr>
           <tr>
@@ -381,11 +442,7 @@
             <td><span class="status-badge status-inactive">Inactive</span></td>
             <td><span class="status-badge status-no-profile">No Profile</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="create">
-                <input type="hidden" name="employee_id" value="EMP-003">
-                <button type="submit" class="btn btn-primary">Create Profile</button>
-              </form>
+              <button type="button" class="btn btn-primary" onclick="window.openProfileModal('EMP-003', 'Michael Johnson', 'create')">Create Profile</button>
             </td>
           </tr>
           <tr>
@@ -395,11 +452,7 @@
             <td><span class="status-badge status-active">Active</span></td>
             <td><span class="status-badge status-active">Configured</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="edit">
-                <input type="hidden" name="employee_id" value="EMP-004">
-                <button type="submit" class="btn btn-secondary">View/Edit</button>
-              </form>
+              <button type="button" class="btn btn-secondary" onclick="window.openProfileModal('EMP-004', 'Sarah Williams', 'edit')">View/Edit</button>
             </td>
           </tr>
           <tr>
@@ -655,3 +708,75 @@
   </div>
 
 </div>
+
+<!-- Profile Modal -->
+<div class="profile-modal-overlay" id="profile-modal-overlay" onclick="if(event.target === this) window.closeProfileModal()">
+  <div class="profile-modal">
+    <div class="profile-modal-header">
+      <h2 class="profile-modal-title" id="profile-modal-title">Employee Profile</h2>
+      <button type="button" class="profile-modal-close" onclick="window.closeProfileModal()">×</button>
+    </div>
+    <div class="profile-modal-body" id="profile-modal-body">
+      <!-- Content will be injected here -->
+    </div>
+  </div>
+</div>
+
+<script>
+// Profile Modal Functions
+window.openProfileModal = function(empId, empName, action) {
+  const modal = document.getElementById('profile-modal-overlay');
+  const title = document.getElementById('profile-modal-title');
+  const body = document.getElementById('profile-modal-body');
+  
+  title.textContent = (action === 'create' ? 'Create ' : 'View/Edit ') + 'Payroll Profile - ' + empName;
+  
+  let html = '<div style="padding: 1rem;">';
+  html += '<div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">';
+  html += '<h3 style="margin: 0 0 1rem 0; font-size: 14px; font-weight: 600; color: #1f2937;">Employee Information</h3>';
+  html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">';
+  html += '<div><label style="font-size: 11px; color: #6b7280; font-weight: 500;">Employee ID</label><div style="font-size: 14px; font-weight: 600; color: #1f2937;">' + empId + '</div></div>';
+  html += '<div><label style="font-size: 11px; color: #6b7280; font-weight: 500;">Name</label><div style="font-size: 14px; font-weight: 600; color: #1f2937;">' + empName + '</div></div>';
+  html += '</div>';
+  html += '</div>';
+  
+  html += '<div style="background: white; padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 1.5rem;">';
+  html += '<h3 style="margin: 0 0 1rem 0; font-size: 14px; font-weight: 600; color: #1f2937;">Payroll Settings</h3>';
+  html += '<div style="display: grid; gap: 1rem;">';
+  html += '<div><label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 500; color: #374151;"><input type="checkbox" checked style="width: 16px; height: 16px;"> Payroll Eligible</label></div>';
+  html += '<div><label style="font-size: 12px; color: #6b7280; font-weight: 500;">Pay Frequency</label><div style="font-size: 13px; color: #1f2937;">Monthly</div></div>';
+  html += '<div><label style="font-size: 12px; color: #6b7280; font-weight: 500;">Basic Salary</label><div style="font-size: 13px; color: #1f2937; font-family: monospace; font-weight: 600;">₱6,000.00</div></div>';
+  html += '</div>';
+  html += '</div>';
+  
+  html += '<div style="background: white; padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px;">';
+  html += '<h3 style="margin: 0 0 1rem 0; font-size: 14px; font-weight: 600; color: #1f2937;">Bank Account</h3>';
+  html += '<div style="display: grid; gap: 1rem;">';
+  html += '<div><label style="font-size: 12px; color: #6b7280; font-weight: 500;">Bank Name</label><div style="font-size: 13px; color: #1f2937;">BDO</div></div>';
+  html += '<div><label style="font-size: 12px; color: #6b7280; font-weight: 500;">Account Number</label><div style="font-size: 13px; color: #1f2937; font-family: monospace;">•••••••••••...1234</div></div>';
+  html += '<div><label style="font-size: 12px; color: #6b7280; font-weight: 500;">Account Type</label><div style="font-size: 13px; color: #1f2937;">Savings</div></div>';
+  html += '</div>';
+  html += '</div>';
+  
+  html += '<div style="margin-top: 1.5rem; display: flex; gap: 1rem;">';
+  html += '<button type="button" onclick="window.closeProfileModal()" class="btn btn-primary" style="flex: 1;">Close</button>';
+  html += '</div>';
+  html += '</div>';
+  
+  body.innerHTML = html;
+  modal.classList.add('active');
+  body.scrollTop = 0;
+};
+
+window.closeProfileModal = function() {
+  const modal = document.getElementById('profile-modal-overlay');
+  modal.classList.remove('active');
+};
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    window.closeProfileModal();
+  }
+});
+</script>

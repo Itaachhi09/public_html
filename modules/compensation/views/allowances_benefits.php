@@ -1,7 +1,7 @@
 <?php
 /**
- * Allowances and Benefits View
- * Manage non-salary compensation. Define benefits: taxable, eligible roles, effective dates. PHP/HTML/CSS only; no JS.
+ * Allowances and Benefits - Modern Design
+ * Manage non-salary compensation benefits
  */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -14,128 +14,278 @@ $benefits = $benefitModel->getAll(false);
 
 $handlerUrl = 'modules/compensation/allowances_benefits_handler.php';
 ?>
-<div class="main-content allowances-benefits-content">
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Allowances & Benefits</title>
 <style>
-.allowances-benefits-content { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #1f2937; }
-.ab-header { margin-bottom: 1.5rem; }
-.ab-title { font-size: 1.5rem; font-weight: 600; margin: 0 0 0.25rem 0; }
-.ab-subtitle { font-size: 0.875rem; color: #6b7280; margin: 0; }
-.ab-rules { background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.5rem; font-size: 0.8125rem; color: #92400e; }
-.ab-rules strong { display: block; margin-bottom: 0.25rem; }
-.ab-msg { background: #d1fae5; border: 1px solid #10b981; color: #065f46; padding: 0.5rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.875rem; }
-.ab-err { background: #fee2e2; border: 1px solid #ef4444; color: #991b1b; padding: 0.5rem 1rem; border-radius: 6px; margin-bottom: 1rem; font-size: 0.875rem; }
-.ab-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-.ab-card h3 { font-size: 1rem; font-weight: 600; margin: 0 0 0.75rem 0; padding-bottom: 0.5rem; border-bottom: 1px solid #e5e7eb; }
-.ab-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
-.ab-table th, .ab-table td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #f3f4f6; }
-.ab-table th { font-weight: 600; color: #374151; background: #f9fafb; }
-.ab-form label { display: block; font-size: 0.75rem; font-weight: 500; color: #374151; margin-bottom: 0.25rem; }
-.ab-form input, .ab-form select, .ab-form textarea { width: 100%; padding: 0.375rem 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.875rem; margin-bottom: 0.5rem; box-sizing: border-box; }
-.ab-form .ab-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-.ab-form input[type=checkbox] { width: auto; margin-right: 0.5rem; }
-.ab-btn { display: inline-block; padding: 0.375rem 0.75rem; font-size: 0.8125rem; font-weight: 500; border-radius: 6px; border: 1px solid transparent; cursor: pointer; text-decoration: none; }
-.ab-btn-primary { background: #1e40af; color: #fff; border-color: #1e40af; }
-.ab-btn-outline { background: #fff; color: #374151; border-color: #d1d5db; }
-.ab-btn-danger { background: #b91c1c; color: #fff; }
-.ab-btn-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
-.ab-empty { color: #9ca3af; font-size: 0.875rem; padding: 1rem; text-align: center; }
-.ab-inline-form { display: inline; }
-.ab-badge { font-size: 0.7rem; padding: 0.2rem 0.4rem; border-radius: 4px; background: #e5e7eb; color: #374151; }
-.ab-badge-active { background: #d1fae5; color: #065f46; }
-.ab-badge-inactive { background: #fee2e2; color: #991b1b; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background: #f5f5f5;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    color: #1f2937;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.container { width: 100%; background: #fff; }
+.header { padding: 16px 24px; border-bottom: 1px solid #e5e7eb; }
+.title { font-size: 17px; font-weight: 600; color: #111827; }
+
+.info-row { padding: 8px 24px; color: #6b7280; font-size: 11px; border-bottom: 1px solid #e5e7eb; }
+
+.content { max-width: 1080px; }
+.msg-bar { padding: 12px 24px; display: flex; gap: 8px; }
+.msg { background: #d1fae5; border-left: 3px solid #10b981; color: #065f46; padding: 8px 12px; border-radius: 3px; font-size: 12px; flex: 1; }
+.err { background: #fee2e2; border-left: 3px solid #ef4444; color: #991b1b; padding: 8px 12px; border-radius: 3px; font-size: 12px; flex: 1; }
+
+.section { padding: 12px 24px; border-bottom: 1px solid #e5e7eb; }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.section-title { font-size: 14px; font-weight: 600; color: #111827; }
+
+.table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 8px; }
+.table th { background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; height: 28px; }
+.table td { padding: 6px 8px; border-bottom: 1px solid #f3f4f6; height: 30px; vertical-align: middle; }
+.table tbody tr:hover { background: #f9fafb; }
+.table .code { font-family: 'Courier New', monospace; background: #f3f4f6; padding: 2px 4px; border-radius: 2px; font-size: 11px; }
+
+.badge { font-size: 10px; padding: 2px 6px; border-radius: 3px; font-weight: 600; text-transform: uppercase; display: inline-block; }
+.badge-active { background: #d1fae5; color: #065f46; }
+.badge-inactive { background: #f3f4f6; color: #6b7280; }
+
+.btn { padding: 6px 12px; font-size: 12px; font-weight: 500; border: 1px solid #d1d5db; background: #fff; color: #374151; border-radius: 4px; cursor: pointer; height: 28px; display: inline-flex; align-items: center; }
+.btn:hover { border-color: #9ca3af; background: #f9fafb; }
+.btn-primary { background: #1e40af; color: #fff; border-color: #1e40af; }
+.btn-primary:hover { background: #1c3aa0; }
+.btn-sm { padding: 4px 8px; font-size: 11px; height: 24px; }
+
+.empty-state { padding: 24px 8px; color: #9ca3af; font-size: 12px; }
+
+.add-form { display: none; background: #f9fafb; padding: 12px; border: 1px solid #e5e7eb; border-radius: 4px; margin-bottom: 8px; }
+.add-form.visible { display: block; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.form-row.full { grid-template-columns: 1fr; }
+.form-group { display: flex; flex-direction: column; gap: 3px; }
+.form-label { font-size: 11px; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.5px; }
+.required { color: #ef4444; }
+
+.form-input, .form-select, .form-textarea { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 3px; font-size: 12px; font-family: inherit; color: #1f2937; height: 30px; }
+.form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: #1e40af; box-shadow: 0 0 0 2px rgba(30, 64, 175, 0.1); }
+.form-textarea { height: auto; min-height: 50px; max-height: 50px; resize: none; }
+
+.form-actions { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
+
+.checkbox-inline { display: flex; align-items: center; gap: 6px; font-size: 11px; }
+.checkbox-inline input { width: auto; cursor: pointer; }
+
+.role-list { position: relative; cursor: help; }
+.role-tooltip { display: none; position: absolute; background: #1f2937; color: #fff; padding: 6px 8px; border-radius: 3px; font-size: 10px; z-index: 100; white-space: nowrap; bottom: 120%; left: 50%; transform: translateX(-50%); }
+.role-list:hover .role-tooltip { display: block; }
+
+.action-icon { cursor: pointer; text-align: center; }
+.action-icon button { background: none; border: none; color: #374151; cursor: pointer; font-size: 14px; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+.action-icon button:hover { color: #1f2937; }
+
+.lock-icon { font-size: 11px; color: #6b7280; }
+
+@media (max-width: 768px) {
+    .form-row { grid-template-columns: 1fr; }
+    .section { padding: 12px 16px; }
+}
 </style>
+</head>
+<body>
 
-<div class="ab-header">
-  <h1 class="ab-title">Allowances and Benefits</h1>
-  <p class="ab-subtitle">Manage non-salary compensation. Define benefits with taxable flag, eligible roles, and effective dates. Benefits attach to duty or role; they do not affect salary bands. Benefit data is passed to Payroll as reference.</p>
-</div>
+<div class="container">
 
-<div class="ab-rules">
-  <strong>Rules</strong>
-  Benefits attach to duty or role. Benefits do not affect salary bands. Output: benefit data passed to Payroll as reference.
-</div>
-
-<?php if (!empty($_GET['msg'])): ?>
-<div class="ab-msg"><?php echo htmlspecialchars(urldecode($_GET['msg'])); ?></div>
-<?php endif; ?>
-<?php if (!empty($_GET['err'])): ?>
-<div class="ab-err"><?php echo htmlspecialchars(urldecode($_GET['err'])); ?></div>
-<?php endif; ?>
-
-<div class="ab-card">
-  <h3>Define benefit</h3>
-  <form class="ab-form" method="post" action="<?php echo htmlspecialchars($handlerUrl); ?>">
-    <input type="hidden" name="action" value="create">
-    <div class="ab-row">
-      <div><label>Code *</label><input type="text" name="code" required placeholder="e.g. FREE_MEALS_TID"></div>
-      <div><label>Name *</label><input type="text" name="name" required placeholder="e.g. Free Meals TID"></div>
+    <!-- Header -->
+    <div class="header">
+        <h1 class="title">Allowances &amp; Benefits</h1>
     </div>
-    <label>Description</label>
-    <textarea name="description" rows="2" placeholder="e.g. Free meals three times daily on duty"></textarea>
-    <label><input type="checkbox" name="taxable" value="1"> Taxable</label>
-    <div class="ab-row">
-      <div>
-        <label>Attach to *</label>
-        <select name="attach_to" required>
-          <option value="role">Role</option>
-          <option value="duty">Duty</option>
-        </select>
-      </div>
-      <div><label>Eligible roles</label><input type="text" name="eligible_roles" placeholder="e.g. ER Staff,Nurse,Doctor or All" value="All"></div>
+
+    <!-- Info Row -->
+    <div class="info-row">
+        Benefits attach to duty or role. Payroll reads as reference only.
     </div>
-    <div class="ab-row">
-      <div><label>Effective from *</label><input type="date" name="effective_from" required></div>
-      <div><label>Effective to (optional)</label><input type="date" name="effective_to" placeholder="Leave blank for no end"></div>
+
+    <!-- Messages -->
+    <?php if (!empty($_GET['msg']) || !empty($_GET['err'])): ?>
+    <div class="msg-bar">
+        <?php if (!empty($_GET['msg'])): ?>
+        <div class="msg"><?php echo htmlspecialchars(urldecode($_GET['msg'])); ?></div>
+        <?php endif; ?>
+        <?php if (!empty($_GET['err'])): ?>
+        <div class="err"><?php echo htmlspecialchars(urldecode($_GET['err'])); ?></div>
+        <?php endif; ?>
     </div>
-    <button type="submit" class="ab-btn ab-btn-primary">Add benefit</button>
-  </form>
+    <?php endif; ?>
+
+    <div class="content">
+
+        <!-- 1. BENEFIT DEFINITIONS TABLE (Primary Focus) -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">Benefit Definitions</div>
+            </div>
+
+            <?php if (empty($benefits)): ?>
+            <div class="empty-state">No benefits defined yet.</div>
+            <?php else: ?>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Tax</th>
+                        <th>Roles</th>
+                        <th>Period</th>
+                        <th>Attach</th>
+                        <th>Status</th>
+                        <th style="width: 50px;"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($benefits as $b): 
+                        $roles = $b['eligible_roles'] ?? 'All';
+                        $roleParts = explode(',', $roles);
+                        $firstRole = trim($roleParts[0]);
+                        $moreCount = count($roleParts) - 1;
+                    ?>
+                    <tr>
+                        <td><span class="code"><?php echo htmlspecialchars($b['code']); ?></span></td>
+                        <td><?php echo htmlspecialchars($b['name']); ?></td>
+                        <td><?php echo !empty($b['taxable']) ? 'Yes' : 'No'; ?></td>
+                        <td>
+                            <?php if ($moreCount > 0): ?>
+                            <span class="role-list">
+                                <?php echo htmlspecialchars($firstRole); ?> <strong>+<?php echo $moreCount; ?></strong>
+                                <div class="role-tooltip"><?php echo htmlspecialchars($roles); ?></div>
+                            </span>
+                            <?php else: ?>
+                            <?php echo htmlspecialchars($firstRole); ?>
+                            <?php endif; ?>
+                        </td>
+                        <td><?php 
+                            $period = htmlspecialchars($b['effective_from']);
+                            if (!empty($b['effective_to'])) {
+                                $period .= ' – ' . htmlspecialchars($b['effective_to']);
+                            }
+                            echo $period;
+                        ?></td>
+                        <td><?php echo htmlspecialchars(strlen($b['attach_to']) > 4 ? substr($b['attach_to'], 0, 4) : $b['attach_to']); ?></td>
+                        <td><span class="badge badge-<?php echo !empty($b['is_active']) ? 'active' : 'inactive'; ?>"><?php echo !empty($b['is_active']) ? 'Active' : 'Inactive'; ?></span></td>
+                        <td class="action-icon">
+                            <?php if (!empty($b['is_active'])): ?>
+                            <form method="post" action="<?php echo htmlspecialchars($handlerUrl); ?>" style="display: inline;">
+                                <input type="hidden" name="action" value="deactivate">
+                                <input type="hidden" name="id" value="<?php echo (int)$b['id']; ?>">
+                                <button type="submit" title="Deactivate">−</button>
+                            </form>
+                            <?php else: ?>
+                            —
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php endif; ?>
+        </div>
+
+        <!-- 2. DEFINE BENEFIT FORM (Collapsed) -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">Define Benefit</div>
+                <button class="btn btn-primary btn-sm" onclick="toggleForm('add-benefit-form'); return false;">+ Add benefit</button>
+            </div>
+
+            <div id="add-benefit-form" class="add-form">
+                <form method="post" action="<?php echo htmlspecialchars($handlerUrl); ?>">
+                    <input type="hidden" name="action" value="create">
+
+                    <!-- Top row: Code, Name -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Code <span class="required">•</span></label>
+                            <input type="text" name="code" required class="form-input" placeholder="FREE_MEALS" maxlength="50">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Name <span class="required">•</span></label>
+                            <input type="text" name="name" required class="form-input" placeholder="Free Meals Allowance" maxlength="255">
+                        </div>
+                    </div>
+
+                    <!-- Second row: Attach to, Eligible roles -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Attach To <span class="required">•</span></label>
+                            <select name="attach_to" required class="form-select" onchange="toggleRoleField()">
+                                <option value="">Select</option>
+                                <option value="duty">Duty</option>
+                                <option value="role">Role</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="roles-field">
+                            <label class="form-label">Eligible Roles</label>
+                            <input type="text" name="eligible_roles" class="form-input" placeholder="Nurse, Doctor or All" maxlength="500" value="All">
+                        </div>
+                    </div>
+
+                    <!-- Third row: Effective from, Effective to -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Effective From <span class="required">•</span></label>
+                            <input type="date" name="effective_from" required class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Effective To</label>
+                            <input type="date" name="effective_to" class="form-input">
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="form-row full">
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-textarea" placeholder="Free meals three times daily on duty"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Taxable checkbox inline -->
+                    <div class="form-row full">
+                        <label class="checkbox-inline">
+                            <input type="checkbox" name="taxable" value="1">
+                            Taxable
+                        </label>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary btn-sm">Create</button>
+                        <button type="button" class="btn btn-sm" onclick="toggleForm('add-benefit-form'); return false;">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
 </div>
 
-<div class="ab-card">
-  <h3>Benefit definitions (Payroll reference)</h3>
-  <?php if (empty($benefits)): ?>
-  <p class="ab-empty">No benefits defined yet. Add one above. Payroll uses this list as reference.</p>
-  <?php else: ?>
-  <table class="ab-table">
-    <thead>
-      <tr>
-        <th>Code</th>
-        <th>Name</th>
-        <th>Taxable</th>
-        <th>Eligible roles</th>
-        <th>Effective from</th>
-        <th>Effective to</th>
-        <th>Attach to</th>
-        <th>Status</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-    <?php foreach ($benefits as $b): ?>
-      <tr>
-        <td><?php echo htmlspecialchars($b['code']); ?></td>
-        <td><?php echo htmlspecialchars($b['name']); ?></td>
-        <td><?php echo !empty($b['taxable']) ? 'Yes' : 'No'; ?></td>
-        <td><?php echo htmlspecialchars($b['eligible_roles']); ?></td>
-        <td><?php echo htmlspecialchars($b['effective_from']); ?></td>
-        <td><?php echo $b['effective_to'] ? htmlspecialchars($b['effective_to']) : '—'; ?></td>
-        <td><?php echo htmlspecialchars($b['attach_to']); ?></td>
-        <td><span class="ab-badge <?php echo !empty($b['is_active']) ? 'ab-badge-active' : 'ab-badge-inactive'; ?>"><?php echo !empty($b['is_active']) ? 'Active' : 'Inactive'; ?></span></td>
-        <td>
-          <?php if (!empty($b['is_active'])): ?>
-          <form class="ab-inline-form" method="post" action="<?php echo htmlspecialchars($handlerUrl); ?>">
-            <input type="hidden" name="action" value="deactivate">
-            <input type="hidden" name="id" value="<?php echo (int)$b['id']; ?>">
-            <button type="submit" class="ab-btn ab-btn-outline ab-btn-sm">Deactivate</button>
-          </form>
-          <?php else: ?>
-          —
-          <?php endif; ?>
-        </td>
-      </tr>
-    <?php endforeach; ?>
-    </tbody>
-  </table>
-  <?php endif; ?>
-</div>
-</div>
+<script>
+function toggleForm(id) {
+    document.getElementById(id).classList.toggle('visible');
+}
+
+function toggleRoleField() {
+    const attachTo = document.querySelector('select[name="attach_to"]').value;
+    const rolesField = document.getElementById('roles-field');
+    rolesField.style.display = (attachTo === 'duty') ? 'none' : 'flex';
+}
+</script>
+
+</body>
+</html>
