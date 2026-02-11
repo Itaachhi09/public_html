@@ -3,6 +3,21 @@
  * Payroll Setup & Configuration Module
  * Manages payroll rules, calendars, components, and settings
  */
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../../../config/Database.php';
+require_once __DIR__ . '/../models/PayrollConfiguration.php';
+require_once __DIR__ . '/../models/PayrollComponent.php';
+
+$configuration = new PayrollConfiguration();
+$payrollComponent = new PayrollComponent();
+
+// Fetch configuration and components
+$configs = $configuration->getActive();
+$components = $payrollComponent->getAll();
+$totalConfigs = count($configs ?? []);
+$totalComponents = count($components ?? []);
 ?>
 
 <style>
@@ -303,7 +318,7 @@
         <strong>Current Setup:</strong> Semi-monthly payroll (15th and 30th cut-off dates, 7th and 22nd pay dates)
       </div>
 
-      <form method="POST" action="">
+      <form method="POST" action="../setup_configuration_handler.php">
         <div class="form-row">
           <div class="form-group">
             <label>Cutoff Date 1 (of month)</label>
@@ -346,7 +361,7 @@
     <div class="setup-section">
       <h3 class="section-header">Configure Payroll Calendar</h3>
 
-      <form method="POST" action="">
+      <form method="POST" action="../setup_configuration_handler.php">
         <div class="form-row full">
           <div class="form-group">
             <label>Payroll Year</label>
@@ -660,7 +675,7 @@
     <div class="setup-section">
       <h3 class="section-header">Configure Bank Settings</h3>
 
-      <form method="POST" action="">
+      <form method="POST" action="../setup_configuration_handler.php">
         <div class="form-row full">
           <div class="form-group">
             <label>Payroll Bank Account</label>

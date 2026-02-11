@@ -3,6 +3,18 @@
  * Employee Payroll Profile Module
  * Define payroll eligibility and profile details per employee
  */
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../../../config/Database.php';
+require_once __DIR__ . '/../models/EmployeePayrollProfile.php';
+require_once __DIR__ . '/../models/EmployeeSalary.php';
+
+$employeeProfile = new EmployeePayrollProfile();
+$employeeSalary = new EmployeeSalary();
+
+// Fetch employee profiles
+$profiles = $employeeProfile->getEligibleEmployees();
 ?>
 
 <style>
@@ -478,7 +490,7 @@
   <div class="section">
     <h3 class="section-header">Payroll Profile Details</h3>
 
-    <form method="POST" action="">
+    <form method="POST" action="../employee_payroll_profile_handler.php">
       <!-- Employee Information (Read-Only) -->
       <div class="form-section">
         <h4>Employee Information</h4>

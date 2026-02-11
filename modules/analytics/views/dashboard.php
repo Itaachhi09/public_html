@@ -632,6 +632,57 @@ $userRole = $_SESSION['role'] ?? 'hr';
             </div>
         </div>
 
+        <!-- ANALYTICS NAVIGATION -->
+        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);">
+            <a href="dashboard.php" class="analytics-nav-btn" style="background: var(--primary); color: white;">
+                <i class='bx bxs-dashboard'></i> Overview
+            </a>
+            <a href="payroll_trends.php" class="analytics-nav-btn">
+                <i class='bx bxs-bar-chart'></i> Payroll Trends
+            </a>
+            <a href="compensation_analysis.php" class="analytics-nav-btn">
+                <i class='bx bxs-wallet'></i> Compensation
+            </a>
+            <a href="headcount_analytics.php" class="analytics-nav-btn">
+                <i class='bx bxs-user-detail'></i> Headcount
+            </a>
+            <a href="hmo_insights.php" class="analytics-nav-btn">
+                <i class='bx bxs-heart'></i> HMO Insights
+            </a>
+            <a href="movement_analytics.php" class="analytics-nav-btn">
+                <i class='bx bxs-transfer'></i> Movement
+            </a>
+            <a href="cost_analysis.php" class="analytics-nav-btn">
+                <i class='bx bxs-calculator'></i> Cost Analysis
+            </a>
+            <a href="compliance_tracking.php" class="analytics-nav-btn">
+                <i class='bx bxs-check-square'></i> Compliance
+            </a>
+        </div>
+
+        <style>
+            .analytics-nav-btn {
+                padding: 0.6rem 1rem;
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                background: white;
+                color: var(--text-dark);
+                text-decoration: none;
+                font-size: 13px;
+                font-weight: 600;
+                display: inline-flex;
+                align-items: center;
+                gap: 0.5rem;
+                transition: all 0.2s;
+                cursor: pointer;
+            }
+            .analytics-nav-btn:hover {
+                background: var(--light);
+                border-color: var(--primary);
+                color: var(--primary);
+            }
+        </style>
+
         <!-- SECTION 1: SUMMARY CARDS -->
         <div class="summary-cards-row">
             <!-- Card 1: Total Headcount -->
@@ -871,6 +922,28 @@ $userRole = $_SESSION['role'] ?? 'hr';
                                   '&employmentType=' + employmentType;
         }
 
+        function switchHeadcountView(event, viewType) {
+            event.preventDefault();
+            
+            // Update button styling
+            const buttons = document.querySelectorAll('.chart-toggle .toggle-btn');
+            buttons.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent.toLowerCase() === viewType.toLowerCase()) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Reload chart with new view
+            if (headcountTrendChart) {
+                headcountTrendChart.destroy();
+                headcountTrendChart = null;
+            }
+            
+            // Fetch data for selected view and reload chart
+            loadHeadcountTrendChart();
+        }
+
         // ===== CHART VARIABLES =====
         let headcountTrendChart = null;
         let payrollBreakdownChart = null;
@@ -970,6 +1043,9 @@ $userRole = $_SESSION['role'] ?? 'hr';
             loadHMODonutChart();
             loadOvertimeChart();
         }
+
+        // ===== CHART LOADING FUNCTIONS =====
+        function loadHeadcountTrendChart() {
             const ctx = document.getElementById('headcount-trend-chart').getContext('2d');
             
             // Sample data - replace with API call
@@ -1240,99 +1316,8 @@ $userRole = $_SESSION['role'] ?? 'hr';
             });
         }
 
-        // ===== LOAD DASHBOARD DATA =====
-        function loadDashboardData() {
-            // Fetch from API and update all values and charts
-            fetch('<?php echo "api.php?action=getDashboardData"; ?>')
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        updateDashboard(data.data);
-                    } else {
-                        console.error('Failed to load dashboard data');
-                    }
-                })
-                .catch(error => console.error('Error:', error));
-        }
-
-        function updateDashboard(data) {
-            // Update summary cards
-            document.getElementById('headcount-value').textContent = (data.headcount?.total || 0).toLocaleString();
-            document.getElementById('headcount-active').textContent = (data.headcount?.active || 0).toLocaleString();
-            document.getElementById('headcount-inactive').textContent = (data.headcount?.inactive || 0).toLocaleString();
-            document.getElementById('headcount-trend-pct').textContent = (data.headcount?.trend >= 0 ? '+' : '') + (data.headcount?.trend || 0).toFixed(1) + '%';
-            
-            // Update movement card
-            const movement = (data.movement?.new || 0) - (data.movement?.resignations || 0);
-            document.getElementById('movement-value').textContent = (movement >= 0 ? '+' : '') + movement.toLocaleString();
-            document.getElementById('movement-new').textContent = (data.movement?.new || 0).toLocaleString();
-            document.getElementById('movement-resignations').textContent = (data.movement?.resignations || 0).toLocaleString();
-            
-            // Update payroll card
-            document.getElementById('payroll-value').textContent = 'PKR ' + (data.payroll?.total || 0).toLocaleString();
-            document.getElementById('payroll-avg').textContent = 'PKR ' + (data.payroll?.average || 0).toLocaleString();
-            
-            // Update attendance card
-            document.getElementById('attendance-value').textContent = (data.attendance?.percentage || 0) + '%';
-            document.getElementById('attendance-absent').textContent = (data.attendance?.absentToday || 0).toLocaleString();
-            
-            // Update operations snapshot
-            document.getElementById('hmo-enrolled').textContent = (data.hmo?.enrolled || 0).toLocaleString();
-            document.getElementById('hmo-avg-cost').textContent = 'PKR ' + (data.hmo?.avgCost || 0).toLocaleString();
-            
-            document.getElementById('overtime-hours').textContent = (data.overtime?.hours || 0).toLocaleString();
-            document.getElementById('overtime-cost').textContent = 'PKR ' + (data.overtime?.cost || 0).toLocaleString();
-            
-            document.getElementById('compliance-docs').textContent = (data.compliance?.expiringDocs || 0).toLocaleString();
-            document.getElementById('compliance-contracts').textContent = (data.compliance?.expiringContracts || 0).toLocaleString();
-            document.getElementById('compliance-total').textContent = ((data.compliance?.expiringDocs || 0) + (data.compliance?.expiringContracts || 0)) + ' Total Alerts';
-            
-            // Load departments for filter
-            if (data.departments && Array.isArray(data.departments)) {
-                const deptSelect = document.getElementById('department-filter');
-                data.departments.forEach(dept => {
-                    const option = document.createElement('option');
-                    option.value = dept.id;
-                    option.textContent = dept.name;
-                    deptSelect.appendChild(option);
-                });
-            }
-        function loadActionItems(items) {
-            const container = document.getElementById('action-items');
-            container.innerHTML = '';
-            
-            const topItems = items.slice(0, 5);
-            
-            if (topItems.length === 0) {
-                container.innerHTML = '<div class="no-data">No action items at this time</div>';
-                return;
-            }
-            
-            topItems.forEach(item => {
-                const itemEl = document.createElement('div');
-                itemEl.className = 'action-item';
-                itemEl.onclick = () => {
-                    if (item.actionUrl) {
-                        window.location.href = item.actionUrl;
-                    }
-                };
-                
-                itemEl.innerHTML = `
-                    <div class="action-item-info">
-                        <p class="action-item-name">${item.name || item.title || 'Action Item'}</p>
-                        <p class="action-item-detail">${item.detail || item.description || ''}</p>
-                    </div>
-                    <div class="action-item-due">
-                        <span class="due-date">${item.due_date || item.dueDate || 'No due date'}</span>
-                        <span class="priority-badge priority-${item.priority || 'medium'}">${(item.priority || 'medium').toUpperCase()}</span>
-                    </div>
-                `;
-                
-                container.appendChild(itemEl);
-            });
-        }
-
         // ===== INITIALIZE ON PAGE LOAD =====
+
         document.addEventListener('DOMContentLoaded', function() {
             loadDashboardData();
         });

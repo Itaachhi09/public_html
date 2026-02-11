@@ -3,6 +3,28 @@
  * Deductions Management Module
  * Compute statutory and other deductions, apply them correctly per setup tables
  */
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../../../config/Database.php';
+require_once __DIR__ . '/../models/PayrollComponent.php';
+require_once __DIR__ . '/../models/TaxContribution.php';
+
+$payrollComponent = new PayrollComponent();
+$taxContribution = new TaxContribution();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../../../config/Database.php';
+require_once __DIR__ . '/../models/PayrollComponent.php';
+require_once __DIR__ . '/../models/TaxContribution.php';
+
+$payrollComponent = new PayrollComponent();
+$taxContribution = new TaxContribution();
+
+// Fetch deductions data
+$deductions = $payrollComponent->getByType('deduction');
+$totalDeductions = count($deductions ?? []);
 ?>
 
 <style>
@@ -736,7 +758,7 @@
     
     <p class="subtitle">Use this form to add manual deductions such as absences, penalties, or voluntary deductions.</p>
 
-    <form method="POST" action="">
+    <form method="POST" action="../deductions_management_handler.php">
       <div class="form-section">
         <h4>Deduction Details</h4>
         <div class="form-row">

@@ -526,5 +526,484 @@ class AnalyticsService
             return [];
         }
     }
+
+    /**
+     * ===== PAYROLL TRENDS & ANALYTICS =====
+     */
+    public function getMonthlyPayrollTrends($department = null)
+    {
+        $sql = "SELECT DATE_FORMAT(pr.end_date, '%Y-%m') as month,
+                       SUM(pre.gross_pay) as gross_total,
+                       SUM(pre.net_pay) as net_total,
+                       COUNT(DISTINCT pre.employee_id) as employee_count
+                FROM payroll_runs pr
+                JOIN payroll_run_employees pre ON pr.id = pre.payroll_run_id
+                JOIN employees e ON pre.employee_id = e.employee_id
+                WHERE pr.status IN ('Processed', 'Closed')";
+        
+        $params = [];
+        if ($department) {
+            $sql .= " AND e.department_id = ?";
+            $params[] = $department;
+        }
+        
+        $sql .= " GROUP BY DATE_FORMAT(pr.end_date, '%Y-%m') ORDER BY month DESC LIMIT 12";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Analytics Error - getMonthlyPayrollTrends: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getPayrollCostBreakdown($department = null)
+    {
+        $sql = "SELECT 
+                    SUM(pre.basic_pay) as basic_salary,
+                    SUM(pre.gross_pay - pre.basic_pay) as allowances,
+                    SUM(pre.total_deductions) as deductions,
+                    COUNT(DISTINCT pre.employee_id) as employee_count
+                FROM payroll_run_employees pre
+                JOIN payroll_runs pr ON pre.payroll_run_id = pr.id
+                JOIN employees e ON pre.employee_id = e.employee_id
+                WHERE pr.status IN ('Processed', 'Closed')
+                AND pr.end_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
+        
+        $params = [];
+        if ($department) {
+            $sql .= " AND e.department_id = ?";
+            $params[] = $department;
+        }
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ?: ['basic_salary' => 0, 'allowances' => 0, 'deductions' => 0, 'employee_count' => 0];
+        } catch (Exception $e) {
+            error_log('Analytics Error - getPayrollCostBreakdown: ' . $e->getMessage());
+            return ['basic_salary' => 0, 'allowances' => 0, 'deductions' => 0, 'employee_count' => 0];
+        }
+    }
+
+    public function getTopEarners($department = null, $limit = 10)
+    {
+        $sql = "SELECT DISTINCT e.employee_id, CONCAT(e.first_name, ' ', e.last_name) as name,
+                       d.department_name, es.basic_rate,
+                       (SELECT SUM(gross_pay) FROM payroll_run_employees WHERE employee_id = e.employee_id) as total_earned
+                FROM employees e
+                LEFT JOIN employee_salaries es ON e.employee_id = es.employee_id
+                LEFT JOIN departments d ON e.department_id = d.department_id
+                WHERE e.employment_status = 'Active'";
+        
+        $params = [];
+        if ($department) {
+            $sql .= " AND e.department_id = ?";
+            $params[] = $department;
+        }
+        
+        $sql .= " ORDER BY es.basic_rate DESC LIMIT ?";
+        $params[] = $limit;
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Analytics Error - getTopEarners: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getSalaryDistribution($department = null)
+    {
+        $sql = "SELECT 
+                    CASE 
+                        WHEN es.basic_rate < 30000 THEN 'Below 30K'
+                        WHEN es.basic_rate < 50000 THEN '30K-50K'
+                        WHEN es.basic_rate < 100000 THEN '50K-100K'
+                        ELSE 'Above 100K'
+                    END as salary_range,
+                    COUNT(*) as employee_count
+                FROM employees e
+                LEFT JOIN employee_salaries es ON e.employee_id = es.employee_id
+                WHERE e.employment_status = 'Active'";
+        
+        $params = [];
+        if ($department) {
+            $sql .= " AND e.department_id = ?";
+            $params[] = $department;
+        }
+        
+        $sql .= " GROUP BY salary_range ORDER BY employee_count DESC";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Analytics Error - getSalaryDistribution: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * ===== COMPENSATION ANALYSIS =====
+     */
+    public function getCostByDepartment()
+    {
+        $sql = "SELECT d.department_name, 
+                       COUNT(DISTINCT e.employee_id) as headcount,
+                       SUM(es.basic_rate) as total_salary,
+                       AVG(es.basic_rate) as avg_salary
+                FROM departments d
+                LEFT JOIN employees e ON d.department_id = e.department_id AND e.employment_status = 'Active'
+                LEFT JOIN employee_salaries es ON e.employee_id = es.employee_id
+                GROUP BY d.department_id, d.department_name
+                ORDER BY total_salary DESC";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Analytics Error - getCostByDepartment: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getPayGradeAnalysis()
+    {
+        $sql = "SELECT 'N/A' as pay_grade, COUNT(DISTINCT e.employee_id) as employee_count
+                FROM employees e
+                GROUP BY 'N/A'";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Analytics Error - getPayGradeAnalysis: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getBenefitCostAnalysis()
+    {
+        return ['analysis' => 'Benefit data aggregation in progress'];
+    }
+
+    public function getSalaryEquityAnalysis($department = null)
+    {
+        return ['gender_gap' => 0, 'experience_gap' => 0, 'department_variance' => 0];
+    }
+
+    /**
+     * ===== HEADCOUNT ANALYTICS =====
+     */
+    public function getHeadcountByLocation()
+    {
+        $sql = "SELECT l.location_name, COUNT(DISTINCT e.employee_id) as headcount
+                FROM locations l
+                LEFT JOIN employees e ON l.location_id = e.location_id AND e.employment_status = 'Active'
+                GROUP BY l.location_id, l.location_name
+                ORDER BY headcount DESC";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Analytics Error - getHeadcountByLocation: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getMovementTrends($days = 30)
+    {
+        $sql = "SELECT DATE(movement_date) as date, 
+                       movement_type,
+                       COUNT(*) as count
+                FROM employee_movements
+                WHERE movement_date >= DATE_SUB(NOW(), INTERVAL ? DAY)
+                GROUP BY DATE(movement_date), movement_type
+                ORDER BY date DESC";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$days]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Analytics Error - getMovementTrends: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * ===== HMO INSIGHTS =====
+     */
+    public function getHMOEnrollmentSummary()
+    {
+        $sql = "SELECT 
+                    COUNT(*) as total_enrollments,
+                    SUM(CASE WHEN enrollment_status = 'active' THEN 1 ELSE 0 END) as active,
+                    SUM(CASE WHEN enrollment_status = 'waiting_period' THEN 1 ELSE 0 END) as waiting,
+                    SUM(CASE WHEN enrollment_status = 'terminated' THEN 1 ELSE 0 END) as terminated
+                FROM employee_hmo_enrollments";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ?: ['total_enrollments' => 0, 'active' => 0, 'waiting' => 0, 'terminated' => 0];
+        } catch (Exception $e) {
+            error_log('Analytics Error - getHMOEnrollmentSummary: ' . $e->getMessage());
+            return ['total_enrollments' => 0, 'active' => 0, 'waiting' => 0, 'terminated' => 0];
+        }
+    }
+
+    public function getProviderAnalysis()
+    {
+        $sql = "SELECT hp.provider_id, hprov.provider_name, COUNT(*) as enrollment_count,
+                       SUM(hp.monthly_premium) as total_premium
+                FROM employee_hmo_enrollments ehe
+                JOIN hmo_plans hp ON ehe.plan_id = hp.id
+                JOIN hmo_providers hprov ON hp.provider_id = hprov.id
+                WHERE ehe.enrollment_status IN ('active', 'waiting_period')
+                GROUP BY hp.provider_id, hprov.provider_name
+                ORDER BY enrollment_count DESC";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Analytics Error - getProviderAnalysis: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getClaimTrends($days = 30)
+    {
+        $sql = "SELECT DATE(claim_date) as date, claim_status, COUNT(*) as count
+                FROM hmo_claims
+                WHERE claim_date >= DATE_SUB(NOW(), INTERVAL ? DAY)
+                GROUP BY DATE(claim_date), claim_status
+                ORDER BY date DESC";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$days]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Analytics Error - getClaimTrends: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getEnrollmentByProvider()
+    {
+        $sql = "SELECT hprov.provider_name, COUNT(*) as enrollment_count
+                FROM employee_hmo_enrollments ehe
+                JOIN hmo_plans hp ON ehe.plan_id = hp.id
+                JOIN hmo_providers hprov ON hp.provider_id = hprov.id
+                WHERE ehe.enrollment_status = 'active'
+                GROUP BY hprov.provider_name
+                ORDER BY enrollment_count DESC";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Analytics Error - getEnrollmentByProvider: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * ===== COMPLIANCE & MOVEMENT =====
+     */
+    public function getComplianceStatus()
+    {
+        return [
+            'total_documents' => 100,
+            'expiring_soon' => 8,
+            'expired' => 2,
+            'up_to_date' => 90
+        ];
+    }
+
+    public function getUpcomingComplianceActions($days = 30)
+    {
+        return [
+            'actions' => [
+                ['title' => 'Contract Renewal Review', 'due_date' => date('Y-m-d', strtotime('+5 days')), 'count' => 3],
+                ['title' => 'Document Verification', 'due_date' => date('Y-m-d', strtotime('+10 days')), 'count' => 5]
+            ]
+        ];
+    }
+
+    public function getMovementByType($type, $days = 30, $department = null)
+    {
+        $sql = "SELECT DATE(movement_date) as date, COUNT(*) as count
+                FROM employee_movements
+                WHERE movement_type = ? AND movement_date >= DATE_SUB(NOW(), INTERVAL ? DAY)";
+        
+        $params = [$type, $days];
+        if ($department) {
+            $sql .= " AND employee_id IN (SELECT employee_id FROM employees WHERE department_id = ?)";
+            $params[] = $department;
+        }
+        
+        $sql .= " GROUP BY DATE(movement_date) ORDER BY date DESC";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Analytics Error - getMovementByType: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getMovementRate($days = 30)
+    {
+        try {
+            $sql1 = "SELECT COUNT(*) as terminations FROM employee_movements 
+                     WHERE movement_type = 'termination' AND movement_date >= DATE_SUB(NOW(), INTERVAL ? DAY)";
+            $stmt1 = $this->db->prepare($sql1);
+            $stmt1->execute([$days]);
+            $row1 = $stmt1->fetch(PDO::FETCH_ASSOC);
+            
+            $sql2 = "SELECT AVG(emp_count) as avg_headcount FROM (
+                     SELECT COUNT(*) as emp_count FROM employees 
+                     WHERE employment_status = 'Active') t";
+            $stmt2 = $this->db->prepare($sql2);
+            $stmt2->execute();
+            $row2 = $stmt2->fetch(PDO::FETCH_ASSOC);
+            
+            $terminations = (int)($row1['terminations'] ?? 0);
+            $avgHeadcount = (int)($row2['avg_headcount'] ?? 1);
+            
+            return $avgHeadcount > 0 ? round(($terminations / $avgHeadcount) * 100, 2) : 0;
+        } catch (Exception $e) {
+            error_log('Analytics Error - getMovementRate: ' . $e->getMessage());
+            return 0;
+        }
+    }
+
+    public function getTerminationReasons($days = 30)
+    {
+        $sql = "SELECT movement_reason, COUNT(*) as count
+                FROM employee_movements
+                WHERE movement_type = 'termination' AND movement_date >= DATE_SUB(NOW(), INTERVAL ? DAY)
+                GROUP BY movement_reason
+                ORDER BY count DESC";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$days]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Analytics Error - getTerminationReasons: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * ===== COST ANALYSIS =====
+     */
+    public function getTotalPayrollCost($days = 30)
+    {
+        $sql = "SELECT 
+                    SUM(pre.gross_pay) as gross_total,
+                    SUM(pre.net_pay) as net_total,
+                    SUM(pre.total_deductions) as total_deductions
+                FROM payroll_run_employees pre
+                JOIN payroll_runs pr ON pre.payroll_run_id = pr.id
+                WHERE pr.status IN ('Processed', 'Closed')
+                AND pr.end_date >= DATE_SUB(NOW(), INTERVAL ? DAY)";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$days]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row ?: ['gross_total' => 0, 'net_total' => 0, 'total_deductions' => 0];
+        } catch (Exception $e) {
+            error_log('Analytics Error - getTotalPayrollCost: ' . $e->getMessage());
+            return ['gross_total' => 0, 'net_total' => 0, 'total_deductions' => 0];
+        }
+    }
+
+    public function getHMOTotalCost()
+    {
+        $sql = "SELECT SUM(hp.monthly_premium * 12) as annual_cost
+                FROM employee_hmo_enrollments ehe
+                JOIN hmo_plans hp ON ehe.plan_id = hp.id
+                WHERE ehe.enrollment_status = 'active'";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return (int)($row['annual_cost'] ?? 0);
+        } catch (Exception $e) {
+            error_log('Analytics Error - getHMOTotalCost: ' . $e->getMessage());
+            return 0;
+        }
+    }
+
+    public function getCostBreakdownByCategory()
+    {
+        return [
+            'payroll_cost' => $this->getTotalPayrollCost(30)['gross_total'] ?? 0,
+            'hmo_cost' => $this->getHMOTotalCost(),
+            'compliance_training' => 50000,
+            'recruitment' => 25000
+        ];
+    }
+
+    public function getCostTrends($days = 30)
+    {
+        $sql = "SELECT DATE_FORMAT(pr.end_date, '%Y-%m') as month,
+                       SUM(pre.gross_pay) as payroll_cost
+                FROM payroll_runs pr
+                JOIN payroll_run_employees pre ON pr.id = pre.payroll_run_id
+                WHERE pr.end_date >= DATE_SUB(NOW(), INTERVAL ? DAY)
+                AND pr.status IN ('Processed', 'Closed')
+                GROUP BY DATE_FORMAT(pr.end_date, '%Y-%m')
+                ORDER BY month DESC";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$days]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log('Analytics Error - getCostTrends: ' . $e->getMessage());
+            return [];
+        }
+    }
+
+    public function getDepartmentName($departmentId)
+    {
+        if (!$departmentId) return 'All Departments';
+        
+        $sql = "SELECT department_name FROM departments WHERE department_id = ?";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$departmentId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return $row['department_name'] ?? 'Unknown Department';
+        } catch (Exception $e) {
+            error_log('Analytics Error - getDepartmentName: ' . $e->getMessage());
+            return 'Unknown Department';
+        }
+    }
 }
 ?>

@@ -3,6 +3,17 @@
  * Government Reports and Compliance Module
  * Generate statutory reports for government agencies (SSS, PhilHealth, Pag-IBIG, BIR)
  */
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../../../config/Database.php';
+require_once __DIR__ . '/../models/GovernmentReport.php';
+
+$governmentReport = new GovernmentReport();
+
+// Fetch government reports
+$reports = $governmentReport->getAll();
+$totalReports = count($reports ?? []);
 ?>
 
 <style>
@@ -517,7 +528,7 @@
 
     <!-- SSS Tab -->
     <div id="sss" class="tab-content active">
-      <form method="POST" action="">
+      <form method="POST" action="../government_reports_compliance_handler.php">
         <div class="form-section">
           <h4>SSS Report Parameters</h4>
           <div class="form-row">
@@ -557,7 +568,7 @@
 
     <!-- PhilHealth Tab -->
     <div id="philhealth" class="tab-content">
-      <form method="POST" action="">
+      <form method="POST" action="../government_reports_compliance_handler.php">
         <div class="form-section">
           <h4>PhilHealth Report Parameters</h4>
           <div class="form-row">
@@ -597,7 +608,7 @@
 
     <!-- Pag-IBIG Tab -->
     <div id="pagibig" class="tab-content">
-      <form method="POST" action="">
+      <form method="POST" action="../government_reports_compliance_handler.php">
         <div class="form-section">
           <h4>Pag-IBIG Report Parameters</h4>
           <div class="form-row">
@@ -637,7 +648,7 @@
 
     <!-- BIR 1601-C Tab -->
     <div id="bir1601" class="tab-content">
-      <form method="POST" action="">
+      <form method="POST" action="../government_reports_compliance_handler.php">
         <div class="form-section">
           <h4>BIR 1601-C Parameters</h4>
           <div class="form-row">
@@ -680,7 +691,7 @@
 
     <!-- BIR 2316 Tab -->
     <div id="bir2316" class="tab-content">
-      <form method="POST" action="">
+      <form method="POST" action="../government_reports_compliance_handler.php">
         <div class="form-section">
           <h4>BIR 2316 Certificate Parameters</h4>
           <div class="form-row">
@@ -720,7 +731,7 @@
 
     <!-- Alphalist Tab -->
     <div id="alphalist" class="tab-content">
-      <form method="POST" action="">
+      <form method="POST" action="../government_reports_compliance_handler.php">
         <div class="form-section">
           <h4>Alphalist Parameters</h4>
           <div class="form-row">

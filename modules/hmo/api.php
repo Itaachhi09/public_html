@@ -2,39 +2,66 @@
 /**
  * HMO Module API
  * RESTful API endpoints for HMO operations
+ * Covers: Providers, plans, enrollment, claims, billing, life events, documents
  */
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-require_once(__DIR__ . '/../../config/Auth.php');
-require_once(__DIR__ . '/controllers/HMOController.php');
+// Error handling
+ob_start();
+error_reporting(E_ALL);
+ini_set('display_errors', '0');
 
-header('Content-Type: application/json');
+// Set proper headers
+header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
-// Verify authentication
-$auth = new Auth();
-$token = null;
-
-// Check for token in Authorization header first
-$token = $auth->getBearerToken();
-
-// Fall back to session token if no Bearer token
-if (!$token && isset($_SESSION['token'])) {
-    $token = $_SESSION['token'];
-}
-
-// Verify token
-if (!$token || !$auth->verifyToken($token)) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+// Handle preflight
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
     exit;
 }
 
-// Inject token into Authorization header so BaseController can find it
-if (!$auth->getBearerToken()) {
-    $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
+// Error handler
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    http_response_code(500);
+    ob_end_clean();
+    echo json_encode([
+        'success' => false,
+        'message' => 'PHP Error',
+        'error' => $errstr
+    ]);
+    exit;
+});
+
+ob_end_clean();
+
+require_once(__DIR__ . '/../../config/Auth.php');
+require_once(__DIR__ . '/controllers/HMOController.php');
+
+// Verify authentication
+try {
+    $auth = new Auth();
+    $token = $auth->getBearerToken() ?? ($_SESSION['token'] ?? null);
+    
+    if (!$token || !$auth->verifyToken($token)) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Unauthorized']);
+        exit;
+    }
+    
+    // Inject token into Authorization header so BaseController can find it
+    if (!$auth->getBearerToken()) {
+        $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
+    }
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Authentication failed: ' . $e->getMessage()]);
+    exit;
 }
 
 $action = $_GET['action'] ?? '';
@@ -87,6 +114,26 @@ try {
         case 'getPlans':
             $response = $controller->getPlans();
             break;
+        
+        case 'getPlanDetail':
+            $plan_id = $_GET['id'] ?? null;
+            if (!$plan_id) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Plan ID required'];
+            } else {
+                $response = $controller->getPlanDetail($plan_id);
+            }
+            break;
+        
+        case 'getPlansByProvider':
+            $provider_id = $_GET['provider_id'] ?? null;
+            if (!$provider_id) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Provider ID required'];
+            } else {
+                $response = $controller->getPlansByProvider($provider_id);
+            }
+            break;
 
         // Enrollment endpoints
         case 'getEmployeeEnrollments':
@@ -128,29 +175,108 @@ try {
         case 'getEnrollmentStats':
             $response = $controller->getEnrollmentStats();
             break;
+        
+        case 'createEnrollment':
+            $request = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+            $required = ['employee_id', 'plan_id', 'enrollment_date'];
+            $missing = array_filter($required, fn($field) => empty($request[$field]));
+            
+            if ($missing) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Missing required fields: ' . implode(', ', $missing)];
+            } else {
+                $response = $controller->createEnrollment($request);
+            }
+            break;
+        
+        case 'updateEnrollment':
+            $enrollment_id = $_GET['id'] ?? null;
+            $request = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+            
+            if (!$enrollment_id) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Enrollment ID required'];
+            } else {
+                $response = $controller->updateEnrollment($enrollment_id, $request);
+            }
+            break;
+        
+        case 'terminateEnrollment':
+            $enrollment_id = $_GET['id'] ?? null;
+            $request = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+            
+            if (!$enrollment_id) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Enrollment ID required'];
+            } else {
+                $response = $controller->terminateEnrollment($enrollment_id, $request);
+            }
+            break;
 
         // Claims endpoints
         case 'getAllClaims':
             $response = $controller->getAllClaims();
             break;
-
+        
+        case 'getClaimDetail':
+            $claim_id = $_GET['id'] ?? null;
+            if (!$claim_id) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Claim ID required'];
+            } else {
+                $response = $controller->getClaimDetail($claim_id);
+            }
+            break;
+        
+        case 'getClaimsByStatus':
+            $status = $_GET['status'] ?? null;
+            if (!$status) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Status required'];
+            } else {
+                $response = $controller->getClaimsByStatus($status);
+            }
+            break;
+        
+        case 'getClaimsByEmployee':
+            $employee_id = $_GET['employee_id'] ?? null;
+            if (!$employee_id) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Employee ID required'];
+            } else {
+                $response = $controller->getClaimsByEmployee($employee_id);
+            }
+            break;
+        
         case 'getHighUtilizationEmployees':
             $threshold = $_GET['threshold'] ?? 80;
             $response = $controller->getHighUtilizationEmployees($threshold);
             break;
-
+        
         case 'getProviderComparison':
             $response = $controller->getProviderComparison();
             break;
-
+        
         case 'approveClaim':
-            $request = json_decode(file_get_contents('php://input'), true);
+            $request = json_decode(file_get_contents('php://input'), true) ?? $_POST;
             $claim_id = $request['id'] ?? null;
             if (!$claim_id) {
                 http_response_code(400);
                 $response = ['success' => false, 'error' => 'Claim ID required'];
             } else {
                 $response = $controller->approveClaim($claim_id);
+            }
+            break;
+        
+        case 'rejectClaim':
+            $request = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+            $claim_id = $request['id'] ?? null;
+            $reason = $request['reason'] ?? null;
+            if (!$claim_id || !$reason) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Claim ID and reason required'];
+            } else {
+                $response = $controller->rejectClaim($claim_id, $reason);
             }
             break;
 
@@ -327,7 +453,14 @@ try {
     }
 } catch (Exception $e) {
     http_response_code(500);
-    $response = ['success' => false, 'error' => $e->getMessage()];
+    error_log('HMO API Error: ' . $e->getMessage() . "\n" . $e->getTraceAsString());
+    $response = [
+        'success' => false,
+        'error' => 'Server error',
+        'message' => $e->getMessage()
+    ];
 }
 
+// Send response
 echo json_encode($response);
+exit;

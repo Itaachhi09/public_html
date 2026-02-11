@@ -3,6 +3,20 @@
  * Payroll Processing and Approval Module
  * Execute payroll safely with multi-level approval workflow
  */
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../../../config/Database.php';
+require_once __DIR__ . '/../models/PayrollApproval.php';
+require_once __DIR__ . '/../models/PayrollRun.php';
+
+$payrollApproval = new PayrollApproval();
+$payrollRun = new PayrollRun();
+
+// Fetch approval data
+$pendingApprovals = $payrollApproval->getByStatus('pending');
+$approvedRuns = $payrollApproval->getByStatus('approved');
+$rejectedRuns = $payrollApproval->getByStatus('rejected');
 ?>
 
 <style>
@@ -587,7 +601,7 @@
     </div>
 
     <!-- Create New Payroll Run -->
-    <form method="POST" action="">
+    <form method="POST" action="../payroll_processing_approval_handler.php">
       <div class="form-section">
         <h4>🚀 Create New Payroll Run</h4>
         <div class="form-row">
@@ -805,7 +819,7 @@
         <p>Verifies employee records and calculations</p>
         <div class="status">AWAITING APPROVAL</div>
         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid;">
-          <form method="POST" action="" style="display: flex; gap: 0.5rem;">
+          <form method="POST" action="../payroll_processing_approval_handler.php" style="display: flex; gap: 0.5rem;">
             <button type="submit" name="action" value="hr_approve" class="btn btn-success btn-sm">Approve</button>
             <button type="submit" name="action" value="hr_reject" class="btn btn-danger btn-sm">Reject</button>
           </form>
@@ -826,7 +840,7 @@
         As HR Manager, verify that all employee records, earnings, and deductions are accurate before proceeding to Finance approval.
       </div>
 
-      <form method="POST" action="">
+      <form method="POST" action="../payroll_processing_approval_handler.php">
         <div class="form-row full">
           <div class="form-group">
             <label>Review Notes (Optional)</label>

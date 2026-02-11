@@ -3,6 +3,51 @@
  * Earnings Management Module
  * Build gross earnings from approved Compensation records
  */
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../../../config/Database.php';
+require_once __DIR__ . '/../models/EmployeeSalary.php';
+require_once __DIR__ . '/../models/PayrollComponent.php';
+
+$employeeSalary = new EmployeeSalary();
+$payrollComponent = new PayrollComponent();
+
+// Fetch employee earnings data
+$search = $_GET['search'] ?? '';
+$department = $_GET['department'] ?? '';
+$compensation_status = $_GET['compensation_status'] ?? '';
+
+$query = "SELECT es.*, e.first_name, e.last_name, e.employee_code, e.department_id 
+          FROM employee_salaries es 
+          JOIN employees e ON es.employee_id = e.employee_id 
+          WHERE es.payroll_eligible = 1";
+
+if ($search) {
+    $query .= " AND (e.employee_code LIKE ? OR e.first_name LIKE ? OR e.last_name LIKE ?)";
+}
+if ($department) {
+    $query .= " AND e.department_id = ?";
+}
+
+$query .= " ORDER BY e.employee_code ASC";
+
+$params = [];
+if ($search) {
+    $search_term = '%' . $search . '%';
+    $params = [$search_term, $search_term, $search_term];
+}
+if ($department) {
+    $params[] = $department;
+}
+
+$earnings = !empty($params) ? $employeeSalary->query($query, $params) : $employeeSalary->query($query);
+$totalEmployees = count($earnings ?? []);
+$totalGross = 0;
+
+foreach ($earnings ?? [] as $e) {
+    $totalGross += (float) $e['basic_rate'];
+}
 ?>
 
 <style>
@@ -331,15 +376,15 @@
   <div class="earnings-summary">
     <div class="summary-card success">
       <label>Total Employees with Earnings</label>
-      <div class="value">8</div>
+      <div class="value"><?php echo (int) $totalEmployees; ?></div>
     </div>
     <div class="summary-card">
       <label>Total Gross Earnings (Monthly)</label>
-      <div class="value">₱ 638,000</div>
+      <div class="value">₱ <?php echo number_format($totalGross, 2); ?></div>
     </div>
     <div class="summary-card warning">
       <label>Pending Compensation</label>
-      <div class="value">2</div>
+      <div class="value">0</div>
     </div>
   </div>
 
@@ -364,81 +409,28 @@
           </tr>
         </thead>
         <tbody>
+          <?php if (empty($earnings)): ?>
+          <tr><td colspan="10" style="text-align: center; padding: 2rem; color: #9ca3af;">No employee earnings found</td></tr>
+          <?php else: foreach ($earnings as $emp): ?>
           <tr>
-            <td>EMP-001</td>
-            <td>John Doe</td>
-            <td>Human Resources</td>
-            <td class="amount">6,000.00</td>
-            <td class="amount">2,000.00</td>
-            <td class="amount">3,000.00</td>
+            <td><?php echo htmlspecialchars($emp['employee_code']); ?></td>
+            <td><?php echo htmlspecialchars($emp['first_name'] . ' ' . $emp['last_name']); ?></td>
+            <td><?php echo htmlspecialchars($emp['department_id'] ?? '—'); ?></td>
+            <td class="amount"><?php echo number_format((float) $emp['basic_rate'], 2); ?></td>
             <td class="amount">0.00</td>
-            <td class="amount amount-gross">11,000.00</td>
+            <td class="amount">0.00</td>
+            <td class="amount">0.00</td>
+            <td class="amount amount-gross"><?php echo number_format((float) $emp['basic_rate'], 2); ?></td>
             <td><span class="badge badge-approved">Approved</span></td>
             <td>
               <form method="GET" style="display: inline;">
                 <input type="hidden" name="action" value="view">
-                <input type="hidden" name="employee_id" value="EMP-001">
+                <input type="hidden" name="employee_id" value="<?php echo (int) $emp['employee_id']; ?>">
                 <button type="submit" class="btn btn-secondary btn-sm">View Details</button>
               </form>
             </td>
           </tr>
-          <tr>
-            <td>EMP-002</td>
-            <td>Jane Smith</td>
-            <td>Information Technology</td>
-            <td class="amount">7,500.00</td>
-            <td class="amount">1,500.00</td>
-            <td class="amount">0.00</td>
-            <td class="amount">2,000.00</td>
-            <td class="amount amount-gross">11,000.00</td>
-            <td><span class="badge badge-approved">Approved</span></td>
-            <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="view">
-                <input type="hidden" name="employee_id" value="EMP-002">
-                <button type="submit" class="btn btn-secondary btn-sm">View Details</button>
-              </form>
-            </td>
-          </tr>
-          <tr>
-            <td>EMP-003</td>
-            <td>Michael Johnson</td>
-            <td>Operations</td>
-            <td class="amount">5,500.00</td>
-            <td class="amount">1,500.00</td>
-            <td class="amount">4,000.00</td>
-            <td class="amount">1,500.00</td>
-            <td class="amount amount-gross">12,500.00</td>
-            <td><span class="badge badge-approved">Approved</span></td>
-            <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="view">
-                <input type="hidden" name="employee_id" value="EMP-003">
-                <button type="submit" class="btn btn-secondary btn-sm">View Details</button>
-              </form>
-            </td>
-          </tr>
-          <tr>
-            <td>EMP-004</td>
-            <td>Sarah Williams</td>
-            <td>Finance</td>
-            <td class="amount">6,500.00</td>
-            <td class="amount">2,500.00</td>
-            <td class="amount">0.00</td>
-            <td class="amount">0.00</td>
-            <td class="amount amount-gross">9,000.00</td>
-            <td><span class="badge badge-pending">Pending Review</span></td>
-            <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="view">
-                <input type="hidden" name="employee_id" value="EMP-004">
-                <button type="submit" class="btn btn-secondary btn-sm">View Details</button>
-              </form>
-            </td>
-          </tr>
-          <tr>
-            <td>EMP-005</td>
-            <td>Robert Brown</td>
+          <?php endforeach; endif; ?>
             <td>Human Resources</td>
             <td class="amount">5,800.00</td>
             <td class="amount">1,200.00</td>

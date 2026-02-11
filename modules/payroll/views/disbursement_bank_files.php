@@ -3,6 +3,26 @@
  * Disbursement and Bank Files Module
  * Generate and manage bank files for payroll fund disbursement
  */
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../../../config/Database.php';
+require_once __DIR__ . '/../models/Disbursement.php';
+require_once __DIR__ . '/../models/PayrollRun.php';
+
+$disbursement = new Disbursement();
+$payrollRun = new PayrollRun();
+
+// Fetch disbursement data
+$allDisbursements = $disbursement->getAll();
+$transmitted = $disbursement->getByStatus('transmitted');
+$failed = $disbursement->getByStatus('failed');
+
+$statsTotal = count($allDisbursements ?? []);
+$statsTransmitted = count($transmitted ?? []);
+$statsConfirmed = count(array_filter($allDisbursements ?? [], fn($d) => $d['status'] === 'confirmed'));
+$statsPending = count(array_filter($allDisbursements ?? [], fn($d) => $d['status'] === 'pending'));
+$statsFailed = count($failed ?? []);
 ?>
 
 <style>
@@ -422,7 +442,7 @@
   <div class="section">
     <h3 class="section-header">✉️ Generate Bank File</h3>
 
-    <form method="POST" action="">
+    <form method="POST" action="../disbursement_banker_files_handler.php">
       <div class="form-section">
         <h4>Select Payroll Run</h4>
         <div class="form-row">
@@ -522,23 +542,23 @@
     <div class="summary-cards">
       <div class="summary-card">
         <label>Total Generated</label>
-        <div class="value">7</div>
+        <div class="value"><?php echo (int) $statsTotal; ?></div>
       </div>
       <div class="summary-card success">
         <label>Transmitted</label>
-        <div class="value">6</div>
+        <div class="value"><?php echo (int) $statsTransmitted; ?></div>
       </div>
       <div class="summary-card success">
         <label>Confirmed</label>
-        <div class="value">6</div>
+        <div class="value"><?php echo (int) $statsConfirmed; ?></div>
       </div>
       <div class="summary-card warning">
         <label>Pending</label>
-        <div class="value">1</div>
+        <div class="value"><?php echo (int) $statsPending; ?></div>
       </div>
       <div class="summary-card danger">
         <label>Failed/Exceptions</label>
-        <div class="value">2</div>
+        <div class="value"><?php echo (int) $statsFailed; ?></div>
       </div>
     </div>
 
@@ -812,7 +832,7 @@
         </table>
       </div>
 
-      <form method="POST" action="">
+      <form method="POST" action="../disbursement_banker_files_handler.php">
         <div class="form-row">
           <div class="form-group">
             <label>Employee Name <span style="color: #ef4444;">*</span></label>
@@ -914,7 +934,7 @@
       </table>
     </div>
 
-    <form method="POST" action="" style="margin-top: 2rem;">
+    <form method="POST" action="../disbursement_banker_files_handler.php" style="margin-top: 2rem;">
       <div class="form-section">
         <h4>Reconcile Failed Transfer</h4>
         <div class="form-row">
@@ -993,7 +1013,7 @@
       </table>
     </div>
 
-    <form method="POST" action="">
+    <form method="POST" action="../disbursement_banker_files_handler.php">
       <div class="form-section">
         <h4>Request Bank File Re-generation</h4>
         <div class="form-row">

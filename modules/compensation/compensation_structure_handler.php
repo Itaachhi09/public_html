@@ -274,9 +274,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'last_updated_reason' => $reason,
                 ]);
                 $msg = "Benefit '{$benefit['name']}' deactivated. Reason: {$reason}";
+            }
+        }
+    }
+}
 
 $params = ['ref' => 'compensation', 'page' => 'compensation_structure'];
 if ($msg) $params['msg'] = urlencode($msg);
 if ($err) $params['err'] = urlencode($err);
 header('Location: ../../dashboard.php?' . http_build_query($params));
-exit;
+exit; 

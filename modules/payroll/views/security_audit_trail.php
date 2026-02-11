@@ -3,6 +3,17 @@
  * Security and Audit Trail Module
  * Prevent fraud and errors through comprehensive logging, access control, and audit trails
  */
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../../../config/Database.php';
+require_once __DIR__ . '/../models/PayrollAuditTrail.php';
+
+$auditTrail = new PayrollAuditTrail();
+
+// Fetch audit trail logs
+$logs = $auditTrail->getRecent(1440); // Last 24 hours
+$recentLogs = array_slice($logs ?? [], 0, 20); // Show recent 20
 ?>
 
 <style>

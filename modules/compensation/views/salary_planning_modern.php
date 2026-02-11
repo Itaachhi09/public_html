@@ -54,6 +54,13 @@ body {
 
 .rules-notice { font-size: 11px; color: #6b7280; margin-bottom: 8px; padding: 6px 0; border-bottom: 1px solid #e5e7eb; }
 
+.callout { padding: 10px 12px; border-radius: 4px; font-size: 12px; margin-bottom: 12px; display: flex; gap: 8px; align-items: flex-start; }
+.callout-info { background: #eff6ff; border-left: 3px solid #3b82f6; color: #1e40af; }
+.callout-warning { background: #fef3c7; border-left: 3px solid #f59e0b; color: #92400e; }
+.callout-success { background: #d1fae5; border-left: 3px solid #10b981; color: #065f46; }
+.callout-icon { flex-shrink: 0; font-size: 14px; }
+.callout-text { flex: 1; line-height: 1.4; }
+
 .table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 8px; }
 .table th { background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; height: 28px; }
 .table td { padding: 6px 8px; border-bottom: 1px solid #f3f4f6; height: 30px; vertical-align: middle; }
@@ -138,6 +145,11 @@ body {
                 <button class="btn btn-primary btn-sm" onclick="toggleForm('add-paygrade-form'); return false;">+ Add</button>
             </div>
 
+            <div class="callout callout-info">
+                <div class="callout-icon">ℹ</div>
+                <div class="callout-text"><strong>Pay Grades</strong> group positions by salary level. Each grade can have multiple bands and levels. Required to set up salary structure.</div>
+            </div>
+
             <?php if (empty($payGrades)): ?>
             <div class="empty-state">No pay grades yet.</div>
             <?php else: ?>
@@ -189,6 +201,11 @@ body {
             <div class="section-header">
                 <div class="section-title">2. Grade Levels</div>
                 <button class="btn btn-primary btn-sm" onclick="toggleForm('add-gradelevel-form'); return false;">+ Add</button>
+            </div>
+
+            <div class="callout callout-info">
+                <div class="callout-icon">ℹ</div>
+                <div class="callout-text"><strong>Grade Levels</strong> represent steps within a pay grade (e.g., Junior, Senior, Lead). Optional but recommended for career progression.</div>
             </div>
 
             <?php if (empty($gradeLevels)): ?>
@@ -249,7 +266,10 @@ body {
                 <button class="btn btn-primary btn-sm" onclick="toggleForm('add-band-form'); return false;">+ Add</button>
             </div>
             
-            <div class="rules-notice">Assignments outside band require approval. Min ≤ Mid ≤ Max.</div>
+            <div class="callout callout-warning">
+                <div class="callout-icon">⚠</div>
+                <div class="callout-text"><strong>Critical:</strong> Salary bands define compensation ranges. Min ≤ Mid ≤ Max must be maintained. Assignments outside bands require approval. This is the foundation of salary equity.</div>
+            </div>
 
             <?php if (empty($bands)): ?>
             <div class="empty-state">No salary bands defined.</div>
@@ -323,6 +343,11 @@ body {
         <div class="section">
             <div class="section-header">
                 <div class="section-title">4. Validated Structure</div>
+            </div>
+
+            <div class="callout callout-success">
+                <div class="callout-icon">✓</div>
+                <div class="callout-text"><strong>Structure Status:</strong> All sections must be configured to enable employee compensation management. Use the checklist below.</div>
             </div>
 
             <div class="summary-grid">

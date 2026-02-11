@@ -3,6 +3,19 @@
  * Payroll Adjustments and Special Pay Module
  * Handle non-regular payroll cases (final pay, back pay, 13th month pay, separation pay)
  */
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../../../config/Database.php';
+require_once __DIR__ . '/../models/PayrollAdjustment.php';
+require_once __DIR__ . '/../models/PayrollRun.php';
+
+$payrollAdjustment = new PayrollAdjustment();
+$payrollRun = new PayrollRun();
+
+// Fetch adjustments data
+$adjustments = $payrollAdjustment->getAll();
+$totalAdjustments = count($adjustments ?? []);
 ?>
 
 <style>
@@ -440,7 +453,7 @@
 
     <!-- Final Pay Tab -->
     <div id="final-pay" class="tab-content active">
-      <form method="POST" action="">
+      <form method="POST" action="../payroll_adjustments_handler.php">
         <div class="form-section">
           <h4>Final Pay - Employee Separation</h4>
           <p style="margin: 0 0 1rem 0; color: #6b7280; font-size: 13px;">Process final paycheck for employees leaving the organization. Includes accrued leave, 13th month (if applicable), and separation pay.</p>
@@ -516,7 +529,7 @@
 
     <!-- Back Pay Tab -->
     <div id="back-pay" class="tab-content">
-      <form method="POST" action="">
+      <form method="POST" action="../payroll_adjustments_handler.php">
         <div class="form-section">
           <h4>Back Pay - Retroactive Adjustments</h4>
           <p style="margin: 0 0 1rem 0; color: #6b7280; font-size: 13px;">Process retroactive pay adjustments for salary corrections, promotion backdating, or missed payments.</p>
@@ -602,7 +615,7 @@
 
     <!-- 13th Month Pay Tab -->
     <div id="thirteenth-month" class="tab-content">
-      <form method="POST" action="">
+      <form method="POST" action="../payroll_adjustments_handler.php">
         <div class="form-section">
           <h4>13th Month Pay - Annual Bonus</h4>
           <p style="margin: 0 0 1rem 0; color: #6b7280; font-size: 13px;">Generate 13th month pay (year-end bonus) for eligible employees based on tenure and employment status.</p>
@@ -677,7 +690,7 @@
 
     <!-- Separation Pay Tab -->
     <div id="separation-pay" class="tab-content">
-      <form method="POST" action="">
+      <form method="POST" action="../payroll_adjustments_handler.php">
         <div class="form-section">
           <h4>Separation Pay - Severance Entitlements</h4>
           <p style="margin: 0 0 1rem 0; color: #6b7280; font-size: 13px;">Calculate and process separation/severance pay based on tenure, separation reason, and applicable labor laws.</p>

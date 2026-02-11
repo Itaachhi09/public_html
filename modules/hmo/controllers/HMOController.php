@@ -973,6 +973,334 @@ class HMOController extends BaseController {
             ];
         }
     }
+
+    /**
+     * Get plan details
+     */
+    public function getPlanDetail($plan_id) {
+        try {
+            $query = "SELECT hp.*, hpr.provider_name, hpr.provider_status, COUNT(ehe.id) as enrollment_count
+                      FROM hmo_plans hp 
+                      LEFT JOIN hmo_providers hpr ON hp.provider_id = hpr.id
+                      LEFT JOIN employee_hmo_enrollments ehe ON hp.id = ehe.plan_id AND ehe.status = 'Active'
+                      WHERE hp.id = ? 
+                      GROUP BY hp.id";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$plan_id]);
+            $plan = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$plan) {
+                return ['success' => false, 'error' => 'Plan not found'];
+            }
+
+            return ['success' => true, 'data' => $plan];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get plans by provider
+     */
+    public function getPlansByProvider($provider_id) {
+        try {
+            $query = "SELECT hp.*, COUNT(ehe.id) as enrollment_count
+                      FROM hmo_plans hp
+                      LEFT JOIN employee_hmo_enrollments ehe ON hp.id = ehe.plan_id AND ehe.status = 'Active'
+                      WHERE hp.provider_id = ? AND hp.is_active = 1
+                      GROUP BY hp.id
+                      ORDER BY hp.plan_name ASC";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$provider_id]);
+            $plans = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return ['success' => true, 'data' => $plans ? $plans : []];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Create enrollment
+     */
+    public function createEnrollment($data) {
+        try {
+            $required = ['employee_id', 'plan_id', 'effective_date'];
+            foreach ($required as $field) {
+                if (empty($data[$field])) {
+                    return ['success' => false, 'error' => "Missing required field: $field"];
+                }
+            }
+
+            $query = "INSERT INTO employee_hmo_enrollments 
+                      (employee_id, plan_id, effective_date, status, created_at) 
+                      VALUES (?, ?, ?, ?, NOW())";
+            $stmt = $this->db->prepare($query);
+            $status = $data['status'] ?? 'Pending';
+            $stmt->execute([
+                $data['employee_id'],
+                $data['plan_id'],
+                $data['effective_date'],
+                $status
+            ]);
+
+            $enrollment_id = $this->db->lastInsertId();
+            return ['success' => true, 'data' => ['id' => $enrollment_id, 'message' => 'Enrollment created successfully']];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Update enrollment
+     */
+    public function updateEnrollment($enrollment_id, $data) {
+        try {
+            if (empty($enrollment_id)) {
+                return ['success' => false, 'error' => 'Enrollment ID required'];
+            }
+
+            $fields = [];
+            $values = [];
+            foreach ($data as $key => $value) {
+                if (in_array($key, ['status', 'plan_id', 'effective_date', 'termination_date'])) {
+                    $fields[] = "$key = ?";
+                    $values[] = $value;
+                }
+            }
+            $values[] = $enrollment_id;
+
+            if (!$fields) {
+                return ['success' => false, 'error' => 'No valid fields to update'];
+            }
+
+            $query = "UPDATE employee_hmo_enrollments SET " . implode(', ', $fields) . ", updated_at = NOW() WHERE id = ?";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute($values);
+
+            return ['success' => true, 'message' => 'Enrollment updated successfully'];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Terminate enrollment
+     */
+    public function terminateEnrollment($enrollment_id, $data = []) {
+        try {
+            if (empty($enrollment_id)) {
+                return ['success' => false, 'error' => 'Enrollment ID required'];
+            }
+
+            $termination_date = $data['termination_date'] ?? date('Y-m-d');
+            $reason = $data['reason'] ?? null;
+
+            $query = "UPDATE employee_hmo_enrollments 
+                      SET status = 'Terminated', termination_date = ?, termination_reason = ?, updated_at = NOW() 
+                      WHERE id = ?";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$termination_date, $reason, $enrollment_id]);
+
+            return ['success' => true, 'message' => 'Enrollment terminated successfully'];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get claim detail
+     */
+    public function getClaimDetail($claim_id) {
+        try {
+            $query = "SELECT * FROM hmo_claims WHERE id = ?";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$claim_id]);
+            $claim = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$claim) {
+                return ['success' => false, 'error' => 'Claim not found'];
+            }
+
+            return ['success' => true, 'data' => $claim];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get claims by status
+     */
+    public function getClaimsByStatus($status) {
+        try {
+            $query = "SELECT * FROM hmo_claims WHERE claim_status = ? ORDER BY created_at DESC";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$status]);
+            $claims = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return ['success' => true, 'data' => $claims ? $claims : []];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get claims by employee
+     */
+    public function getClaimsByEmployee($employee_id) {
+        try {
+            $query = "SELECT * FROM hmo_claims WHERE employee_id = ? ORDER BY created_at DESC";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$employee_id]);
+            $claims = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return ['success' => true, 'data' => $claims ? $claims : []];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Reject claim
+     */
+    public function rejectClaim($claim_id, $reason) {
+        try {
+            if (empty($claim_id) || empty($reason)) {
+                return ['success' => false, 'error' => 'Claim ID and reason required'];
+            }
+
+            $query = "UPDATE hmo_claims 
+                      SET claim_status = 'Rejected', rejection_reason = ?, updated_at = NOW() 
+                      WHERE id = ?";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$reason, $claim_id]);
+
+            return ['success' => true, 'message' => 'Claim rejected successfully'];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Create billing reconciliation
+     */
+    public function createBillingReconciliation($data) {
+        try {
+            $required = ['provider_id', 'month', 'year', 'claims_count', 'total_amount'];
+            foreach ($required as $field) {
+                if (empty($data[$field])) {
+                    return ['success' => false, 'error' => "Missing required field: $field"];
+                }
+            }
+
+            $query = "INSERT INTO billing_reconciliations 
+                      (provider_id, billing_month, claims_count, total_amount, status, created_at) 
+                      VALUES (?, ?, ?, ?, ?, NOW())";
+            $stmt = $this->db->prepare($query);
+            $billing_month = $data['year'] . '-' . str_pad($data['month'], 2, '0', STR_PAD_LEFT) . '-01';
+            $stmt->execute([
+                $data['provider_id'],
+                $billing_month,
+                $data['claims_count'],
+                $data['total_amount'],
+                'Pending'
+            ]);
+
+            $id = $this->db->lastInsertId();
+            return ['success' => true, 'data' => ['id' => $id, 'message' => 'Billing reconciliation created successfully']];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Update billing reconciliation
+     */
+    public function updateBillingReconciliation($reconciliation_id, $data) {
+        try {
+            $fields = [];
+            $values = [];
+            foreach ($data as $key => $value) {
+                if (in_array($key, ['status', 'total_amount', 'notes'])) {
+                    $fields[] = "$key = ?";
+                    $values[] = $value;
+                }
+            }
+            $values[] = $reconciliation_id;
+
+            if (!$fields) {
+                return ['success' => false, 'error' => 'No valid fields to update'];
+            }
+
+            $query = "UPDATE billing_reconciliations SET " . implode(', ', $fields) . ", updated_at = NOW() WHERE id = ?";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute($values);
+
+            return ['success' => true, 'message' => 'Billing reconciliation updated successfully'];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get billing reconciliations by month
+     */
+    public function getBillingReconciliationsByMonth($month, $year) {
+        try {
+            $billing_month = $year . '-' . str_pad($month, 2, '0', STR_PAD_LEFT);
+            $query = "SELECT br.*, hpr.provider_name 
+                      FROM billing_reconciliations br
+                      LEFT JOIN hmo_providers hpr ON br.provider_id = hpr.id
+                      WHERE DATE_FORMAT(br.billing_month, '%Y-%m') = ? 
+                      ORDER BY br.created_at DESC";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$billing_month]);
+            $reconciliations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return ['success' => true, 'data' => $reconciliations ? $reconciliations : []];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get billing reconciliations by provider
+     */
+    public function getBillingReconciliationsByProvider($provider_id) {
+        try {
+            $query = "SELECT * FROM billing_reconciliations 
+                      WHERE provider_id = ? 
+                      ORDER BY billing_month DESC, created_at DESC";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$provider_id]);
+            $reconciliations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return ['success' => true, 'data' => $reconciliations ? $reconciliations : []];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Resolve billing discrepancy
+     */
+    public function resolveBillingDiscrepancy($discrepancy_id, $resolution) {
+        try {
+            if (empty($discrepancy_id) || empty($resolution)) {
+                return ['success' => false, 'error' => 'Discrepancy ID and resolution required'];
+            }
+
+            $query = "UPDATE billing_discrepancies 
+                      SET status = 'Resolved', resolution = ?, resolved_at = NOW(), updated_at = NOW() 
+                      WHERE id = ?";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$resolution, $discrepancy_id]);
+
+            return ['success' => true, 'message' => 'Billing discrepancy resolved successfully'];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
 }
 
 

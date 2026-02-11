@@ -3,6 +3,19 @@
  * Tax and Contributions Engine Module
  * Ensure legal compliance through automated tax computation and contribution calculations
  */
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../../../config/Database.php';
+require_once __DIR__ . '/../models/TaxContribution.php';
+require_once __DIR__ . '/../models/PayrollComponent.php';
+
+$taxContribution = new TaxContribution();
+$payrollComponent = new PayrollComponent();
+
+// Fetch tax and contribution data
+$taxRecords = $taxContribution->getAll();
+$totalTaxRecords = count($taxRecords ?? []);
 ?>
 
 <style>

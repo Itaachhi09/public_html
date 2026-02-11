@@ -180,6 +180,125 @@ try {
             ]);
             break;
 
+        case 'getPayrollTrends':
+            $trends = [
+                'monthly_gross' => $service->getMonthlyPayrollTrends($department),
+                'cost_breakdown' => $service->getPayrollCostBreakdown($department),
+                'top_earners' => $service->getTopEarners($department, 10),
+                'salary_distribution' => $service->getSalaryDistribution($department)
+            ];
+            echo json_encode(['success' => true, 'data' => $trends, 'timestamp' => date('Y-m-d H:i:s')]);
+            break;
+
+        case 'getCompensationAnalysis':
+            $compensation = [
+                'cost_by_department' => $service->getCostByDepartment(),
+                'pay_grade_analysis' => $service->getPayGradeAnalysis(),
+                'benefit_cost_analysis' => $service->getBenefitCostAnalysis(),
+                'salary_equity' => $service->getSalaryEquityAnalysis($department)
+            ];
+            echo json_encode(['success' => true, 'data' => $compensation, 'timestamp' => date('Y-m-d H:i:s')]);
+            break;
+
+        case 'getHeadcountAnalytics':
+            $headcount = [
+                'by_department' => $service->getHeadcountByDepartment(),
+                'by_employment_type' => $service->getEmploymentTypeDistribution(),
+                'by_location' => $service->getHeadcountByLocation(),
+                'movement_trends' => $service->getMovementTrends($dateRange)
+            ];
+            echo json_encode(['success' => true, 'data' => $headcount, 'timestamp' => date('Y-m-d H:i:s')]);
+            break;
+
+        case 'getHMOInsights':
+            $hmo = [
+                'enrollment_summary' => $service->getHMOEnrollmentSummary(),
+                'provider_analysis' => $service->getProviderAnalysis(),
+                'claim_trends' => $service->getClaimTrends($dateRange),
+                'cost_per_employee' => $service->getHMOCostPerEmployee(),
+                'enrollment_by_provider' => $service->getEnrollmentByProvider()
+            ];
+            echo json_encode(['success' => true, 'data' => $hmo, 'timestamp' => date('Y-m-d H:i:s')]);
+            break;
+
+        case 'getComplianceTracking':
+            $compliance = [
+                'expiring_contracts' => $service->getContractExpiryData(),
+                'document_expiry' => $service->getExpiringDocumentsData(),
+                'compliance_status' => $service->getComplianceStatus(),
+                'upcoming_actions' => $service->getUpcomingComplianceActions(30)
+            ];
+            echo json_encode(['success' => true, 'data' => $compliance, 'timestamp' => date('Y-m-d H:i:s')]);
+            break;
+
+        case 'getMovementAnalytics':
+            $movement = [
+                'joiners' => $service->getMovementByType('joining', $dateRange, $department),
+                'leavers' => $service->getMovementByType('termination', $dateRange, $department),
+                'transfers' => $service->getMovementByType('transfer', $dateRange, $department),
+                'movement_rate' => $service->getMovementRate($dateRange),
+                'reasons_for_leaving' => $service->getTerminationReasons($dateRange)
+            ];
+            echo json_encode(['success' => true, 'data' => $movement, 'timestamp' => date('Y-m-d H:i:s')]);
+            break;
+
+        case 'getDepartmentKPIs':
+            $deptId = $_GET['departmentId'] ?? $_POST['departmentId'] ?? null;
+            $kpis = [
+                'headcount' => $service->getHeadcountSummary($deptId),
+                'average_salary' => $service->getAverageSalary($deptId),
+                'payroll_data' => $service->getPayrollSummary($dateRange, $deptId),
+                'hmo_metrics' => $service->getHMOSnapshot($deptId),
+                'movement_data' => $service->getMovementData($dateRange, $deptId),
+                'department_name' => $service->getDepartmentName($deptId)
+            ];
+            echo json_encode(['success' => true, 'data' => $kpis, 'timestamp' => date('Y-m-d H:i:s')]);
+            break;
+
+        case 'getCostAnalysis':
+            $costAnalysis = [
+                'total_payroll' => $service->getTotalPayrollCost($dateRange),
+                'hmo_cost' => $service->getHMOTotalCost(),
+                'cost_breakdown' => $service->getCostBreakdownByCategory(),
+                'cost_trends' => $service->getCostTrends($dateRange),
+                'cost_by_department' => $service->getCostByDepartment()
+            ];
+            echo json_encode(['success' => true, 'data' => $costAnalysis, 'timestamp' => date('Y-m-d H:i:s')]);
+            break;
+
+        case 'exportAnalytics':
+            $format = $_GET['format'] ?? $_POST['format'] ?? 'pdf';
+            $reportType = $_GET['reportType'] ?? $_POST['reportType'] ?? 'dashboard';
+            
+            if (!in_array($format, ['pdf', 'excel', 'csv'])) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'error' => 'Invalid export format']);
+                break;
+            }
+            
+            require_once(__DIR__ . '/ExportService.php');
+            $exporter = new ExportService();
+            
+            try {
+                $fileName = $exporter->export($reportType, $format, [
+                    'startDate' => $startDate,
+                    'endDate' => $endDate,
+                    'department' => $department,
+                    'dateRange' => $dateRange
+                ]);
+                
+                echo json_encode([
+                    'success' => true,
+                    'fileName' => $fileName,
+                    'downloadUrl' => '/modules/analytics/exports/' . $fileName,
+                    'message' => 'Export generated successfully'
+                ]);
+            } catch (Exception $e) {
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            }
+            break;
+
         default:
             http_response_code(400);
             echo json_encode(['success' => false, 'error' => 'Invalid action: ' . htmlspecialchars($action)]);

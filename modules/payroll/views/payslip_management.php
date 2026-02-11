@@ -3,6 +3,22 @@
  * Payslip Management Module
  * Generate and manage employee payslips with employee portal access
  */
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+require_once __DIR__ . '/../../../config/Database.php';
+require_once __DIR__ . '/../models/EmployeeSalary.php';
+require_once __DIR__ . '/../models/PayrollRunEmployee.php';
+
+$employeeSalary = new EmployeeSalary();
+$payrollEmployee = new PayrollRunEmployee();
+
+// Fetch payslips
+$payslips = $payrollEmployee->query("SELECT pre.*, pr.period_name, pr.pay_date, e.first_name, e.last_name, e.employee_code 
+                                      FROM payroll_run_employees pre 
+                                      JOIN payroll_runs pr ON pre.payroll_run_id = pr.id 
+                                      JOIN employees e ON pre.employee_id = e.employee_id 
+                                      ORDER BY pr.pay_date DESC, e.employee_code ASC");
 ?>
 
 <style>
@@ -574,7 +590,7 @@
   <div class="section">
     <h3 class="section-header">🚀 Generate Payslips</h3>
 
-    <form method="POST" action="">
+    <form method="POST" action="../payslip_management_handler.php">
       <div class="form-section">
         <h4>Select Payroll Period</h4>
         <div class="form-row">
@@ -956,7 +972,7 @@
   <div class="section">
     <h3 class="section-header">📧 Email Distribution Settings</h3>
 
-    <form method="POST" action="">
+    <form method="POST" action="../payslip_management_handler.php">
       <div class="form-section">
         <h4>Email Configuration</h4>
         <div class="form-row full">
