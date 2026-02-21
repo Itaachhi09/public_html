@@ -41,6 +41,13 @@ abstract class BaseModel {
     }
 
     /**
+     * Get by ID (alias for find)
+     */
+    public function getById($id) {
+        return $this->find($id);
+    }
+
+    /**
      * Get all records
      */
     public function all($limit = null, $offset = 0) {

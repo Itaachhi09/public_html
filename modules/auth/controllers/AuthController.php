@@ -70,7 +70,8 @@ class AuthController {
             }
 
             // Find user in database by email or username
-            $stmt = $this->db->prepare(
+            $conn = $this->db->getConnection();
+            $stmt = $conn->prepare(
                 'SELECT * FROM users WHERE email = :email OR username = :username LIMIT 1'
             );
             $stmt->bindParam(':email', $email);
@@ -191,7 +192,8 @@ class AuthController {
             }
 
             // Get user data
-            $stmt = $this->db->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
+            $conn = $this->db->getConnection();
+            $stmt = $conn->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
             $stmt->bindParam(':id', $user_id, PDO::PARAM_INT);
             $stmt->execute();
             
@@ -284,7 +286,8 @@ class AuthController {
             }
 
             // Get user data
-            $stmt = $this->db->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
+            $conn = $this->db->getConnection();
+            $stmt = $conn->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
             $stmt->bindParam(':id', $user_id, PDO::PARAM_INT);
             $stmt->execute();
             

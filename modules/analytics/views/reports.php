@@ -990,7 +990,11 @@ $employmentType = $_GET['employmentType'] ?? '';
             showModal('comparison-modal');
         }
 
+        // Track selected export format
+        window.selectedExportFormat = 'excel';
+        
         function selectExportFormat(event, format) {
+            window.selectedExportFormat = format;
             document.querySelectorAll('#export-modal .option-btn').forEach(btn => btn.classList.remove('selected'));
             event.target.closest('.option-btn').classList.add('selected');
         }
@@ -1014,8 +1018,298 @@ $employmentType = $_GET['employmentType'] ?? '';
         }
 
         function exportReport() {
-            alert('Report export functionality coming soon');
+            // Get selected format from tracked variable
+            const format = window.selectedExportFormat || 'excel';
+            
+            console.log('Exporting report in format:', format);
+            
+            // Check if we have complete data
+            if (!window.allReportData || window.allReportData.length === 0) {
+                alert('No data to export. Please load a report first.');
+                return;
+            }
+            
+            const reportName = window.selectedReportId || 'report';
+            const timestamp = new Date().toISOString().slice(0, 10);
+            const filename = reportName + '_' + timestamp;
+            
+            switch(format) {
+                case 'csv':
+                    exportToCSV(filename);
+                    break;
+                case 'excel':
+                    exportToExcel(filename);
+                    break;
+                case 'pdf':
+                    exportToPDF(filename);
+                    break;
+                default:
+                    exportToCSV(filename);
+            }
+            
             closeModal('export-modal');
+        }
+
+        function exportToCSV(filename) {
+            const rows = window.allReportData || [];
+            
+            if (rows.length === 0) {
+                alert('No data to export. Please load a report first.');
+                return;
+            }
+            
+            let csv = [];
+            
+            // Add report header
+            csv.push('DETAILED REPORT - ' + window.selectedReportId.toUpperCase());
+            csv.push('Generated: ' + new Date().toLocaleString());
+            csv.push('');
+            
+            // Get all column headers from first row
+            const headers = Object.keys(rows[0] || {});
+            
+            // Add summary statistics
+            csv.push('SUMMARY STATISTICS');
+            csv.push('Total Records,' + rows.length);
+            csv.push('Total Columns,' + headers.length);
+            csv.push('');
+            
+            // Calculate column statistics
+            const stats = {};
+            headers.forEach(header => {
+                const values = rows.map(r => parseFloat(r[header])).filter(v => !isNaN(v));
+                if (values.length > 0) {
+                    const sum = values.reduce((a, b) => a + b, 0);
+                    stats[header] = {
+                        sum: sum,
+                        avg: sum / values.length,
+                        max: Math.max(...values),
+                        min: Math.min(...values)
+                    };
+                }
+            });
+            
+            // Add statistics
+            csv.push('COLUMN STATISTICS');
+            Object.keys(stats).forEach(header => {
+                const stat = stats[header];
+                csv.push('');
+                csv.push(header + ' - Statistics');
+                csv.push('Sum,' + stat.sum.toFixed(2));
+                csv.push('Average,' + stat.avg.toFixed(2));
+                csv.push('Maximum,' + stat.max.toFixed(2));
+                csv.push('Minimum,' + stat.min.toFixed(2));
+            });
+            
+            csv.push('');
+            csv.push('DETAILED DATA (' + rows.length + ' rows × ' + headers.length + ' columns)');
+            csv.push('');
+            
+            // Add all headers
+            const headerRow = headers.map(h => '"' + (h || '').replace(/"/g, '""') + '"');
+            csv.push(headerRow.join(','));
+            
+            // Add all rows with ALL data
+            rows.forEach(row => {
+                const rowData = headers.map(header => {
+                    const value = row[header] !== null && row[header] !== undefined ? String(row[header]) : '';
+                    return '"' + value.replace(/"/g, '""') + '"';
+                });
+                csv.push(rowData.join(','));
+            });
+            
+            // Download
+            const csvContent = csv.join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename + '.csv';
+            link.click();
+            console.log('✅ CSV export: ' + rows.length + ' rows × ' + headers.length + ' columns');
+        }
+
+        function exportToExcel(filename) {
+            const rows = window.allReportData || [];
+            
+            if (rows.length === 0) {
+                alert('No data to export. Please load a report first.');
+                return;
+            }
+            
+            // Create detailed Excel-compatible HTML
+            let html = '<html><head><meta charset="UTF-8"><style>';
+            html += 'body { font-family: Arial, sans-serif; }';
+            html += 'h1 { color: #1e40af; font-size: 20px; margin-bottom: 5px; }';
+            html += 'p { color: #666; font-size: 12px; margin: 5px 0; }';
+            html += '.section-title { background: #1e40af; color: white; padding: 8px; margin-top: 15px; font-weight: bold; }';
+            html += 'table { border-collapse: collapse; width: 100%; margin: 10px 0; }';
+            html += 'th { background: #e5e7eb; border: 1px solid #d1d5db; padding: 8px; text-align: left; font-weight: bold; }';
+            html += 'td { border: 1px solid #d1d5db; padding: 6px; }';
+            html += 'tr:nth-child(even) { background: #f9fafb; }';
+            html += '.stat-label { font-weight: bold; width: 30%; }';
+            html += '.stat-value { color: #1e40af; }';
+            html += '</style></head><body>';
+            
+            // Get all columns from first row
+            const headers = Object.keys(rows[0] || {});
+            
+            // Header
+            html += '<h1>DETAILED REPORT</h1>';
+            html += '<p><strong>Report Type:</strong> ' + (window.selectedReportId || 'Report').toUpperCase() + '</p>';
+            html += '<p><strong>Generated:</strong> ' + new Date().toLocaleString() + '</p>';
+            html += '<p><strong>Total Records:</strong> ' + rows.length + '</p>';
+            html += '<p><strong>Total Columns:</strong> ' + headers.length + '</p>';
+            
+            // Summary Table
+            html += '<div class="section-title">SUMMARY STATISTICS</div>';
+            html += '<table>';
+            
+            // Calculate statistics
+            const stats = {};
+            headers.forEach(header => {
+                const values = rows.map(r => parseFloat(r[header])).filter(v => !isNaN(v));
+                if (values.length > 0) {
+                    const sum = values.reduce((a, b) => a + b, 0);
+                    stats[header] = {
+                        sum: sum,
+                        avg: sum / values.length,
+                        max: Math.max(...values),
+                        min: Math.min(...values)
+                    };
+                }
+            });
+            
+            Object.keys(stats).forEach(header => {
+                const stat = stats[header];
+                html += '<tr>';
+                html += '<td class="stat-label">' + header + '</td>';
+                html += '<td>Total: <span class="stat-value">' + stat.sum.toFixed(2) + '</span></td>';
+                html += '<td>Avg: <span class="stat-value">' + stat.avg.toFixed(2) + '</span></td>';
+                html += '<td>Max: <span class="stat-value">' + stat.max.toFixed(2) + '</span></td>';
+                html += '<td>Min: <span class="stat-value">' + stat.min.toFixed(2) + '</span></td>';
+                html += '</tr>';
+            });
+            
+            html += '</table>';
+            
+            // Detailed Data Table
+            html += '<div class="section-title">DETAILED DATA (' + rows.length + ' rows × ' + headers.length + ' columns)</div>';
+            html += '<table>';
+            
+            // Add headers
+            html += '<tr>';
+            headers.forEach(header => {
+                html += '<th>' + (header || '') + '</th>';
+            });
+            html += '</tr>';
+            
+            // Add all rows with all data
+            rows.forEach(row => {
+                html += '<tr>';
+                headers.forEach(header => {
+                    const value = row[header] !== null && row[header] !== undefined ? String(row[header]) : '';
+                    html += '<td>' + value + '</td>';
+                });
+                html += '</tr>';
+            });
+            html += '</table>';
+            
+            // Footer
+            html += '<div class="section-title">REPORT FOOTER</div>';
+            html += '<p><strong>Export Time:</strong> ' + new Date().toLocaleString() + '</p>';
+            html += '<p><strong>Total Records Exported:</strong> ' + rows.length + '</p>';
+            html += '<p><strong>Document:</strong> ' + filename + '</p>';
+            html += '</body></html>';
+            
+            // Create Excel file
+            const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename + '.xls';
+            link.click();
+            console.log('✅ Excel export: ' + rows.length + ' rows × ' + headers.length + ' columns');
+        }
+
+        function exportToPDF(filename) {
+            const rows = window.allReportData || [];
+            
+            if (rows.length === 0) {
+                alert('No data to export. Please load a report first.');
+                return;
+            }
+            
+            // Generate detailed report content
+            let content = '';
+            content += '='.repeat(80) + '\n';
+            content += '                         DETAILED REPORT\n';
+            content += '='.repeat(80) + '\n\n';
+            
+            // Get all columns from first row
+            const headers = Object.keys(rows[0] || {});
+            
+            content += 'Report Type: ' + (window.selectedReportId || 'Report').toUpperCase() + '\n';
+            content += 'Generated: ' + new Date().toLocaleString() + '\n';
+            content += 'Total Records: ' + rows.length + '\n';
+            content += 'Total Columns: ' + headers.length + '\n';
+            content += '\n' + '-'.repeat(80) + '\n';
+            content += 'SUMMARY STATISTICS\n';
+            content += '-'.repeat(80) + '\n\n';
+            
+            // Calculate statistics
+            const stats = {};
+            headers.forEach(header => {
+                const values = rows.map(r => parseFloat(r[header])).filter(v => !isNaN(v));
+                if (values.length > 0) {
+                    const sum = values.reduce((a, b) => a + b, 0);
+                    stats[header] = {
+                        sum: sum,
+                        avg: sum / values.length,
+                        max: Math.max(...values),
+                        min: Math.min(...values)
+                    };
+                }
+            });
+            
+            Object.keys(stats).forEach(header => {
+                const stat = stats[header];
+                content += header + ':\n';
+                content += '  Total:   ' + stat.sum.toFixed(2) + '\n';
+                content += '  Average: ' + stat.avg.toFixed(2) + '\n';
+                content += '  Maximum: ' + stat.max.toFixed(2) + '\n';
+                content += '  Minimum: ' + stat.min.toFixed(2) + '\n\n';
+            });
+            
+            content += '\n' + '-'.repeat(80) + '\n';
+            content += 'DETAILED DATA (' + rows.length + ' rows × ' + headers.length + ' columns)\n';
+            content += '-'.repeat(80) + '\n\n';
+            
+            // Headers
+            content += headers.map(h => (h || '').padEnd(20)).join(' | ') + '\n';
+            content += '-'.repeat(80) + '\n';
+            
+            // Data rows - include all data
+            rows.forEach(row => {
+                const rowData = headers.map(header => {
+                    const value = row[header] !== null && row[header] !== undefined ? String(row[header]) : '';
+                    return value.padEnd(20);
+                });
+                content += rowData.join(' | ') + '\n';
+            });
+            
+            content += '\n' + '='.repeat(80) + '\n';
+            content += 'Report Generated: ' + new Date().toLocaleString() + '\n';
+            content += 'Total Records Exported: ' + rows.length + '\n';
+            content += 'Document: ' + filename + '\n';
+            content += '='.repeat(80) + '\n';
+            
+            // Download as TXT (PDF would require a library)
+            const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename + '.txt';
+            link.click();
+            console.log('✅ PDF-style report exported as TXT: ' + rows.length + ' rows × ' + headers.length + ' columns');
+            alert('PDF exported as formatted TXT file with ' + rows.length + ' records. For true PDF support, install a PDF library.');
         }
 
         function scheduleReport() {
@@ -1201,7 +1495,7 @@ $employmentType = $_GET['employmentType'] ?? '';
 
         function loadFilterDropdowns() {
             // Load departments
-            fetch('../api.php?action=getDashboardData')
+            fetch('/public_html/modules/analytics/api.php?action=getDashboardData')
                 .then(response => response.json())
                 .then(data => {
                     if (data.departments) {
@@ -1235,23 +1529,41 @@ $employmentType = $_GET['employmentType'] ?? '';
 
         function loadReportData() {
             if (!window.selectedReportId) {
+                console.log('No report selected yet, skipping data load');
                 return;
             }
+            
+            console.log('Loading report data for:', window.selectedReportId);
             
             // Get filter values
             const department = document.getElementById('report-department-filter')?.value || '';
             const employmentType = document.getElementById('report-employment-type-filter')?.value || '';
             
-            // Build API URL
-            let url = '../api.php?action=getReportData&reportId=' + encodeURIComponent(window.selectedReportId);
+            // Build API URL - use full path
+            let url = '/public_html/modules/analytics/api.php?action=getReportData&reportId=' + encodeURIComponent(window.selectedReportId);
             url += '&limit=20&offset=0';
             if (department) url += '&department=' + encodeURIComponent(department);
             if (employmentType) url += '&employmentType=' + encodeURIComponent(employmentType);
             
+            console.log('Report data URL:', url);
+            
             // Fetch data
-            fetch(url)
-                .then(response => response.json())
+            fetch(url, {
+                credentials: 'same-origin',
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+                .then(response => {
+                    console.log('Report data response status:', response.status);
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            console.error('API error response:', text);
+                            throw new Error('API error ' + response.status + ': ' + text);
+                        });
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('Report data received:', data);
                     if (data.success && data.data) {
                         displayReportData(data.data);
                     } else {
@@ -1262,7 +1574,7 @@ $employmentType = $_GET['employmentType'] ?? '';
                 .catch(error => {
                     console.error('Error loading report data:', error);
                     document.getElementById('report-table-container').innerHTML = 
-                        '<div class="no-data">Error loading report data</div>';
+                        '<div class="no-data">Error loading report data: ' + error.message + '</div>';
                 });
         }
 
@@ -1272,6 +1584,10 @@ $employmentType = $_GET['employmentType'] ?? '';
                     '<div class="no-data">No data available</div>';
                 return;
             }
+            
+            // Store all data globally for export
+            window.allReportData = rows;
+            console.log('Stored ' + rows.length + ' rows for export');
             
             // Get visible fields
             const visibleFields = Array.from(document.querySelectorAll('.report-field-visible:checked'))

@@ -195,13 +195,57 @@ button {
   transition: opacity 0.3s 0.1s;
 }
 
-.sidebar-footer {
-  margin-top: auto;
+.sidebar-nav {
+  flex-grow: 1;
+  overflow-y: auto;
   width: 100%;
-  text-align: center;
-  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-footer {
+  width: 100%;
+  padding: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sidebar-footer a {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   padding: 1rem;
-  opacity: 0.7;
+  width: 100%;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: 0.3s;
+  cursor: pointer;
+}
+
+.sidebar-footer a:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-footer a i {
+  font-size: 20px;
+  min-width: 24px;
+  flex-shrink: 0;
+}
+
+.sidebar-footer a span {
+  opacity: 0;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+  transition: opacity 0.3s 0.1s;
+}
+
+.sidebar:hover .sidebar-footer a span {
+  opacity: 1;
 }
 
 .sidebar:hover ~ .flex-col .main-content,

@@ -1100,7 +1100,7 @@
 
         function formatDate(dateString) {
             if (!dateString) return '';
-            return new Date(dateString).toLocaleDateString('en-KE', {
+            return new Date(dateString).toLocaleDateString('en-PH', {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric'

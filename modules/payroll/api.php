@@ -41,6 +41,7 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
 
 ob_end_clean();
 
+require_once __DIR__ . '/../../config/BaseConfig.php';
 require_once __DIR__ . '/../../config/Database.php';
 require_once __DIR__ . '/../../config/Auth.php';
 require_once __DIR__ . '/models/PayrollRun.php';
@@ -92,6 +93,41 @@ try {
     
     $action = $_GET['action'] ?? $_POST['action'] ?? '';
     $response = ['success' => false, 'message' => 'Invalid action'];
+    
+    // ===== ROLE-BASED ACCESS CONTROL =====
+    // Define restricted actions for each submodule
+    $restrictedActions = [
+        'setup_configuration' => [
+            'getPayrollConfiguration', 'updatePayrollConfiguration'
+        ],
+        'tax_contributions_engine' => [
+            'getTaxContributions', 'getTaxContributionDetail', 'createTaxContribution', 
+            'updateTaxContribution', 'deleteTaxContribution'
+        ],
+        'disbursement_bank_files' => [
+            'getDisbursements', 'getDisbursementDetail', 'createDisbursement', 
+            'updateDisbursement', 'deleteDisbursement'
+        ],
+        'government_reports_compliance' => [
+            'getGovernmentReports', 'getGovernmentReportDetail', 'createGovernmentReport', 
+            'updateGovernmentReport', 'deleteGovernmentReport'
+        ],
+        'security_audit_trail' => [
+            'getPayrollAuditTrails', 'getPayrollAuditTrailDetail'
+        ]
+    ];
+    
+    // Check if action is restricted
+    foreach ($restrictedActions as $submodule => $actions) {
+        if (in_array($action, $actions)) {
+            if (!canAccessMenuItem('payroll', $submodule)) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'Access denied: ' . $submodule]);
+                exit;
+            }
+            break;
+        }
+    }
     
     switch ($action) {
         // ==================== PAYROLL RUNS ====================

@@ -91,7 +91,10 @@
         <div class="card">
           <div class="card-header">
             <h3 class="card-title">Employee Movements</h3>
-            <button class="btn btn-outline btn-sm" onclick="window.resetFilters()" style="color: var(--text-light);">↻ Reset</button>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn btn-outline btn-sm" onclick="window.resetFilters()" style="color: var(--text-light);">↻ Reset</button>
+              <button class="btn btn-outline" onclick="window.openArchiveModal()" title="View archived movements" style="white-space: nowrap; position: relative;">📦 Archive <span id="archiveCount" style="display: inline-block; background: var(--danger); color: white; border-radius: 50%; width: 20px; height: 20px; line-height: 20px; text-align: center; font-size: 12px; font-weight: 600; margin-left: 0.5rem;">0</span></button>
+            </div>
           </div>
 
           <div class="table-container" style="overflow-x: auto;">
@@ -182,14 +185,13 @@
       </div>
     </aside>
   </div>
-</main>
 
-<!-- Movement Modal -->
-<div id="movementModal" class="modal">
+  <!-- Movement Modal -->
+  <div id="movementModal" class="modal" style="position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.4); display: none;">
   <div class="modal-content" style="max-width: 600px;">
     <div class="modal-header">
       <h2 class="modal-title">Add Movement</h2>
-      <button class="modal-close" onclick="closeMovementModal()">&times;</button>
+      <button class="modal-close" onclick="window.closeMovementModal()">&times;</button>
     </div>
     <form id="movementForm">
       <div class="form-group">
@@ -226,12 +228,13 @@
         </select>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline" onclick="closeMovementModal()">Cancel</button>
+        <button type="button" class="btn btn-outline" onclick="window.closeMovementModal()">Cancel</button>
         <button type="submit" class="btn btn-primary">Save</button>
       </div>
     </form>
   </div>
 </div>
+</main>
 
 <script>
   (function() {
@@ -329,7 +332,8 @@
           actionButtons = `
             <div style="display: flex; gap: 0.5rem; justify-content: center;">
               <button class="move-action-btn move-action-view" onclick="window.viewMovement(${mov.id})" title="View">👁</button>
-              <button class="move-action-btn move-action-more" onclick="alert('Edit/Delete options')" title="More">⋯</button>
+              <button class="move-action-btn move-action-view" onclick="window.editMovement(${mov.id})" title="Edit">✏</button>
+              <button class="move-action-btn move-action-reject" onclick="window.deleteMovement(${mov.id})" title="Delete">🗑</button>
             </div>
           `;
         } else if (status === 'Rejected') {
@@ -338,7 +342,8 @@
           actionButtons = `
             <div style="display: flex; gap: 0.5rem; justify-content: center;">
               <button class="move-action-btn move-action-view" onclick="window.viewMovement(${mov.id})" title="View">👁</button>
-              <button class="move-action-btn move-action-more" onclick="alert('Edit/Delete options')" title="More">⋯</button>
+              <button class="move-action-btn move-action-view" onclick="window.editMovement(${mov.id})" title="Edit">✏</button>
+              <button class="move-action-btn move-action-reject" onclick="window.deleteMovement(${mov.id})" title="Delete">🗑</button>
             </div>
           `;
         } else {
@@ -348,8 +353,8 @@
           actionButtons = `
             <div style="display: flex; gap: 0.5rem; justify-content: center;">
               <button class="move-action-btn move-action-approve" onclick="window.approveMovement(${mov.id})" title="Approve">✓ Approve</button>
-              <button class="move-action-btn move-action-reject" onclick="window.rejectMovement(${mov.id})" title="Reject">✕ Reject</button>
-              <button class="move-action-btn move-action-view" onclick="window.viewMovement(${mov.id})" title="View details">👁</button>
+              <button class="move-action-btn move-action-reject" onclick="window.showRejectDialog(${mov.id})" title="Reject">✕ Reject</button>
+              <button class="move-action-btn move-action-view" onclick="window.viewMovement(${mov.id})" title="View">👁</button>
             </div>
           `;
         }
@@ -379,14 +384,130 @@
     };
 
     window.openMovementModal = function() {
-      document.getElementById('movementForm').reset();
-      delete document.getElementById('movementForm').dataset.id;
-      document.querySelector('#movementModal .modal-title').textContent = 'Add Movement';
-      document.getElementById('movementModal').classList.add('active');
+      const modalContent = document.querySelector('#movementModal .modal-content');
+      if (!modalContent) {
+        console.error('Modal content element not found');
+        return;
+      }
+
+      // First, restore the form view in the modal-content
+      const formView = `
+        <div class="modal-header">
+          <h2 class="modal-title">Add Movement</h2>
+          <button class="modal-close" onclick="window.closeMovementModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+        </div>
+        <form id="movementForm">
+          <div class="form-group">
+            <label class="form-label">Employee *</label>
+            <select name="employee_id" class="form-select" required>
+              <option value="">Select employee...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Movement Type *</label>
+            <select name="movement_type" class="form-select" required>
+              <option value="">Select type...</option>
+              <option value="promotion">Promotion</option>
+              <option value="transfer">Transfer</option>
+              <option value="demotion">Demotion</option>
+              <option value="resignation">Resignation</option>
+              <option value="retirement">Retirement</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Effective Date *</label>
+            <input type="date" name="effective_date" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea name="description" class="form-input" placeholder="Details about the movement..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Status</label>
+            <select name="approval_status" class="form-select">
+              <option value="Pending">Pending</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" onclick="window.closeMovementModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save</button>
+          </div>
+        </form>
+      `;
+      modalContent.innerHTML = formView;
+      
+      // Load employees for dropdown
+      fetch('modules/hr_core/api.php?action=getAllEmployees')
+        .then(res => res.json())
+        .then(data => {
+          const employeeSelect = document.querySelector('[name="employee_id"]');
+          if (employeeSelect && data.success && data.data.employees) {
+            employeeSelect.innerHTML = '<option value="">Select employee...</option>';
+            data.data.employees.forEach(emp => {
+              employeeSelect.innerHTML += `<option value="${emp.employee_id}">${emp.first_name} ${emp.last_name} (${emp.employee_code})</option>`;
+            });
+          }
+        })
+        .catch(error => console.error('Error loading employees:', error));
+
+      const form = document.getElementById('movementForm');
+      if (!form) return;
+      
+      form.reset();
+      delete form.dataset.id;
+      
+      // Reattach form submit handler
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const isEdit = this.dataset.id;
+        const action = isEdit ? 'updateMovement' : 'createMovement';
+        
+        const data = {
+          action: action,
+          employee_id: parseInt(formData.get('employee_id')),
+          movement_type: formData.get('movement_type'),
+          effective_date: formData.get('effective_date'),
+          reason: formData.get('description'),
+          status: formData.get('approval_status')
+        };
+        
+        if (isEdit) data.id = parseInt(isEdit);
+
+        fetch(`modules/hr_core/api.php`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(result => {
+          if (result.success) {
+            alert(isEdit ? '✓ Movement updated successfully' : '✓ Movement created successfully');
+            window.closeMovementModal();
+            window.loadMovements();
+          } else {
+            alert('Error: ' + (result.message || 'Failed to save movement'));
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error saving movement: ' + error.message);
+        });
+      });
+      
+      document.getElementById('movementModal').style.display = 'flex';
+      document.getElementById('movementModal').style.alignItems = 'center';
+      document.getElementById('movementModal').style.justifyContent = 'center';
     };
 
     window.closeMovementModal = function() {
-      document.getElementById('movementModal').classList.remove('active');
+      const modal = document.getElementById('movementModal');
+      if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+      }
     };
 
     window.toggleStatusFilter = function(status) {
@@ -417,10 +538,367 @@
         .then(data => {
           if (data.success) {
             const mov = data.data;
-            alert(`Movement: ${mov.movement_type}\nEmployee: ${mov.employee_name}\nEffective: ${mov.effective_date}\nStatus: ${mov.status || mov.approval_status}`);
+            const viewContent = `
+              <div class="modal-header">
+                <h2 class="modal-title">View Movement</h2>
+                <button class="modal-close" onclick="window.closeMovementModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+              </div>
+              <div style="padding: 1.5rem; text-align: center;">
+                <div style="margin-bottom: 1.5rem;">
+                  <p style="font-size: 12px; color: var(--text-light); margin: 0; text-transform: uppercase; font-weight: 600;">Employee</p>
+                  <p style="font-size: 18px; color: var(--text-dark); font-weight: 600; margin: 0.5rem 0 0 0;">${mov.employee_name || 'N/A'}</p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                  <div>
+                    <p style="font-size: 12px; color: var(--text-light); margin: 0; text-transform: uppercase; font-weight: 600;">Movement Type</p>
+                    <p style="font-size: 16px; color: var(--text-dark); font-weight: 600; margin: 0.5rem 0 0 0;">${mov.movement_type || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p style="font-size: 12px; color: var(--text-light); margin: 0; text-transform: uppercase; font-weight: 600;">Effective Date</p>
+                    <p style="font-size: 16px; color: var(--text-dark); font-weight: 600; margin: 0.5rem 0 0 0;">${mov.effective_date || 'N/A'}</p>
+                  </div>
+                </div>
+
+                <div style="background: var(--bg-light); padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+                  <p style="font-size: 12px; color: var(--text-light); margin: 0; text-transform: uppercase; font-weight: 600;">Status</p>
+                  <p style="font-size: 16px; font-weight: 600; margin: 0.5rem 0 0 0; color: ${mov.status === 'Approved' ? '#22c55e' : mov.status === 'Rejected' ? '#ef4444' : '#f59e0b'};">${mov.status || 'Pending'}</p>
+                </div>
+
+                ${mov.reason ? `<div style="text-align: left; background: #f9fafb; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;"><p style="font-size: 12px; color: var(--text-light); margin: 0; font-weight: 600;">Notes</p><p style="margin: 0.5rem 0 0 0; font-size: 14px; color: var(--text-dark);">${mov.reason}</p></div>` : ''}
+
+                <div style="display: flex; gap: 1rem; justify-content: center;">
+                  <button class="btn btn-outline" onclick="window.closeMovementModal()">Close</button>
+                  <button class="btn btn-primary" onclick="window.editMovement(${id})">Edit</button>
+                </div>
+              </div>
+            `;
+            const modalContent = document.querySelector('#movementModal .modal-content');
+            if (modalContent) {
+              modalContent.innerHTML = viewContent;
+              const modal = document.getElementById('movementModal');
+              modal.style.display = 'flex';
+              modal.style.alignItems = 'center';
+              modal.style.justifyContent = 'center';
+            } else {
+              console.error('Modal content element not found');
+            }
+          } else {
+            alert('Failed to load movement: ' + (data.message || 'Unknown error'));
           }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error loading movement details');
+        });
+    };
+
+    window.editMovement = function(id) {
+      fetch(`modules/hr_core/api.php?action=getMovementById&id=${id}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            const mov = data.data;
+            
+            // Build the full modal content with form
+            const editContent = `
+              <div class="modal-header">
+                <h2 class="modal-title">Edit Movement</h2>
+                <button class="modal-close" onclick="window.closeMovementModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+              </div>
+              <form id="movementForm" data-id="${id}">
+                <div class="form-group">
+                  <label class="form-label">Employee *</label>
+                  <select name="employee_id" class="form-select" required>
+                    <option value="">Select employee...</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Movement Type *</label>
+                  <select name="movement_type" class="form-select" required>
+                    <option value="">Select type...</option>
+                    <option value="promotion">Promotion</option>
+                    <option value="transfer">Transfer</option>
+                    <option value="demotion">Demotion</option>
+                    <option value="resignation">Resignation</option>
+                    <option value="retirement">Retirement</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Effective Date *</label>
+                  <input type="date" name="effective_date" class="form-input" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Description</label>
+                  <textarea name="description" class="form-input" placeholder="Details about the movement..."></textarea>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Status</label>
+                  <select name="approval_status" class="form-select">
+                    <option value="Pending">Pending</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Rejected">Rejected</option>
+                  </select>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-outline" onclick="window.closeMovementModal()">Cancel</button>
+                  <button type="submit" class="btn btn-primary">Update</button>
+                </div>
+              </form>
+            `;
+            
+            const modalContent = document.querySelector('#movementModal .modal-content');
+            if (modalContent) {
+              modalContent.innerHTML = editContent;
+              
+              // Load employees and populate form
+              fetch('modules/hr_core/api.php?action=getAllEmployees')
+                .then(res => res.json())
+                .then(empData => {
+                  const employeeSelect = document.querySelector('[name="employee_id"]');
+                  if (employeeSelect && empData.success && empData.data.employees) {
+                    employeeSelect.innerHTML = '<option value="">Select employee...</option>';
+                    empData.data.employees.forEach(emp => {
+                      employeeSelect.innerHTML += `<option value="${emp.employee_id}">${emp.first_name} ${emp.last_name} (${emp.employee_code})</option>`;
+                    });
+                    
+                    // Set form values from fetched movement data
+                    employeeSelect.value = mov.employee_id || '';
+                    document.querySelector('[name="movement_type"]').value = mov.movement_type || '';
+                    document.querySelector('[name="effective_date"]').value = mov.effective_date || '';
+                    document.querySelector('[name="description"]').value = mov.reason || '';
+                    document.querySelector('[name="approval_status"]').value = mov.status || 'Pending';
+                  }
+                })
+                .catch(err => console.error('Error loading employees:', err));
+              
+              // Attach form submit handler
+              const form = document.getElementById('movementForm');
+              if (form) {
+                form.addEventListener('submit', function(e) {
+                  e.preventDefault();
+                  const formData = new FormData(this);
+                  
+                  const updateData = {
+                    action: 'updateMovement',
+                    id: parseInt(this.dataset.id),
+                    employee_id: parseInt(formData.get('employee_id')),
+                    movement_type: formData.get('movement_type'),
+                    effective_date: formData.get('effective_date'),
+                    reason: formData.get('description'),
+                    status: formData.get('approval_status')
+                  };
+
+                  fetch(`modules/hr_core/api.php`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(updateData)
+                  })
+                  .then(response => response.json())
+                  .then(result => {
+                    if (result.success) {
+                      alert('✓ Movement updated successfully');
+                      window.closeMovementModal();
+                      window.loadMovements();
+                    } else {
+                      alert('Error: ' + (result.message || 'Failed to update movement'));
+                    }
+                  })
+                  .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error updating movement: ' + error.message);
+                  });
+                });
+              }
+              
+              const modal = document.getElementById('movementModal');
+              modal.style.display = 'flex';
+              modal.style.alignItems = 'center';
+              modal.style.justifyContent = 'center';
+            } else {
+              console.error('Modal content element not found');
+            }
+          } else {
+            alert('Failed to load movement: ' + (data.message || 'Unknown error'));
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error loading movement for edit');
+        });
+    };
+
+    window.deleteMovement = function(id) {
+      if (confirm('Archive this movement? It can be restored later.')) {
+        fetch(`modules/hr_core/api.php?action=deleteMovement&id=${id}`, {
+          method: 'POST'
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('✓ Movement archived successfully');
+            window.loadMovements();
+            window.updateArchiveCount();
+          } else {
+            alert('Error: ' + (data.message || 'Failed to archive'));
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error archiving movement');
+        });
+      }
+    };
+
+    window.updateArchiveCount = function() {
+      fetch(`modules/hr_core/api.php?action=getArchivedMovements`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            const countBadge = document.getElementById('archiveCount');
+            if (countBadge) {
+              countBadge.textContent = data.data.length || 0;
+            }
+          }
+        })
+        .catch(error => console.error('Error updating archive count:', error));
+    };
+
+    window.openArchiveModal = function() {
+      fetch(`modules/hr_core/api.php?action=getArchivedMovements`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success && data.data.length > 0) {
+            let content = '<div style="max-height: 600px; overflow-y: auto;">';
+            data.data.forEach(mov => {
+              content += `
+                <div style="border: 1px solid #ecf0f1; border-radius: 6px; padding: 1rem; margin-bottom: 1rem; background: #f9fafb;">
+                  <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                    <div>
+                      <p style="margin: 0; font-weight: 600; color: var(--text-dark);">${mov.employee_name || 'N/A'}</p>
+                      <p style="margin: 0.5rem 0 0 0; font-size: 12px; color: var(--text-light);">${mov.movement_type || 'N/A'} • ${mov.effective_date || 'N/A'}</p>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; white-space: nowrap;">
+                      <button class="btn btn-primary btn-sm" onclick="window.restoreMovement(${mov.movement_id})">↩ Restore</button>
+                      <button class="btn btn-outline btn-sm" onclick="window.permanentlyDeleteArchivedMovement(${mov.movement_id})" style="color: #ef4444; border-color: #ef4444;">🗑 Delete</button>
+                    </div>
+                  </div>
+                </div>
+              `;
+            });
+            content += '</div>';
+            
+            const modal = document.createElement('div');
+            modal.id = 'archiveModal';
+            modal.className = 'modal';
+            modal.style.display = 'flex';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            modal.style.position = 'fixed';
+            modal.style.zIndex = '2000';
+            modal.style.left = '0';
+            modal.style.top = '0';
+            modal.style.width = '100%';
+            modal.style.height = '100%';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
+            
+            modal.innerHTML = `
+              <div class="modal-content" style="max-width: 600px;">
+                <div class="modal-header">
+                  <h2 class="modal-title">Archived Movements</h2>
+                  <button class="modal-close" onclick="document.getElementById('archiveModal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+                </div>
+                <div style="padding: 1.5rem;">
+                  ${content}
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-outline" onclick="document.getElementById('archiveModal').remove()">Close</button>
+                </div>
+              </div>
+            `;
+            
+            document.body.appendChild(modal);
+          } else {
+            const modal = document.createElement('div');
+            modal.id = 'archiveModal';
+            modal.className = 'modal';
+            modal.style.display = 'flex';
+            modal.style.alignItems = 'center';
+            modal.style.justifyContent = 'center';
+            modal.style.position = 'fixed';
+            modal.style.zIndex = '2000';
+            modal.style.left = '0';
+            modal.style.top = '0';
+            modal.style.width = '100%';
+            modal.style.height = '100%';
+            modal.style.backgroundColor = 'rgba(0, 0, 0, 0.4)';
+            
+            modal.innerHTML = `
+              <div class="modal-content" style="max-width: 600px; text-align: center;">
+                <div class="modal-header">
+                  <h2 class="modal-title">Archived Movements</h2>
+                  <button class="modal-close" onclick="document.getElementById('archiveModal').remove()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+                </div>
+                <div style="padding: 2rem;">
+                  <div style="font-size: 48px; margin-bottom: 1rem;">📦</div>
+                  <h3 style="font-size: 18px; color: var(--text-dark); margin-bottom: 0.5rem;">No Archived Movements</h3>
+                  <p style="color: var(--text-light);">No archived movements at this time.</p>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-outline" onclick="document.getElementById('archiveModal').remove()">Close</button>
+                </div>
+              </div>
+            `;
+            
+            document.body.appendChild(modal);
+          }
+        })
+        .catch(error => {
+          console.error('Error loading archived movements:', error);
+          alert('Error loading archived movements: ' + error.message);
+        });
+    };
+
+    window.restoreMovement = function(id) {
+      if (confirm('Restore this movement?')) {
+        fetch(`modules/hr_core/api.php?action=restoreMovement&id=${id}`, {method: 'POST'})
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('✓ Movement restored successfully');
+              window.openArchiveModal();
+              window.loadMovements();
+              window.updateArchiveCount();
+            } else {
+              alert('Error: ' + (data.message || 'Failed to restore'));
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Error restoring movement');
+          });
+      }
+    };
+
+    window.permanentlyDeleteArchivedMovement = function(id) {
+      if (confirm('⚠️ Permanently delete this movement? This action cannot be undone.')) {
+        fetch(`modules/hr_core/api.php?action=permanentlyDeleteMovement&id=${id}`, {method: 'POST'})
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('✓ Movement permanently deleted');
+              window.openArchiveModal();
+              window.loadMovements();
+              window.updateArchiveCount();
+            } else {
+              alert('Error: ' + (data.message || 'Failed to delete'));
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting movement');
+          });
+      }
     };
 
     window.approveMovement = function(id) {
@@ -429,26 +907,45 @@
           .then(response => response.json())
           .then(data => {
             if (data.success) {
-              alert('Movement approved');
+              alert('✓ Movement approved successfully');
               window.loadMovements();
+            } else {
+              alert('Error: ' + (data.message || 'Failed to approve'));
             }
           })
-          .catch(error => console.error('Error:', error));
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Error approving movement');
+          });
+      }
+    };
+
+    window.showRejectDialog = function(id) {
+      const reason = prompt('Enter reason for rejection:', 'Rejection reason...');
+      if (reason !== null && reason.trim() !== '') {
+        fetch(`modules/hr_core/api.php?action=rejectMovement&id=${id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ rejection_reason: reason })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('✕ Movement rejected successfully');
+            window.loadMovements();
+          } else {
+            alert('Error: ' + (data.message || 'Failed to reject'));
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error rejecting movement');
+        });
       }
     };
 
     window.rejectMovement = function(id) {
-      if (confirm('Reject this movement?')) {
-        fetch(`modules/hr_core/api.php?action=rejectMovement&id=${id}`, {method: 'POST'})
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              alert('Movement rejected');
-              window.loadMovements();
-            }
-          })
-          .catch(error => console.error('Error:', error));
-      }
+      window.showRejectDialog(id);
     };
 
     window.loadMyApprovals = function() {
@@ -496,46 +993,76 @@
         if (el) el.addEventListener('change', () => window.loadMovements());
       });
 
-      const form = document.getElementById('movementForm');
-      if (form) {
-        form.addEventListener('submit', function(e) {
-          e.preventDefault();
-          const formData = new FormData(this);
-          const isEdit = this.dataset.id;
-          const action = isEdit ? 'updateMovement' : 'createMovement';
-          const data = {
-            employee_id: formData.get('employee_id'),
-            movement_type: formData.get('movement_type'),
-            effective_date: formData.get('effective_date'),
-            description: formData.get('description'),
-            approval_status: formData.get('approval_status')
-          };
-          if (isEdit) data.id = isEdit;
-
-          fetch(`modules/hr_core/api.php?action=${action}`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
-          })
-          .then(response => response.json())
-          .then(result => {
-            if (result.success) {
-              alert(isEdit ? 'Movement updated' : 'Movement created');
-              window.closeMovementModal();
-              window.loadMovements();
-            }
-          })
-          .catch(error => console.error('Error:', error));
-        });
-      }
+      // Form submit listener is attached dynamically in openMovementModal()
     }
 
     setTimeout(attachEventListeners, 50);
     window.loadMovements();
+    window.updateArchiveCount();
   })();
 </script>
 
 <style>
+  /* Modal Styling */
+  #movementModal .modal-content {
+    background-color: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    max-width: 600px;
+    width: 90%;
+    animation: modalSlideIn 0.3s ease-out;
+  }
+
+  @keyframes modalSlideIn {
+    from {
+      transform: scale(0.9);
+      opacity: 0;
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  #movementModal .modal-header {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #ecf0f1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  #movementModal .modal-header h2 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  #movementModal .modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #7f8c8d;
+    transition: color 0.2s;
+  }
+
+  #movementModal .modal-close:hover {
+    color: #2c3e50;
+  }
+
+  #movementModal .modal-footer {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #ecf0f1;
+  }
+
   /* Movements Layout */
   .movements-container {
     max-width: 1420px;

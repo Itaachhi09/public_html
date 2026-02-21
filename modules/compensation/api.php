@@ -41,6 +41,7 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
 
 ob_end_clean();
 
+require_once __DIR__ . '/../../config/BaseConfig.php';
 require_once __DIR__ . '/../../config/Database.php';
 require_once __DIR__ . '/../../config/Auth.php';
 require_once __DIR__ . '/models/SalaryComponentDefinition.php';
@@ -90,6 +91,31 @@ try {
     
     $action = $_GET['action'] ?? $_POST['action'] ?? '';
     $response = ['success' => false, 'message' => 'Invalid action'];
+    
+    // ===== ROLE-BASED ACCESS CONTROL =====
+    // Define restricted actions for each submodule
+    $restrictedActions = [
+        'compensation_approval' => [
+            'getCompensationApprovals', 'getCompensationApprovalDetail', 'createCompensationApproval',
+            'approveCompensationRequest', 'rejectCompensationRequest'
+        ],
+        'pay_bonds_contracts' => [
+            'getEmployeeContracts', 'getEmployeeContractDetail', 'assignEmployeeContract'
+        ],
+        'compensation_versioning' => []  // No specific actions - history tracking is internal
+    ];
+    
+    // Check if action is restricted
+    foreach ($restrictedActions as $submodule => $actions) {
+        if (in_array($action, $actions)) {
+            if (!canAccessMenuItem('compensation', $submodule)) {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'error' => 'Access denied: ' . $submodule]);
+                exit;
+            }
+            break;
+        }
+    }
     
     switch ($action) {
         // ==================== SALARY COMPONENTS ====================

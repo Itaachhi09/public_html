@@ -8,7 +8,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-if (empty($_SESSION['token'])) {
+// Check for AJAX requests - don't redirect for XMLHttpRequest
+if (empty($_SESSION['token']) && (!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || $_SERVER['HTTP_X_REQUESTED_WITH'] !== 'XMLHttpRequest')) {
     header('Location: ../../../index.php');
     exit;
 }
@@ -204,11 +205,12 @@ if (empty($_SESSION['token'])) {
     </div>
 
     <script>
-        let charts = {};
+        // Use global charts cache to avoid redeclaration conflicts when injected into dashboard
+        window.chartsMovement = window.chartsMovement || {};
 
         async function loadData() {
             try {
-                const response = await fetch('../api.php?action=getMovementAnalytics');
+                const response = await fetch('/public_html/modules/analytics/api.php?action=getMovementAnalytics');
                 const result = await response.json();
 
                 if (result.success) {
@@ -238,10 +240,10 @@ if (empty($_SESSION['token'])) {
             const transfers = data.transfers?.length || 0;
 
             // Movement Trends Chart
-            if (charts.trends) charts.trends.destroy();
+            if (window.chartsMovement.trends) window.chartsMovement.trends.destroy();
             
             const ctx1 = document.getElementById('movementTrendsChart').getContext('2d');
-            charts.trends = new Chart(ctx1, {
+            window.chartsMovement.trends = new Chart(ctx1, {
                 type: 'line',
                 data: {
                     labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
@@ -268,10 +270,10 @@ if (empty($_SESSION['token'])) {
             });
 
             // Movement Breakdown Chart
-            if (charts.breakdown) charts.breakdown.destroy();
+            if (window.chartsMovement.breakdown) window.chartsMovement.breakdown.destroy();
             
             const ctx2 = document.getElementById('movementBreakdownChart').getContext('2d');
-            charts.breakdown = new Chart(ctx2, {
+            window.chartsMovement.breakdown = new Chart(ctx2, {
                 type: 'doughnut',
                 data: {
                     labels: ['Joiners', 'Leavers', 'Transfers'],
@@ -293,7 +295,10 @@ if (empty($_SESSION['token'])) {
                 const result = await response.json();
                 
                 if (result.success) {
-                    window.location.href = result.downloadUrl;
+                    const a = document.createElement('a');
+                    a.href = result.downloadUrl;
+                    a.download = 'report.csv';
+                    a.click();
                 }
             } catch (error) {
                 alert('Error exporting report: ' + error.message);

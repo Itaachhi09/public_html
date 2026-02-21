@@ -11,6 +11,7 @@ if (empty($_SESSION['token'])) {
 }
 
 require_once __DIR__ . '/../../config/Database.php';
+require_once __DIR__ . '/../../config/BaseConfig.php';
 require_once __DIR__ . '/models/PayrollApproval.php';
 
 $approval = new PayrollApproval();
@@ -20,7 +21,13 @@ $err = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     
-    if ($action === 'approve') {
+    if ($action === 'preview') {
+        // Store the payroll ID in session to display preview on the main page
+        $_SESSION['preview_payroll_id'] = (int) ($_POST['payroll_id'] ?? 0);
+    } elseif ($action === 'cancel_preview') {
+        // Clear the preview from session
+        unset($_SESSION['preview_payroll_id']);
+    } elseif ($action === 'approve') {
         $id = (int) ($_POST['id'] ?? 0);
         $record = $approval->find($id);
         
@@ -56,5 +63,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $params = ['ref' => 'payroll', 'page' => 'payroll_processing_approval'];
 if ($msg) $params['msg'] = urlencode($msg);
 if ($err) $params['err'] = urlencode($err);
-header('Location: ../../dashboard.php?' . http_build_query($params));
+header('Location: /public_html/dashboard.php?' . http_build_query($params));
 exit;

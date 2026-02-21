@@ -4,6 +4,9 @@
  * Handles all API requests for the HR Core module using database
  */
 
+// Start session for user authentication
+session_start();
+
 // Suppress all output except our JSON
 ob_start();
 error_reporting(E_ALL);
@@ -51,6 +54,7 @@ set_exception_handler(function($e) {
 ob_end_clean();
 
 // Include database class from config
+require_once __DIR__ . '/../../config/BaseConfig.php';
 require_once __DIR__ . '/../../config/Database.php';
 require_once __DIR__ . '/../../config/ModuleHelpers.php';
 
@@ -67,6 +71,17 @@ class Response {
     }
 }
 
+// Helper function to sanitize filenames
+function sanitizeFilename($filename) {
+    // Remove path components
+    $filename = basename($filename);
+    // Replace spaces and special characters
+    $filename = preg_replace('/[^a-zA-Z0-9._-]/', '_', $filename);
+    // Remove multiple dots and underscores
+    $filename = preg_replace('/_{2,}/', '_', $filename);
+    return $filename;
+}
+
 // Get action from GET or POST
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 
@@ -74,6 +89,35 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
 if (!$action && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $input = json_decode(file_get_contents('php://input'), true);
     $action = $input['action'] ?? '';
+}
+
+// ===== ROLE-BASED ACCESS CONTROL =====
+// Define restricted actions for each submodule
+$restrictedActions = [
+    'job_titles' => [
+        'getJobTitles'
+    ],
+    'employment_types' => [
+        'getEmploymentTypes', 'getEmploymentTypeById', 'createEmploymentType', 'updateEmploymentType'
+    ],
+    'locations' => [
+        'getLocations'
+    ],
+    'roles' => [
+        'getRoles'
+    ]
+];
+
+// Check if action is restricted
+foreach ($restrictedActions as $submodule => $actions) {
+    if (in_array($action, $actions)) {
+        if (!canAccessMenuItem('hr_core', $submodule)) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Access denied: ' . $submodule]);
+            exit;
+        }
+        break;
+    }
 }
 
 // Debug: Check if database connected
@@ -91,7 +135,7 @@ try {
             $status = isset($_GET['status']) ? $_GET['status'] : '';
 
             $query = "SELECT e.*, d.department_name as department, e.employee_id as id, e.employee_code as code, e.date_of_joining as hire_date FROM employees e 
-                     LEFT JOIN departments d ON e.department_id = d.department_id WHERE 1=1";
+                     LEFT JOIN departments d ON e.department_id = d.department_id WHERE e.employment_status != 'Terminated'";
             $params = [];
             
             if ($search) {
@@ -113,13 +157,13 @@ try {
             $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
             $employees = $result ?: [];
 
-            // Get high-level stats (overall, not filtered)
+            // Get high-level stats (overall, not filtered, excluding Terminated)
             $statsQuery = "SELECT 
                           COUNT(*) as total,
                           SUM(CASE WHEN employment_status = 'Active' THEN 1 ELSE 0 END) as active,
                           SUM(CASE WHEN employment_status = 'On Leave' THEN 1 ELSE 0 END) as on_leave,
-                          SUM(CASE WHEN employment_status = 'Terminated' THEN 1 ELSE 0 END) as resigned
-                          FROM employees";
+                          SUM(CASE WHEN employment_status = 'Resigned' THEN 1 ELSE 0 END) as resigned
+                          FROM employees WHERE employment_status != 'Terminated'";
             $statsResult = $db->query($statsQuery);
             $stats = $statsResult->fetch(PDO::FETCH_ASSOC) ?: [
                 'total' => 0,
@@ -175,11 +219,12 @@ try {
             $first_name = $input['first_name'] ?? '';
             $last_name = $input['last_name'] ?? '';
             $email = $input['email'] ?? '';
+            $employment_status = $input['employment_status'] ?? '';
 
-            $query = "UPDATE employees SET first_name=?, last_name=?, email=? WHERE employee_id=?";
+            $query = "UPDATE employees SET first_name=?, last_name=?, email=?, employment_status=? WHERE employee_id=?";
             $stmt = $db->prepare($query);
             
-            if ($stmt->execute([$first_name, $last_name, $email, $id])) {
+            if ($stmt->execute([$first_name, $last_name, $email, $employment_status, $id])) {
                 echo Response::success(null, 'Employee updated successfully');
             } else {
                 echo Response::error('Failed to update employee');
@@ -188,45 +233,174 @@ try {
 
         case 'deleteEmployee':
             $id = intval($_GET['id'] ?? $_GET['employee_id'] ?? 0);
+            // Soft delete - mark as Terminated instead of hard delete
+            $stmt = $db->prepare("UPDATE employees SET employment_status = 'Terminated' WHERE employee_id = ?");
+            if ($stmt->execute([$id])) {
+                echo Response::success(null, 'Employee archived successfully');
+            } else {
+                echo Response::error('Failed to archive employee');
+            }
+            break;
+
+        case 'getArchivedEmployees':
+            $query = "SELECT e.*, d.department_name as department, e.employee_id as id, e.employee_code as code, e.date_of_joining as hire_date 
+                     FROM employees e 
+                     LEFT JOIN departments d ON e.department_id = d.department_id 
+                     WHERE e.employment_status = 'Terminated' OR e.employment_status = 'Resigned'
+                     ORDER BY e.employment_status DESC";
+            
+            $result = $db->query($query);
+            $employees = $result->fetchAll(PDO::FETCH_ASSOC);
+            
+            echo Response::success($employees, 'Archived employees retrieved');
+            break;
+
+        case 'restoreEmployee':
+            $id = intval($_GET['id'] ?? $_GET['employee_id'] ?? 0);
+            $stmt = $db->prepare("UPDATE employees SET employment_status = 'Active' WHERE employee_id = ?");
+            if ($stmt->execute([$id])) {
+                echo Response::success(null, 'Employee restored successfully');
+            } else {
+                echo Response::error('Failed to restore employee');
+            }
+            break;
+
+        case 'permanentlyDeleteEmployee':
+            $id = intval($_GET['id'] ?? $_GET['employee_id'] ?? 0);
+            
+            // Get password from request body
+            $input = json_decode(file_get_contents('php://input'), true);
+            $provided_password = $input['password'] ?? '';
+            
+            if (empty($provided_password)) {
+                echo Response::error('Admin password is required to permanently delete an employee', null);
+                break;
+            }
+            
+            // Get current user from session
+            if (!isset($_SESSION['user_id'])) {
+                echo Response::error('User not authenticated', null);
+                break;
+            }
+            
+            $user_id = $_SESSION['user_id'];
+            
+            // Fetch user's password hash from database
+            $userStmt = $db->prepare("SELECT password, role FROM users WHERE id = ?");
+            $userStmt->execute([$user_id]);
+            $user = $userStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$user) {
+                echo Response::error('User not found', null);
+                break;
+            }
+            
+            // Check if user is admin
+            if ($user['role'] !== 'admin' && $user['role'] !== 'hr_chief') {
+                echo Response::error('Only administrators can permanently delete employees', null);
+                break;
+            }
+            
+            // Verify password
+            if (!password_verify($provided_password, $user['password'])) {
+                echo Response::error('Invalid password. Unable to authenticate admin action.', null);
+                break;
+            }
+            
+            // Password verified - proceed with deletion
             $stmt = $db->prepare("DELETE FROM employees WHERE employee_id = ?");
             if ($stmt->execute([$id])) {
-                echo Response::success(null, 'Employee deleted successfully');
+                echo Response::success(null, 'Employee permanently deleted');
             } else {
-                echo Response::error('Failed to delete employee');
+                echo Response::error('Failed to permanently delete employee');
             }
+            break;
+
+        case 'getAllEmployees':
+            $query = "SELECT e.*, d.department_name as department, e.employee_id, e.employee_code 
+                     FROM employees e 
+                     LEFT JOIN departments d ON e.department_id = d.department_id 
+                     WHERE e.employment_status != 'Terminated'
+                     ORDER BY e.first_name ASC, e.last_name ASC";
+            
+            $result = $db->query($query);
+            $employees = $result->fetchAll(PDO::FETCH_ASSOC);
+            
+            echo Response::success(['employees' => $employees], 'All employees retrieved');
             break;
 
         // DOCUMENTS
         case 'getDocuments':
-            $query = "SELECT d.*, d.document_id as id, e.first_name, e.last_name, 
-                      CONCAT(e.first_name, ' ', e.last_name) as employee_name FROM employee_documents d 
-                     LEFT JOIN employees e ON d.employee_id = e.employee_id ORDER BY d.created_at DESC";
-            
-            $result = $db->query($query);
-            $documents = $result->fetchAll(PDO::FETCH_ASSOC);
+            $search = isset($_GET['search']) ? $_GET['search'] : '';
+            $type = isset($_GET['type']) ? $_GET['type'] : '';
+            $status_filter = isset($_GET['status']) ? $_GET['status'] : '';
 
-            // Calculate stats
+            $query = "SELECT d.*, d.document_id as id, e.first_name, e.last_name, 
+                      CONCAT(e.first_name, ' ', e.last_name) as employee_name,
+                      e.department_id as emp_dept
+                      FROM employee_documents d 
+                     LEFT JOIN employees e ON d.employee_id = e.employee_id 
+                     WHERE 1=1";
+            
+            $params = [];
+            
+            if ($search) {
+                $query .= " AND (e.first_name LIKE ? OR e.last_name LIKE ? OR d.document_type LIKE ? OR CONCAT(e.first_name, ' ', e.last_name) LIKE ?)";
+                $searchTerm = "%$search%";
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+            }
+            
+            if ($type) {
+                $query .= " AND d.document_type = ?";
+                $params[] = $type;
+            }
+            
+            $query .= " ORDER BY d.created_at DESC";
+            
+            $stmt = $db->prepare($query);
+            $stmt->execute($params);
+            $documents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Calculate stats and apply status filter
             $expired = 0;
             $expiring = 0;
             $valid = 0;
             $expiring_soon = [];
             $today_time = time();
+            $filtered_documents = [];
+            
+            // Parse status filter (could be comma-separated: "valid,expiring,expired")
+            $status_filters = array_filter(array_map('trim', explode(',', $status_filter)));
             
             foreach ($documents as $doc) {
+                $doc_status = 'valid';
+                
                 if ($doc['expiry_date']) {
                     $exp_date = strtotime($doc['expiry_date']);
                     $diff_days = ceil(($exp_date - $today_time) / (60 * 60 * 24));
                     
                     if ($diff_days < 0) {
                         $expired++;
+                        $doc_status = 'expired';
                     } elseif ($diff_days <= 30) {
                         $expiring++;
+                        $doc_status = 'expiring';
                         $expiring_soon[] = $doc;
                     } else {
                         $valid++;
+                        $doc_status = 'valid';
                     }
                 } else {
                     $valid++;
+                    $doc_status = 'valid';
+                }
+                
+                // Apply status filter - if no status filter, show all; otherwise show only matching
+                if (empty($status_filters) || in_array($doc_status, $status_filters)) {
+                    $filtered_documents[] = $doc;
                 }
             }
 
@@ -238,9 +412,10 @@ try {
             ];
 
             echo Response::success([
-                'documents' => $documents,
+                'documents' => $filtered_documents,
                 'stats' => $stats,
                 'expiring_soon' => array_slice($expiring_soon, 0, 5)
+
             ]);
             break;
 
@@ -258,19 +433,52 @@ try {
             break;
 
         case 'createDocument':
-            $input = json_decode(file_get_contents('php://input'), true);
+            // Handle both JSON and FormData
+            $input = $_POST ?: json_decode(file_get_contents('php://input'), true);
             $employee_id = intval($input['employee_id'] ?? 0);
             $document_type = $input['document_type'] ?? '';
             $upload_date = $input['upload_date'] ?? date('Y-m-d');
             $expiry_date = $input['expiry_date'] ?? null;
             $notes = $input['notes'] ?? '';
             $status = $input['status'] ?? 'valid';
+            $file_path = null;
 
-            $query = "INSERT INTO employee_documents (employee_id, document_type, upload_date, expiry_date, notes, status, created_at, updated_at) 
+            // Handle file upload
+            if (!empty($_FILES['document_file']['name'])) {
+                $upload_dir = __DIR__ . '/../../uploads/documents/';
+                if (!is_dir($upload_dir)) {
+                    @mkdir($upload_dir, 0755, true);
+                }
+
+                $file = $_FILES['document_file'];
+                $allowed_types = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'image/jpeg', 'image/png', 'image/jpg'];
+                $max_size = 10 * 1024 * 1024; // 10MB
+
+                if (!in_array($file['type'], $allowed_types)) {
+                    echo Response::error('Invalid file type. Allowed: PDF, DOC, DOCX, XLS, XLSX, JPG, JPEG, PNG');
+                    break;
+                }
+
+                if ($file['size'] > $max_size) {
+                    echo Response::error('File size exceeds 10MB limit');
+                    break;
+                }
+
+                if ($file['error'] === UPLOAD_ERR_OK) {
+                    $filename = 'doc_' . time() . '_' . sanitizeFilename($file['name']);
+                    $file_path = 'uploads/documents/' . $filename;
+                    if (!move_uploaded_file($file['tmp_name'], $upload_dir . $filename)) {
+                        echo Response::error('Failed to upload file');
+                        break;
+                    }
+                }
+            }
+
+            $query = "INSERT INTO employee_documents (employee_id, document_type, issue_date, expiry_date, remarks, file_path, created_at, updated_at) 
                      VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())";
             $stmt = $db->prepare($query);
 
-            if ($stmt->execute([$employee_id, $document_type, $upload_date, $expiry_date, $notes, $status])) {
+            if ($stmt->execute([$employee_id, $document_type, $upload_date, $expiry_date, $notes, $file_path])) {
                 echo Response::success(['id' => $db->lastInsertId()], 'Document created successfully');
             } else {
                 echo Response::error('Failed to create document');
@@ -278,16 +486,61 @@ try {
             break;
 
         case 'updateDocument':
-            $input = json_decode(file_get_contents('php://input'), true);
+            // Handle both JSON and FormData
+            $input = $_POST ?: json_decode(file_get_contents('php://input'), true);
             $id = intval($input['document_id'] ?? 0);
             $document_type = $input['document_type'] ?? '';
+            $upload_date = $input['upload_date'] ?? null;
             $expiry_date = $input['expiry_date'] ?? null;
-            $remarks = $input['remarks'] ?? '';
+            $notes = $input['notes'] ?? '';
+            $file_path = null;
 
-            $query = "UPDATE employee_documents SET document_type=?, expiry_date=?, remarks=?, updated_at=NOW() WHERE document_id=?";
+            // Get existing document
+            $stmt = $db->prepare("SELECT file_path FROM employee_documents WHERE document_id = ?");
+            $stmt->execute([$id]);
+            $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+            $file_path = $existing['file_path'] ?? null;
+
+            // Handle file upload
+            if (!empty($_FILES['document_file']['name'])) {
+                $upload_dir = __DIR__ . '/../../uploads/documents/';
+                if (!is_dir($upload_dir)) {
+                    @mkdir($upload_dir, 0755, true);
+                }
+
+                $file = $_FILES['document_file'];
+                $allowed_types = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'image/jpeg', 'image/png', 'image/jpg'];
+                $max_size = 10 * 1024 * 1024; // 10MB
+
+                if (!in_array($file['type'], $allowed_types)) {
+                    echo Response::error('Invalid file type. Allowed: PDF, DOC, DOCX, XLS, XLSX, JPG, JPEG, PNG');
+                    break;
+                }
+
+                if ($file['size'] > $max_size) {
+                    echo Response::error('File size exceeds 10MB limit');
+                    break;
+                }
+
+                if ($file['error'] === UPLOAD_ERR_OK) {
+                    // Delete old file if exists
+                    if ($file_path) {
+                        @unlink(__DIR__ . '/../../' . $file_path);
+                    }
+
+                    $filename = 'doc_' . time() . '_' . sanitizeFilename($file['name']);
+                    $file_path = 'uploads/documents/' . $filename;
+                    if (!move_uploaded_file($file['tmp_name'], $upload_dir . $filename)) {
+                        echo Response::error('Failed to upload file');
+                        break;
+                    }
+                }
+            }
+
+            $query = "UPDATE employee_documents SET document_type=?, issue_date=?, expiry_date=?, remarks=?, file_path=?, updated_at=NOW() WHERE document_id=?";
             $stmt = $db->prepare($query);
 
-            if ($stmt->execute([$document_type, $expiry_date, $remarks, $id])) {
+            if ($stmt->execute([$document_type, $upload_date, $expiry_date, $notes, $file_path, $id])) {
                 echo Response::success(null, 'Document updated successfully');
             } else {
                 echo Response::error('Failed to update document');
@@ -295,7 +548,8 @@ try {
             break;
 
         case 'deleteDocument':
-            $id = intval($_GET['id'] ?? 0);
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id = intval($_GET['id'] ?? $input['document_id'] ?? 0);
             $stmt = $db->prepare("DELETE FROM employee_documents WHERE document_id = ?");
             if ($stmt->execute([$id])) {
                 echo Response::success(null, 'Document deleted successfully');
@@ -304,21 +558,307 @@ try {
             }
             break;
 
+        case 'downloadDocument':
+            $id = intval($_GET['id'] ?? 0);
+            $stmt = $db->prepare("SELECT d.*, e.first_name, e.last_name FROM employee_documents d 
+                                 LEFT JOIN employees e ON d.employee_id = e.employee_id WHERE d.document_id = ?");
+            $stmt->execute([$id]);
+            $doc = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$doc) {
+                http_response_code(404);
+                echo json_encode(ModuleHelpers::error('Document not found'));
+                exit;
+            }
+
+            // If file exists, download it
+            if ($doc['file_path']) {
+                $file_path = __DIR__ . '/../../' . $doc['file_path'];
+                if (file_exists($file_path)) {
+                    // Generate clean filename
+                    $employee_name = trim($doc['first_name'] . ' ' . $doc['last_name']);
+                    $clean_filename = sanitizeFilename($employee_name . '_' . $doc['document_type'] . '_' . date('Y-m-d'));
+                    $file_ext = pathinfo($file_path, PATHINFO_EXTENSION);
+                    $clean_filename = $clean_filename . '.' . $file_ext;
+
+                    // Clear any previous output
+                    if (ob_get_level()) ob_end_clean();
+                    
+                    // Determine MIME type
+                    $mime_type = 'application/octet-stream';
+                    if (function_exists('finfo_file')) {
+                        // Use mime type detection if available
+                        $finfo = @finfo_open(FILEINFO_MIME_TYPE);
+                        if ($finfo !== false) {
+                            $detected_mime = @finfo_file($finfo, $file_path);
+                            if ($detected_mime !== false) {
+                                $mime_type = $detected_mime;
+                            }
+                        }
+                        // Don't explicitly close - let PHP handle resource cleanup
+                    }
+
+                    // Send headers
+                    header('Content-Type: ' . $mime_type);
+                    header('Content-Disposition: attachment; filename="' . $clean_filename . '"');
+                    header('Content-Length: ' . filesize($file_path));
+                    header('Cache-Control: no-cache, no-store, must-revalidate');
+                    header('Pragma: no-cache');
+                    header('Expires: 0');
+                    
+                    // Stream file
+                    readfile($file_path);
+                    exit;
+                }
+            }
+
+            // If no file, generate a clean text document
+            if (ob_get_level()) ob_end_clean();
+            
+            header('Content-Type: text/plain; charset=utf-8');
+            header('Content-Disposition: attachment; filename="' . sanitizeFilename($doc['document_type']) . '_' . $id . '.txt"');
+            
+            $output = "EMPLOYEE DOCUMENT RECORD\n";
+            $output .= "========================\n\n";
+            $output .= "Document ID: " . $id . "\n";
+            $output .= "Employee: " . trim($doc['first_name'] . ' ' . $doc['last_name']) . "\n";
+            $output .= "Document Type: " . $doc['document_type'] . "\n";
+            $output .= "Issue Date: " . ($doc['issue_date'] ?? 'N/A') . "\n";
+            $output .= "Expiry Date: " . ($doc['expiry_date'] ?? 'N/A') . "\n";
+            $output .= "Remarks: " . ($doc['remarks'] ?? 'N/A') . "\n";
+            $output .= "Uploaded: " . ($doc['created_at'] ?? 'N/A') . "\n";
+            
+            echo $output;
+            exit;
+
+        case 'bulkUploadCSV':
+            $csv_data = json_decode($_POST['csv_data'] ?? '[]', true);
+            $upload_count = 0;
+            $upload_dir = __DIR__ . '/../../uploads/documents/';
+            
+            if (!is_dir($upload_dir)) {
+                @mkdir($upload_dir, 0755, true);
+            }
+
+            foreach ($csv_data as $row) {
+                $employee_id = intval($row['employee_id'] ?? $row['emp_id'] ?? 0);
+                $document_type = $row['document_type'] ?? '';
+                $expiry_date = $row['expiry_date'] ?? null;
+                $notes = $row['notes'] ?? '';
+
+                if ($employee_id && $document_type) {
+                    $issue_date = date('Y-m-d');
+                    $query = "INSERT INTO employee_documents (employee_id, document_type, issue_date, expiry_date, remarks, created_at, updated_at) 
+                             VALUES (?, ?, ?, ?, ?, NOW(), NOW())";
+                    $stmt = $db->prepare($query);
+                    if ($stmt->execute([$employee_id, $document_type, $issue_date, $expiry_date, $notes])) {
+                        $upload_count++;
+                    }
+                }
+            }
+
+            echo Response::success(['count' => $upload_count], "Bulk uploaded $upload_count documents");
+            break;
+
+        case 'bulkUploadZip':
+            if (!isset($_FILES['zip_file'])) {
+                echo Response::error('No ZIP file provided');
+                break;
+            }
+
+            $zip_file = $_FILES['zip_file'];
+            $temp_dir = sys_get_temp_dir() . '/bulk_upload_' . uniqid();
+            @mkdir($temp_dir, 0755, true);
+
+            // Extract ZIP
+            $zip = new ZipArchive();
+            if ($zip->open($zip_file['tmp_name']) !== true) {
+                echo Response::error('Failed to open ZIP file');
+                break;
+            }
+
+            $zip->extractTo($temp_dir);
+            $zip->close();
+
+            // Look for CSV file
+            $csv_file = null;
+            foreach (glob($temp_dir . '/*.csv') as $file) {
+                $csv_file = $file;
+                break;
+            }
+
+            if (!$csv_file) {
+                echo Response::error('No CSV file found in ZIP archive');
+                break;
+            }
+
+            // Parse CSV
+            $upload_count = 0;
+            $upload_dir = __DIR__ . '/../../uploads/documents/';
+            if (!is_dir($upload_dir)) {
+                @mkdir($upload_dir, 0755, true);
+            }
+
+            $handle = fopen($csv_file, 'r');
+            $headers = fgetcsv($handle);
+            $headers = array_map('strtolower', array_map('trim', $headers));
+
+            while (($row = fgetcsv($handle)) !== false) {
+                $data = array_combine($headers, $row);
+                $employee_id = intval($data['employee_id'] ?? $data['emp_id'] ?? 0);
+                $document_type = $data['document_type'] ?? '';
+                $doc_file = $data['document_file'] ?? '';
+                $expiry_date = $data['expiry_date'] ?? null;
+                $notes = $data['notes'] ?? '';
+
+                if ($employee_id && $document_type) {
+                    $file_path = null;
+
+                    // Look for file in ZIP based on employee folder
+                    if ($doc_file) {
+                        $possible_paths = [
+                            $temp_dir . '/' . $doc_file,
+                            $temp_dir . '/' . $employee_id . '/' . $doc_file,
+                            $temp_dir . '/' . 'documents/' . $employee_id . '/' . $doc_file
+                        ];
+
+                        foreach ($possible_paths as $path) {
+                            if (file_exists($path)) {
+                                $filename = 'doc_' . time() . '_' . sanitizeFilename(basename($path));
+                                $file_path = 'uploads/documents/' . $filename;
+                                @copy($path, $upload_dir . $filename);
+                                break;
+                            }
+                        }
+                    }
+
+                    $issue_date = date('Y-m-d');
+                    $query = "INSERT INTO employee_documents (employee_id, document_type, issue_date, expiry_date, remarks, file_path, created_at, updated_at) 
+                             VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())";
+                    $stmt = $db->prepare($query);
+                    if ($stmt->execute([$employee_id, $document_type, $issue_date, $expiry_date, $notes, $file_path])) {
+                        $upload_count++;
+                    }
+                }
+            }
+            fclose($handle);
+
+            // Cleanup
+            array_map('unlink', glob($temp_dir . '/*.*'));
+            @rmdir($temp_dir);
+
+            echo Response::success(['count' => $upload_count], "Bulk uploaded $upload_count documents from ZIP");
+            break;
+
+        case 'bulkUploadEmployeeDocuments':
+            $employee_id = intval($_POST['employee_id'] ?? 0);
+            $document_type = $_POST['document_type'] ?? '';
+            $expiry_date = $_POST['expiry_date'] ?? null;
+            $notes = $_POST['notes'] ?? '';
+            
+            if (!$employee_id) {
+                echo Response::error('Employee ID is required');
+                break;
+            }
+
+            if (!$document_type) {
+                echo Response::error('Document type is required');
+                break;
+            }
+
+            $upload_count = 0;
+            $upload_dir = __DIR__ . '/../../uploads/documents/';
+            
+            if (!is_dir($upload_dir)) {
+                @mkdir($upload_dir, 0755, true);
+            }
+
+            // Process each uploaded file
+            $file_count = 0;
+            foreach ($_FILES as $key => $file) {
+                if (strpos($key, 'document_file_') !== 0 || !isset($file['name']) || $file['name'] === '') {
+                    continue;
+                }
+
+                $allowed_types = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'image/jpeg', 'image/png', 'image/jpg'];
+                $max_size = 10 * 1024 * 1024; // 10MB
+
+                if (!in_array($file['type'], $allowed_types)) {
+                    continue;
+                }
+
+                if ($file['size'] > $max_size) {
+                    continue;
+                }
+
+                if ($file['error'] === UPLOAD_ERR_OK) {
+                    $filename = 'doc_' . time() . '_' . rand(1000, 9999) . '_' . sanitizeFilename($file['name']);
+                    $file_path = 'uploads/documents/' . $filename;
+                    
+                    if (move_uploaded_file($file['tmp_name'], $upload_dir . $filename)) {
+                        $issue_date = date('Y-m-d');
+                        $query = "INSERT INTO employee_documents (employee_id, document_type, issue_date, expiry_date, remarks, file_path, created_at, updated_at) 
+                                 VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())";
+                        $stmt = $db->prepare($query);
+                        if ($stmt->execute([$employee_id, $document_type, $issue_date, $expiry_date, $notes, $file_path])) {
+                            $upload_count++;
+                        }
+                    }
+                    $file_count++;
+                }
+            }
+
+            echo Response::success(['count' => $upload_count], "Bulk uploaded $upload_count document(s) for employee");
+            break;
+
         // MOVEMENTS
         case 'getMovements':
+            $search = isset($_GET['search']) ? $_GET['search'] : '';
+            $type = isset($_GET['type']) ? $_GET['type'] : '';
+            $status = isset($_GET['status']) ? $_GET['status'] : '';
+
             $query = "SELECT m.*, m.movement_id as id, e.first_name, e.last_name, e.employee_id,
                       CONCAT(e.first_name, ' ', e.last_name) as employee_name FROM employee_movements m 
-                     LEFT JOIN employees e ON m.employee_id = e.employee_id";
+                     LEFT JOIN employees e ON m.employee_id = e.employee_id
+                     WHERE m.archived = 0";
             
-            $result = $db->query($query);
-            $movements = $result->fetchAll(PDO::FETCH_ASSOC);
+            $params = [];
+            
+            if ($search) {
+                $query .= " AND (e.first_name LIKE ? OR e.last_name LIKE ? OR m.movement_type LIKE ?)";
+                $searchTerm = "%$search%";
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+                $params[] = $searchTerm;
+            }
+            
+            if ($type) {
+                $query .= " AND m.movement_type = ?";
+                $params[] = $type;
+            }
+            
+            if ($status) {
+                // Handle comma-separated status values
+                $status_filters = array_filter(array_map('trim', explode(',', $status)));
+                if (!empty($status_filters)) {
+                    $placeholders = implode(',', array_fill(0, count($status_filters), '?'));
+                    $query .= " AND m.status IN ($placeholders)";
+                    $params = array_merge($params, $status_filters);
+                }
+            }
+            
+            $query .= " ORDER BY m.movement_id DESC";
+            
+            $stmt = $db->prepare($query);
+            $result = $stmt->execute($params);
+            $movements = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             $statsQuery = "SELECT 
                           COUNT(*) as total,
                           SUM(CASE WHEN status = 'Approved' THEN 1 ELSE 0 END) as approved,
                           SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending,
                           SUM(CASE WHEN status = 'Rejected' THEN 1 ELSE 0 END) as rejected
-                          FROM employee_movements";
+                          FROM employee_movements WHERE archived = 0";
             $statsResult = $db->query($statsQuery);
             $stats = $statsResult->fetch(PDO::FETCH_ASSOC);
 
@@ -330,7 +870,10 @@ try {
 
         case 'getMovementById':
             $id = intval($_GET['id'] ?? 0);
-            $stmt = $db->prepare("SELECT m.*, m.movement_id as id FROM employee_movements m WHERE m.movement_id = ?");
+            $stmt = $db->prepare("SELECT m.*, m.movement_id as id, e.first_name, e.last_name, e.employee_id, CONCAT(e.first_name, ' ', e.last_name) as employee_name 
+                                  FROM employee_movements m 
+                                  LEFT JOIN employees e ON m.employee_id = e.employee_id 
+                                  WHERE m.movement_id = ?");
             $stmt->execute([$id]);
             $movement = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -348,6 +891,15 @@ try {
             $effective_date = $input['effective_date'] ?? date('Y-m-d');
             $reason = $input['reason'] ?? '';
             $status = $input['status'] ?? 'Pending';
+
+            if (!$employee_id) {
+                echo Response::error('Employee ID is required');
+                break;
+            }
+            if (!$movement_type) {
+                echo Response::error('Movement type is required');
+                break;
+            }
 
             $query = "INSERT INTO employee_movements (employee_id, movement_type, effective_date, reason, status) 
                      VALUES (?, ?, ?, ?, ?)";
@@ -380,11 +932,94 @@ try {
 
         case 'deleteMovement':
             $id = intval($_GET['id'] ?? 0);
+            // Soft delete - mark as archived instead of hard delete
+            $stmt = $db->prepare("UPDATE employee_movements SET archived = 1 WHERE movement_id = ?");
+            if ($stmt->execute([$id])) {
+                echo Response::success(null, 'Movement archived successfully');
+            } else {
+                echo Response::error('Failed to archive movement');
+            }
+            break;
+
+        case 'archiveMovement':
+            $id = intval($_GET['id'] ?? 0);
+            $stmt = $db->prepare("UPDATE employee_movements SET archived = 1 WHERE movement_id = ?");
+            if ($stmt->execute([$id])) {
+                echo Response::success(null, 'Movement archived successfully');
+            } else {
+                echo Response::error('Failed to archive movement');
+            }
+            break;
+
+        case 'getArchivedMovements':
+            $query = "SELECT m.*, 
+                      e.first_name, e.last_name, e.employee_code,
+                      CONCAT(e.first_name, ' ', e.last_name) as employee_name,
+                      jt1.title as from_job_title,
+                      jt2.title as to_job_title,
+                      d1.department_name as from_department,
+                      d2.department_name as to_department,
+                      l1.location_name as from_location,
+                      l2.location_name as to_location
+                      FROM employee_movements m
+                      LEFT JOIN employees e ON m.employee_id = e.employee_id
+                      LEFT JOIN job_titles jt1 ON m.from_job_title_id = jt1.job_title_id
+                      LEFT JOIN job_titles jt2 ON m.to_job_title_id = jt2.job_title_id
+                      LEFT JOIN departments d1 ON m.from_department_id = d1.department_id
+                      LEFT JOIN departments d2 ON m.to_department_id = d2.department_id
+                      LEFT JOIN locations l1 ON m.from_location_id = l1.location_id
+                      LEFT JOIN locations l2 ON m.to_location_id = l2.location_id
+                      WHERE m.archived = 1
+                      ORDER BY m.updated_at DESC";
+            
+            $result = $db->query($query);
+            $movements = $result->fetchAll(PDO::FETCH_ASSOC);
+            
+            echo Response::success($movements, 'Archived movements retrieved');
+            break;
+
+        case 'restoreMovement':
+            $id = intval($_GET['id'] ?? 0);
+            $stmt = $db->prepare("UPDATE employee_movements SET archived = 0 WHERE movement_id = ?");
+            if ($stmt->execute([$id])) {
+                echo Response::success(null, 'Movement restored successfully');
+            } else {
+                echo Response::error('Failed to restore movement');
+            }
+            break;
+
+        case 'permanentlyDeleteMovement':
+            $id = intval($_GET['id'] ?? 0);
             $stmt = $db->prepare("DELETE FROM employee_movements WHERE movement_id = ?");
             if ($stmt->execute([$id])) {
-                echo Response::success(null, 'Movement deleted successfully');
+                echo Response::success(null, 'Movement permanently deleted');
             } else {
-                echo Response::error('Failed to delete movement');
+                echo Response::error('Failed to permanently delete movement');
+            }
+            break;
+
+        case 'approveMovement':
+            $id = intval($_GET['id'] ?? 0);
+            $approver_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
+            $stmt = $db->prepare("UPDATE employee_movements SET status = 'Approved', approved_by = ?, approved_date = NOW() WHERE movement_id = ?");
+            if ($stmt->execute([$approver_id, $id])) {
+                echo Response::success(null, 'Movement approved successfully');
+            } else {
+                echo Response::error('Failed to approve movement');
+            }
+            break;
+
+        case 'rejectMovement':
+            $id = intval($_GET['id'] ?? 0);
+            $input = json_decode(file_get_contents('php://input'), true) ?? [];
+            $rejection_reason = $input['rejection_reason'] ?? '';
+            $approver_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
+            
+            $stmt = $db->prepare("UPDATE employee_movements SET status = 'Rejected', approved_by = ?, approved_date = NOW(), reason = ? WHERE movement_id = ?");
+            if ($stmt->execute([$approver_id, $rejection_reason ?: 'Rejected by manager', $id])) {
+                echo Response::success(null, 'Movement rejected successfully');
+            } else {
+                echo Response::error('Failed to reject movement');
             }
             break;
 
@@ -468,7 +1103,16 @@ try {
 
         case 'getDepartmentById':
             $id = intval($_GET['id'] ?? $_GET['department_id'] ?? 0);
-            $stmt = $db->prepare("SELECT d.*, d.department_id as id, d.department_name as name FROM departments d WHERE d.department_id = ?");
+            $stmt = $db->prepare("SELECT d.*, 
+                                  d.department_id as id, 
+                                  d.department_name as name,
+                                  CONCAT(e.first_name, ' ', e.last_name) as head_name,
+                                  COUNT(DISTINCT emp.employee_id) as staff_count
+                                  FROM departments d
+                                  LEFT JOIN employees e ON d.head_id = e.employee_id
+                                  LEFT JOIN employees emp ON d.department_id = emp.department_id AND emp.employment_status = 'Active'
+                                  WHERE d.department_id = ?
+                                  GROUP BY d.department_id");
             $stmt->execute([$id]);
             $department = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -595,7 +1239,15 @@ try {
 
         case 'getOnboardingById':
             $id = intval($_GET['id'] ?? $_GET['onboarding_checklist_id'] ?? 0);
-            $stmt = $db->prepare("SELECT o.*, o.onboarding_checklist_id as id FROM onboarding_checklists o WHERE o.onboarding_checklist_id = ?");
+            $stmt = $db->prepare("SELECT o.*, 
+                                  o.onboarding_checklist_id as id, 
+                                  e.first_name, 
+                                  e.last_name, 
+                                  CONCAT(e.first_name, ' ', e.last_name) as employee_name,
+                                  e.employee_code
+                                  FROM onboarding_checklists o
+                                  LEFT JOIN employees e ON o.employee_id = e.employee_id
+                                  WHERE o.onboarding_checklist_id = ?");
             $stmt->execute([$id]);
             $record = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -627,13 +1279,17 @@ try {
         case 'updateOnboarding':
             $input = json_decode(file_get_contents('php://input'), true);
             $id = intval($input['id'] ?? 0);
-            $status = $input['status'] ?? '';
+            $employee_id = intval($input['employee_id'] ?? 0);
+            $department = $input['department'] ?? '';
+            $start_date = $input['start_date'] ?? '';
+            $status = $input['status'] ?? 'In Progress';
+            $assigned_mentor = $input['assigned_mentor'] ?? '';
             $notes = $input['notes'] ?? '';
 
-            $query = "UPDATE onboarding_checklists SET status=?, remarks=? WHERE onboarding_checklist_id=?";
+            $query = "UPDATE onboarding_checklists SET employee_id=?, department=?, start_date=?, status=?, assigned_mentor=?, notes=? WHERE onboarding_checklist_id=?";
             $stmt = $db->prepare($query);
 
-            if ($stmt->execute([$status, $notes, $id])) {
+            if ($stmt->execute([$employee_id, $department, $start_date, $status, $assigned_mentor, $notes, $id])) {
                 echo Response::success(null, 'Onboarding record updated successfully');
             } else {
                 echo Response::error('Failed to update onboarding record');

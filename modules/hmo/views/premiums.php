@@ -560,6 +560,96 @@
       width: 100%;
       text-align: center;
     }
+
+    /* Edit Form Modal */
+    .edit-form-modal {
+      position: fixed;
+      top: 50%;
+      right: -500px;
+      width: 450px;
+      max-height: 90vh;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15);
+      z-index: 1001;
+      overflow-y: auto;
+      transform: translateY(-50%);
+      transition: right 0.3s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .edit-form-modal.show {
+      right: 20px;
+    }
+
+    .edit-form-modal .modal-header {
+      flex-shrink: 0;
+    }
+
+    .edit-form-modal .modal-content {
+      flex: 1;
+      padding: 1.5rem;
+    }
+
+    #edit-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    #edit-modal-overlay.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #1e40af;
+      box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 0.75rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .form-actions .btn {
+      flex: 1;
+      text-align: center;
+    }
   </style>
 
   <!-- Stats Section -->
@@ -707,15 +797,15 @@
         <div class="premium-breakdown">
           <div class="breakdown-item">
             <div class="breakdown-label">Total Premium</div>
-            <div class="breakdown-value" id="modal-total-premium">KES 0</div>
+            <div class="breakdown-value" id="modal-total-premium">PHP 0</div>
           </div>
           <div class="breakdown-item">
             <div class="breakdown-label">Employer Share</div>
-            <div class="breakdown-value" id="modal-employer-share">KES 0</div>
+            <div class="breakdown-value" id="modal-employer-share">PHP 0</div>
           </div>
           <div class="breakdown-item">
             <div class="breakdown-label">Employee Share</div>
-            <div class="breakdown-value" id="modal-employee-share">KES 0</div>
+            <div class="breakdown-value" id="modal-employee-share">PHP 0</div>
           </div>
           <div class="breakdown-item">
             <div class="breakdown-label">Type</div>
@@ -753,7 +843,7 @@
           </div>
           <div style="display: flex; justify-content: space-between;">
             <span>Monthly Cost Impact:</span>
-            <strong id="modal-monthly-impact">KES 0</strong>
+            <strong id="modal-monthly-impact">PHP 0</strong>
           </div>
         </div>
       </div>
@@ -784,6 +874,33 @@
       </div>
     </div>
   </div>
+
+  <!-- Edit Premium Modal -->
+  <div class="modal-overlay" id="edit-modal-overlay"></div>
+  <div class="edit-form-modal" id="edit-premium-modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Edit Premium</h2>
+      <button class="modal-close" onclick="closeEditModal()">✕</button>
+    </div>
+    <div class="modal-content">
+      <div class="form-group">
+        <label>Annual Premium (Employee)</label>
+        <input type="number" id="edit-annual-premium" placeholder="0.00" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Annual Premium (Dependent)</label>
+        <input type="number" id="edit-dependent-premium" placeholder="0.00" step="0.01">
+      </div>
+      <div class="form-group">
+        <label>Monthly Premium</label>
+        <input type="number" id="edit-monthly-premium" placeholder="0.00" step="0.01">
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitPremiumEdit()">Save Changes</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -807,12 +924,12 @@
 
   function formatCurrency(amount) {
     const numAmount = parseFloat(amount || 0);
-    return 'KES ' + numAmount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return 'PHP ' + numAmount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   function formatDate(dateString) {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-KE', { year: 'numeric', month: 'short', day: 'numeric' });
+    return new Date(dateString).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
   // ============================================
@@ -864,6 +981,10 @@
         }
       })
       .catch(error => console.error('Error:', error));
+    
+    // Also load deductions and adjustments
+    loadDeductions();
+    loadAdjustments();
   }
 
   function loadDeductions() {
@@ -912,34 +1033,39 @@
       return;
     }
 
-    tbody.innerHTML = premiums.map(premium => `
-      <tr onclick="openSideModal(${premium.id}, event)">
-        <td>
-          <span class="plan-badge">${premium.plan_name || 'N/A'}</span>
-        </td>
-        <td class="premium-value">${formatCurrency(premium.total_premium)}</td>
-        <td class="premium-value">${formatCurrency(premium.employer_share)}</td>
-        <td class="premium-value">${formatCurrency(premium.employee_share)}</td>
-        <td>
-          <span class="badge ${premium.is_percentage ? 'badge-percentage' : 'badge-active'}">
-            ${premium.is_percentage ? '%' : '₭'}
-          </span>
-        </td>
-        <td style="text-align: center; font-weight: 600;">${premium.total_enrollments || 0}</td>
-        <td>
-          <span class="badge ${premium.is_active ? 'badge-active' : 'badge-inactive'}">
-            ${premium.is_active ? 'Active' : 'Inactive'}
-          </span>
-        </td>
-        <td>
-          <div class="actions-cell">
-            <button class="btn-icon" onclick="viewPremium(${premium.id}, event)" title="View">👁️</button>
-            <button class="btn-icon" onclick="editPremium(${premium.id}, event)" title="Edit">✏️</button>
-            <button class="btn-icon" onclick="togglePremium(${premium.id}, event)" title="Toggle">${premium.is_active ? '⏸' : '▶️'}</button>
-          </div>
-        </td>
-      </tr>
-    `).join('');
+    tbody.innerHTML = premiums.map(premium => {
+      // Calculate premium values from plan data
+      const annualPremium = parseFloat(premium.annual_premium_per_employee) || 0;
+      const employerShare = annualPremium * 0.70; // 70% employer
+      const employeeShare = annualPremium * 0.30; // 30% employee
+      
+      return `
+        <tr onclick="openSideModal(${premium.id}, event)">
+          <td>
+            <span class="plan-badge">${premium.plan_name || 'N/A'}</span>
+          </td>
+          <td class="premium-value">${formatCurrency(annualPremium)}</td>
+          <td class="premium-value">${formatCurrency(employerShare)}</td>
+          <td class="premium-value">${formatCurrency(employeeShare)}</td>
+          <td>
+            <span class="badge badge-active">
+              ₭
+            </span>
+          </td>
+          <td style="text-align: center; font-weight: 600;">0</td>
+          <td>
+            <span class="badge ${premium.is_active ? 'badge-active' : 'badge-inactive'}">\n              ${premium.is_active ? 'Active' : 'Inactive'}\n            </span>
+          </td>
+          <td>
+            <div class="actions-cell">
+              <button class="btn-icon" onclick="viewPremium(${premium.id}, event)" title="View">👁️</button>
+              <button class="btn-icon" onclick="editPremium(${premium.id}, event)" title="Edit">✏️</button>
+              <button class="btn-icon" onclick="togglePremium(${premium.id}, event)" title="Toggle">${premium.is_active ? '⏸' : '▶️'}</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
   }
 
   function renderDeductionsTable(deductions) {
@@ -955,10 +1081,10 @@
         <td>${ded.employee_name || 'N/A'}</td>
         <td>${ded.plan_name || 'N/A'}</td>
         <td class="premium-value">${formatCurrency(ded.deduction_amount)}</td>
-        <td>${formatDate(ded.deduction_date)}</td>
-        <td><code>${ded.payroll_code || '-'}</code></td>
-        <td><span class="badge ${ded.is_active ? 'badge-active' : 'badge-inactive'}">${ded.is_active ? 'Active' : 'Inactive'}</span></td>
-        <td><button class="btn-icon" onclick="viewDeduction(${ded.id}, event)" title="View">👁️</button></td>
+        <td>${formatDate(ded.deduction_start_date)}</td>
+        <td><code>HMO-DED</code></td>
+        <td><span class="badge badge-active">${ded.enrollment_status || 'Active'}</span></td>
+        <td><button class="btn-icon" onclick="viewDeduction(${ded.deduction_id}, event)" title="View">👁️</button></td>
       </tr>
     `).join('');
   }
@@ -973,12 +1099,12 @@
 
     tbody.innerHTML = adjustments.map(adj => `
       <tr>
-        <td>${adj.employee_name || 'N/A'}</td>
-        <td>${adj.adjustment_type || 'N/A'}</td>
-        <td class="premium-value">${formatCurrency(adj.original_amount)}</td>
-        <td class="premium-value">${formatCurrency(adj.adjusted_amount)}</td>
-        <td>${adj.reason || '-'}</td>
-        <td>${formatDate(adj.effective_date)}</td>
+        <td>${adj.plan_name || 'N/A'}</td>
+        <td>Premium</td>
+        <td class="premium-value">${formatCurrency(adj.current_premium)}</td>
+        <td class="premium-value">${formatCurrency(adj.current_premium)}</td>
+        <td>Auto-adjustment</td>
+        <td>${formatDate(adj.last_adjusted)}</td>
         <td><button class="btn-icon" onclick="viewAdjustment(${adj.id}, event)" title="View">👁️</button></td>
       </tr>
     `).join('');
@@ -1040,12 +1166,102 @@
 
   function editPremium(id = null, event = null) {
     if (event) event.stopPropagation();
-    alert('Edit premium coming soon');
+    if (id) currentPremiumId = id;
+    
+    if (!currentPremiumId) return;
+    
+    // Populate edit modal with current values
+    fetch(`modules/hmo/api.php?action=getPremiumDetails&id=${currentPremiumId}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.success && data.data) {
+          const premium = data.data;
+          document.getElementById('edit-annual-premium').value = premium.annual_premium_per_employee || '';
+          document.getElementById('edit-dependent-premium').value = premium.annual_premium_per_dependent || '';
+          document.getElementById('edit-monthly-premium').value = premium.monthly_premium || '';
+          openEditModal();
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to load premium details');
+      });
+  }
+
+  function openEditModal() {
+    document.getElementById('edit-modal-overlay').classList.add('show');
+    document.getElementById('edit-premium-modal').classList.add('show');
+  }
+
+  function closeEditModal() {
+    document.getElementById('edit-modal-overlay').classList.remove('show');
+    document.getElementById('edit-premium-modal').classList.remove('show');
+  }
+
+  function submitPremiumEdit() {
+    const annualEmployee = parseFloat(document.getElementById('edit-annual-premium').value) || 0;
+    const annualDependent = parseFloat(document.getElementById('edit-dependent-premium').value) || 0;
+    const monthly = parseFloat(document.getElementById('edit-monthly-premium').value) || 0;
+
+    if (!annualEmployee) {
+      alert('Please enter annual premium for employee');
+      return;
+    }
+
+    const payload = {
+      annual_premium_per_employee: annualEmployee,
+      annual_premium_per_dependent: annualDependent,
+      monthly_premium: monthly
+    };
+
+    console.log('Updating premium:', currentPremiumId, payload);
+
+    fetch(`modules/hmo/api.php?action=updatePremium&id=${currentPremiumId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log('Update response:', data);
+      if (data.success) {
+        alert('Premium updated successfully');
+        closeEditModal();
+        closeSideModal();
+        loadPremiums();
+      } else {
+        alert('Error: ' + (data.error || 'Failed to update premium'));
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error updating premium: ' + error.message);
+    });
   }
 
   function togglePremium(id, event) {
     event.stopPropagation();
-    alert('Toggle premium coming soon');
+    if (!confirm('Toggle premium active status?')) return;
+    
+    fetch(`modules/hmo/api.php?action=togglePremium&id=${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert(data.message || 'Premium status updated');
+        closeSideModal();
+        loadPremiums();
+      } else {
+        alert('Error: ' + (data.error || 'Failed to toggle premium'));
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error toggling premium');
+    });
   }
 
   function viewDeduction(id, event) {
@@ -1104,10 +1320,14 @@
   updateCounts();
 
   document.getElementById('modal-overlay').addEventListener('click', closeSideModal);
+  document.getElementById('edit-modal-overlay').addEventListener('click', closeEditModal);
 
   window.onclick = function(event) {
     if (event.target.id === 'modal-overlay') {
       closeSideModal();
+    }
+    if (event.target.id === 'edit-modal-overlay') {
+      closeEditModal();
     }
   };
 </script>

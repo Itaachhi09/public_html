@@ -11,6 +11,16 @@ if (empty($_SESSION['token'])) {
 }
 
 require_once __DIR__ . '/../../config/Database.php';
+require_once __DIR__ . '/../../config/BaseConfig.php';
+
+// Role-based access control
+if (!canAccessMenuItem('payroll', 'security_audit_trail')) {
+    http_response_code(403);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Access denied: security_audit_trail']);
+    exit;
+}
+
 require_once __DIR__ . '/models/PayrollAuditTrail.php';
 
 $auditTrail = new PayrollAuditTrail();
@@ -55,6 +65,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 if ($err) {
     $params = ['ref' => 'payroll', 'page' => 'security_audit_trail', 'err' => urlencode($err)];
-    header('Location: ../../dashboard.php?' . http_build_query($params));
+    header('Location: ' . BASE_URL . 'dashboard.php?' . http_build_query($params));
     exit;
 }

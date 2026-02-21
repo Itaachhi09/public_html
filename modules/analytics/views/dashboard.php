@@ -634,30 +634,30 @@ $userRole = $_SESSION['role'] ?? 'hr';
 
         <!-- ANALYTICS NAVIGATION -->
         <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);">
-            <a href="dashboard.php" class="analytics-nav-btn" style="background: var(--primary); color: white;">
+            <button class="analytics-nav-btn active-tab" onclick="switchAnalyticsTab(event, 'overview')" style="background: var(--primary); color: white;">
                 <i class='bx bxs-dashboard'></i> Overview
-            </a>
-            <a href="payroll_trends.php" class="analytics-nav-btn">
+            </button>
+            <button class="analytics-nav-btn" onclick="switchAnalyticsTab(event, 'payroll-trends')">
                 <i class='bx bxs-bar-chart'></i> Payroll Trends
-            </a>
-            <a href="compensation_analysis.php" class="analytics-nav-btn">
+            </button>
+            <button class="analytics-nav-btn" onclick="switchAnalyticsTab(event, 'compensation')">
                 <i class='bx bxs-wallet'></i> Compensation
-            </a>
-            <a href="headcount_analytics.php" class="analytics-nav-btn">
+            </button>
+            <button class="analytics-nav-btn" onclick="switchAnalyticsTab(event, 'headcount')">
                 <i class='bx bxs-user-detail'></i> Headcount
-            </a>
-            <a href="hmo_insights.php" class="analytics-nav-btn">
+            </button>
+            <button class="analytics-nav-btn" onclick="switchAnalyticsTab(event, 'hmo-insights')">
                 <i class='bx bxs-heart'></i> HMO Insights
-            </a>
-            <a href="movement_analytics.php" class="analytics-nav-btn">
+            </button>
+            <button class="analytics-nav-btn" onclick="switchAnalyticsTab(event, 'movement')">
                 <i class='bx bxs-transfer'></i> Movement
-            </a>
-            <a href="cost_analysis.php" class="analytics-nav-btn">
+            </button>
+            <button class="analytics-nav-btn" onclick="switchAnalyticsTab(event, 'cost-analysis')">
                 <i class='bx bxs-calculator'></i> Cost Analysis
-            </a>
-            <a href="compliance_tracking.php" class="analytics-nav-btn">
+            </button>
+            <button class="analytics-nav-btn" onclick="switchAnalyticsTab(event, 'compliance')">
                 <i class='bx bxs-check-square'></i> Compliance
-            </a>
+            </button>
         </div>
 
         <style>
@@ -675,14 +675,30 @@ $userRole = $_SESSION['role'] ?? 'hr';
                 gap: 0.5rem;
                 transition: all 0.2s;
                 cursor: pointer;
+                font-family: inherit;
             }
             .analytics-nav-btn:hover {
                 background: var(--light);
                 border-color: var(--primary);
                 color: var(--primary);
             }
+            .analytics-nav-btn.active-tab {
+                background: var(--primary);
+                color: white;
+                border-color: var(--primary);
+            }
+            
+            .analytics-tab-content {
+                display: none;
+            }
+            
+            .analytics-tab-content.active {
+                display: block;
+            }
         </style>
 
+        <!-- TAB CONTENT SECTIONS -->
+        <div id="overview-tab" class="analytics-tab-content active">
         <!-- SECTION 1: SUMMARY CARDS -->
         <div class="summary-cards-row">
             <!-- Card 1: Total Headcount -->
@@ -883,11 +899,296 @@ $userRole = $_SESSION['role'] ?? 'hr';
                 </div>
             </div>
         </div>
+        </div> <!-- End of overview-tab -->
+
+        <!-- Other Tab Containers -->
+        <div id="payroll-trends-tab" class="analytics-tab-content">
+            <div style="padding: 2rem; text-align: center; color: var(--text-light);">
+                <div class="loading-spinner" style="margin: 0 auto 1rem auto;"></div>
+                Loading content...
+            </div>
+        </div>
+
+        <div id="compensation-tab" class="analytics-tab-content">
+            <div style="padding: 2rem; text-align: center; color: var(--text-light);">
+                <div class="loading-spinner" style="margin: 0 auto 1rem auto;"></div>
+                Loading content...
+            </div>
+        </div>
+
+        <div id="headcount-tab" class="analytics-tab-content">
+            <div style="padding: 2rem; text-align: center; color: var(--text-light);">
+                <div class="loading-spinner" style="margin: 0 auto 1rem auto;"></div>
+                Loading content...
+            </div>
+        </div>
+
+        <div id="hmo-insights-tab" class="analytics-tab-content">
+            <div style="padding: 2rem; text-align: center; color: var(--text-light);">
+                <div class="loading-spinner" style="margin: 0 auto 1rem auto;"></div>
+                Loading content...
+            </div>
+        </div>
+
+        <div id="movement-tab" class="analytics-tab-content">
+            <div style="padding: 2rem; text-align: center; color: var(--text-light);">
+                <div class="loading-spinner" style="margin: 0 auto 1rem auto;"></div>
+                Loading content...
+            </div>
+        </div>
+
+        <div id="cost-analysis-tab" class="analytics-tab-content">
+            <div style="padding: 2rem; text-align: center; color: var(--text-light);">
+                <div class="loading-spinner" style="margin: 0 auto 1rem auto;"></div>
+                Loading content...
+            </div>
+        </div>
+
+        <div id="compliance-tab" class="analytics-tab-content">
+            <div style="padding: 2rem; text-align: center; color: var(--text-light);">
+                <div class="loading-spinner" style="margin: 0 auto 1rem auto;"></div>
+                Loading content...
+            </div>
+        </div>
 
     </div>
 
     <!-- SCRIPTS -->
     <script>
+        // ===== TAB SWITCHING =====
+        var tabMap = {
+            'payroll-trends': 'modules/analytics/views/payroll_trends.php',
+            'compensation': 'modules/analytics/views/compensation_analysis.php',
+            'headcount': 'modules/analytics/views/headcount_analytics.php',
+            'hmo-insights': 'modules/analytics/views/hmo_insights.php',
+            'movement': 'modules/analytics/views/movement_analytics.php',
+            'cost-analysis': 'modules/analytics/views/cost_analysis.php',
+            'compliance': 'modules/analytics/views/compliance_tracking.php'
+        };
+
+        function switchAnalyticsTab(event, tabName) {
+            event.preventDefault();
+            
+            // Update active button
+            document.querySelectorAll('.analytics-nav-btn').forEach(btn => {
+                btn.classList.remove('active-tab');
+            });
+            event.target.closest('.analytics-nav-btn').classList.add('active-tab');
+            
+            // Hide all tabs
+            document.querySelectorAll('.analytics-tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab
+            const tabElement = document.getElementById(tabName + '-tab');
+            if (tabElement) {
+                tabElement.classList.add('active');
+            }
+            
+            // Load content from other pages
+            if (tabName !== 'overview' && tabMap[tabName]) {
+                loadTabContent(tabName, tabMap[tabName]);
+            }
+        }
+
+        function loadTabContent(tabName, phpFile) {
+            const tabElement = document.getElementById(tabName + '-tab');
+            
+            if (!tabElement) {
+                console.error('Tab element not found:', tabName);
+                return;
+            }
+            
+            // Check if content is already loaded
+            if (tabElement.getAttribute('data-loaded') === 'true') {
+                return;
+            }
+            
+            // Show loading spinner
+            tabElement.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-light);"><div class="loading-spinner" style="margin: 0 auto 1rem auto;"></div>Loading content...</div>';
+            
+            // Determine the correct fetch URL based on current context
+            let fetchUrl = phpFile;
+            
+            // Add /public_html/ prefix if not already present
+            if (!fetchUrl.startsWith('/public_html/')) {
+                fetchUrl = '/public_html/' + (fetchUrl.startsWith('/') ? fetchUrl.substring(1) : fetchUrl);
+            }
+            
+            console.log('Loading tab from:', fetchUrl);
+            
+            // Fetch the content (with credentials to maintain session)
+            fetch(fetchUrl, {
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    return response.text();
+                })
+                .then(html => {
+                    // Comprehensive path fixing before parsing
+                    // Handle all variations: ../api.php, ./api.php, /modules/analytics/api.php
+                    html = html.replace(/fetch\(\s*[`'"](\.\.\/|\/modules\/analytics\/)?api\.php/g, 'fetch(`/public_html/modules/analytics/api.php');
+                    html = html.replace(/fetch\(\s*[`'"](\.\.\/|\/modules\/analytics\/)?dashboard_handler\.php/g, 'fetch(`/public_html/modules/analytics/dashboard_handler.php');
+                    
+                    // Handle string replacements
+                    html = html.replace(/[`'\"](\.\.\/|\/modules\/analytics\/)?api\.php/g, '`/public_html/modules/analytics/api.php');
+                    html = html.replace(/[`'\"](\.\.\/|\/modules\/analytics\/)?dashboard_handler\.php/g, '`/public_html/modules/analytics/dashboard_handler.php');
+                    
+                    // Parse the HTML response
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, 'text/html');
+                    
+                    // Try to find container div
+                    let containerElement = doc.querySelector('.container');
+                    
+                    // If no container, try other possible content wrappers
+                    if (!containerElement) {
+                        containerElement = doc.querySelector('main');
+                    }
+                    if (!containerElement) {
+                        containerElement = doc.querySelector('[class*="content"]');
+                    }
+                    if (!containerElement) {
+                        // Last resort: use the body content
+                        containerElement = doc.body;
+                    }
+                    
+                    if (!containerElement || !containerElement.innerHTML.trim()) {
+                        tabElement.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--text-light);">No content available for this tab.</div>';
+                        return;
+                    }
+                    
+                    // Extract styles from the loaded content
+                    const styles = doc.querySelectorAll('style');
+                    const styleArray = [];
+                    
+                    styles.forEach(style => {
+                        if (style.textContent && style.textContent.length > 0) {
+                            try {
+                                const newStyle = document.createElement('style');
+                                // Add namespace to avoid conflicts
+                                newStyle.setAttribute('data-tab-module-style', tabName);
+                                newStyle.textContent = style.textContent;
+                                if (!document.querySelector(`[data-tab-module-style="${tabName}"]`)) {
+                                    document.head.appendChild(newStyle);
+                                }
+                                styleArray.push(newStyle);
+                            } catch (e) {
+                                console.error('Error injecting style for tab', tabName, ':', e);
+                            }
+                        }
+                    });
+                    
+                    // Extract scripts
+                    const scripts = doc.querySelectorAll('script');
+                    const scriptArray = [];
+                    
+                    scripts.forEach(script => {
+                        if (script.textContent && script.textContent.length > 0) {
+                            // Rewrite relative paths in script content
+                            let scriptContent = script.textContent;
+                            scriptContent = scriptContent.replace(/fetch\(['"]\.\.\/api\.php/g, 'fetch(\'/public_html/modules/analytics/api.php');
+                            scriptContent = scriptContent.replace(/fetch\(`\.\.\/api\.php/g, 'fetch(`/public_html/modules/analytics/api.php');
+                            scriptContent = scriptContent.replace(/fetch\(['"]\.\.\/dashboard_handler\.php/g, 'fetch(\'/public_html/modules/analytics/dashboard_handler.php');
+                            scriptContent = scriptContent.replace(/'\.\.\/api\.php/g, '\'/public_html/modules/analytics/api.php');
+                            scriptContent = scriptContent.replace(/`\.\.\/api\.php/g, '`/public_html/modules/analytics/api.php');
+                            scriptContent = scriptContent.replace(/"\.\.\/api\.php/g, '"/public_html/modules/analytics/api.php');
+                            
+                            // Also handle ./api.php and /modules/analytics/api.php variations
+                            scriptContent = scriptContent.replace(/fetch\(['"]\.\/api\.php/g, 'fetch(\'/public_html/modules/analytics/api.php');
+                            scriptContent = scriptContent.replace(/fetch\(`\.\/api\.php/g, 'fetch(`/public_html/modules/analytics/api.php');
+                            scriptContent = scriptContent.replace(/fetch\(['"]\/modules\/analytics\/api\.php/g, 'fetch(\'/public_html/modules/analytics/api.php');
+                            scriptContent = scriptContent.replace(/fetch\(`\/modules\/analytics\/api\.php/g, 'fetch(`/public_html/modules/analytics/api.php');
+                            
+                            // Skip scripts that contain redirect logic
+                            if (!scriptContent.includes('location.href') && 
+                                !scriptContent.includes('window.location') &&
+                                !scriptContent.includes('location.replace') &&
+                                !scriptContent.includes('session_start') &&
+                                scriptContent.length > 50) {
+                                scriptArray.push(scriptContent);
+                            }
+                        } else if (script.src) {
+                            // Store external script URLs
+                            scriptArray.push({ src: script.src });
+                        }
+                    });
+                    
+                    // Clear loading and insert container content
+                    let contentToInsert = '';
+                    
+                    // If we got the full body, extract just the meaningful content
+                    if (containerElement === doc.body) {
+                        // Look for the main content div
+                        const main = doc.querySelector('main') || doc.querySelector('div[style*="container"]');
+                        if (main && main !== containerElement) {
+                            contentToInsert = main.innerHTML;
+                        } else {
+                            // Get all non-script, non-style elements from body
+                            const bodyClone = doc.body.cloneNode(true);
+                            // Remove scripts and styles from the clone
+                            bodyClone.querySelectorAll('script, style, head, body').forEach(el => el.remove());
+                            contentToInsert = bodyClone.innerHTML;
+                        }
+                    } else {
+                        contentToInsert = containerElement.innerHTML;
+                    }
+                    
+                    try {
+                        tabElement.innerHTML = contentToInsert;
+                    } catch (e) {
+                        console.error('Error setting tab content:', e);
+                        tabElement.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--danger);">Error loading content. Please try again.</div>';
+                        return;
+                    }
+                    
+                    // Execute external scripts
+                    setTimeout(() => {
+                        scriptArray.forEach(scriptContent => {
+                            try {
+                                if (typeof scriptContent === 'object' && scriptContent.src) {
+                                    // External script
+                                    const newScript = document.createElement('script');
+                                    newScript.src = scriptContent.src;
+                                    document.body.appendChild(newScript);
+                                } else {
+                                    // Inline script
+                                    const newScript = document.createElement('script');
+                                    newScript.textContent = scriptContent;
+                                    document.body.appendChild(newScript);
+                                }
+                            } catch (e) {
+                                console.error('Error executing script:', e);
+                            }
+                        });
+                    }, 100);
+                    
+                    // Mark as loaded
+                    tabElement.setAttribute('data-loaded', 'true');
+                })
+                .catch(error => {
+                    console.error('Error loading tab content for', tabName, ':', error);
+                    console.log('Attempted to load from:', fetchUrl);
+                    let errorMsg = error.message;
+                    
+                    // Provide specific error messages
+                    if (error.message.includes('404')) {
+                        errorMsg = `File not found. Tried to load: ${fetchUrl}`;
+                    } else if (error.message.includes('401') || error.message.includes('403')) {
+                        errorMsg = 'You do not have permission to access this content.';
+                    }
+                    
+                    tabElement.innerHTML = '<div style="padding: 2rem; text-align: center; color: var(--danger); background: rgba(239, 68, 68, 0.05); border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.2); margin: 1rem;"><p style="margin: 0 0 0.5rem 0; font-weight: 600;">Error loading content</p><p style="margin: 0; font-size: 13px;">' + errorMsg + '</p><p style="margin: 0.5rem 0 0 0; font-size: 11px; color: var(--text-light);">Check console for details</p></div>';
+                });
+        }
+
         // ===== FILTER HANDLING =====
         document.getElementById('date-range').addEventListener('change', function() {
             const customGroup = document.getElementById('custom-date-group');
@@ -910,16 +1211,23 @@ $userRole = $_SESSION['role'] ?? 'hr';
             event.preventDefault();
             event.stopPropagation();
             
-            // Get current filters
-            const dateRange = document.getElementById('date-range').value;
-            const department = document.getElementById('department-filter').value;
-            const employmentType = document.getElementById('employment-type-filter').value;
+            // Map metrics to tab names
+            const metricToTab = {
+                'headcount': 'headcount',
+                'payroll': 'payroll-trends',
+                'movement': 'movement',
+                'hmo': 'hmo-insights',
+                'compliance': 'compliance',
+                'overtime': 'cost-analysis'
+            };
             
-            // Navigate to metrics view with filters
-            window.location.href = 'metrics.php?metric=' + metric + 
-                                  '&dateRange=' + dateRange + 
-                                  '&department=' + department + 
-                                  '&employmentType=' + employmentType;
+            const tabName = metricToTab[metric] || 'overview';
+            
+            // Switch to the appropriate tab
+            const button = document.querySelector(`.analytics-nav-btn[onclick*="'${tabName}'"]`);
+            if (button) {
+                button.click();
+            }
         }
 
         function switchHeadcountView(event, viewType) {
@@ -934,6 +1242,9 @@ $userRole = $_SESSION['role'] ?? 'hr';
                 }
             });
             
+            // Set the current view
+            currentHeadcountView = viewType.toLowerCase();
+            
             // Reload chart with new view
             if (headcountTrendChart) {
                 headcountTrendChart.destroy();
@@ -945,11 +1256,12 @@ $userRole = $_SESSION['role'] ?? 'hr';
         }
 
         // ===== CHART VARIABLES =====
-        let headcountTrendChart = null;
-        let payrollBreakdownChart = null;
-        let hmoDonutChart = null;
-        let overtimeChart = null;
-        let attendanceRingChart = null;
+        var headcountTrendChart = null;
+        var payrollBreakdownChart = null;
+        var hmoDonutChart = null;
+        var overtimeChart = null;
+        var attendanceRingChart = null;
+        var currentHeadcountView = 'monthly';  // Default view
 
         // ===== LOAD DASHBOARD DATA =====
         function loadDashboardData() {
@@ -958,8 +1270,8 @@ $userRole = $_SESSION['role'] ?? 'hr';
             const department = document.getElementById('department-filter').value;
             const employmentType = document.getElementById('employment-type-filter').value;
             
-            // Build query string
-            let url = '../api.php?action=getDashboardData&dateRange=' + encodeURIComponent(dateRange);
+            // Build query string - use absolute path with public_html
+            let url = '/public_html/modules/analytics/api.php?action=getDashboardData&dateRange=' + encodeURIComponent(dateRange);
             if (department && department !== '') {
                 url += '&department=' + encodeURIComponent(department);
             }
@@ -967,58 +1279,131 @@ $userRole = $_SESSION['role'] ?? 'hr';
                 url += '&employmentType=' + encodeURIComponent(employmentType);
             }
             
+            console.log('DEBUG: Fetching dashboard data from:', url);
+            console.log('DEBUG: Current filters - dateRange:', dateRange, 'department:', department, 'employmentType:', employmentType);
+            
             // Fetch from API with filters
-            fetch(url)
-                .then(response => response.json())
+            fetch(url, {
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => {
+                    console.log('DEBUG: API Response Status:', response.status);
+                    console.log('DEBUG: API Response Headers:', response.headers);
+                    if (!response.ok) {
+                        return response.text().then(text => {
+                            console.error('DEBUG: Non-OK response text:', text);
+                            throw new Error(`HTTP ${response.status}: ${text}`);
+                        });
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    if (data.success) {
+                    console.log('DEBUG: API Response Data:', data);
+                    if (data && data.success) {
+                        console.log('DEBUG: Updating dashboard with data:', data.data);
                         updateDashboard(data.data);
                     } else {
-                        console.error('Failed to load dashboard data:', data.error);
+                        console.error('Failed to load dashboard data:', data ? data.error : 'No response data');
+                        console.log('DEBUG: Response was not successful:', data);
                     }
                 })
-                .catch(error => console.error('API Error:', error));
+                .catch(error => {
+                    console.error('API Error caught:', error);
+                    console.log('DEBUG: Full error:', error);
+                    console.log('DEBUG: Error message:', error.message);
+                });
         }
 
         function updateDashboard(data) {
+            console.log('DEBUG: updateDashboard called with data:', data);
+            
+            if (!data) {
+                console.error('DEBUG: No data provided to updateDashboard');
+                return;
+            }
+            
             // Update summary cards
-            document.getElementById('headcount-value').textContent = (data.summary?.headcount?.total || 0).toLocaleString();
-            document.getElementById('headcount-active').textContent = (data.summary?.headcount?.active || 0).toLocaleString();
-            document.getElementById('headcount-inactive').textContent = (data.summary?.headcount?.inactive || 0).toLocaleString();
+            const headcountTotal = (data.summary?.headcount?.total || 0);
+            const headcountValue = headcountTotal.toLocaleString();
+            console.log('DEBUG: Setting headcount-value to:', headcountValue);
+            
+            try {
+                document.getElementById('headcount-value').textContent = headcountValue;
+                document.getElementById('headcount-active').textContent = (data.summary?.headcount?.active || 0).toLocaleString();
+                document.getElementById('headcount-inactive').textContent = (data.summary?.headcount?.inactive || 0).toLocaleString();
+            } catch (e) {
+                console.error('DEBUG: Error updating headcount elements:', e);
+            }
             
             // Calculate trend
             const headcountTrend = data.summary?.headcount?.active > 0 ? 
                 ((data.summary?.movement?.net_movement / data.summary?.headcount?.active) * 100).toFixed(1) : 0;
-            document.getElementById('headcount-trend-pct').textContent = 
-                (headcountTrend >= 0 ? '+' : '') + headcountTrend + '%';
+            try {
+                document.getElementById('headcount-trend-pct').textContent = 
+                    (headcountTrend >= 0 ? '+' : '') + headcountTrend + '%';
+            } catch (e) {
+                console.error('DEBUG: Error updating headcount trend:', e);
+            }
             
             // Update movement card
-            const movement = (data.summary?.movement?.new_hires || 0) - (data.summary?.movement?.resignations || 0);
-            document.getElementById('movement-value').textContent = (movement >= 0 ? '+' : '') + movement.toLocaleString();
-            document.getElementById('movement-new').textContent = (data.summary?.movement?.new_hires || 0).toLocaleString();
-            document.getElementById('movement-resignations').textContent = (data.summary?.movement?.resignations || 0).toLocaleString();
+            try {
+                const movement = (data.summary?.movement?.new_hires || 0) - (data.summary?.movement?.resignations || 0);
+                document.getElementById('movement-value').textContent = (movement >= 0 ? '+' : '') + movement.toLocaleString();
+                document.getElementById('movement-new').textContent = (data.summary?.movement?.new_hires || 0).toLocaleString();
+                document.getElementById('movement-resignations').textContent = (data.summary?.movement?.resignations || 0).toLocaleString();
+            } catch (e) {
+                console.error('DEBUG: Error updating movement elements:', e);
+            }
             
             // Update payroll card
-            document.getElementById('payroll-value').textContent = 'PKR ' + (data.summary?.payroll?.gross || 0).toLocaleString();
-            document.getElementById('payroll-avg').textContent = 'PKR ' + (data.summary?.payroll?.net || 0).toLocaleString();
+            try {
+                document.getElementById('payroll-value').textContent = 'PHP ' + (data.summary?.payroll?.gross || 0).toLocaleString();
+                document.getElementById('payroll-avg').textContent = 'PHP ' + (data.summary?.payroll?.net || 0).toLocaleString();
+            } catch (e) {
+                console.error('DEBUG: Error updating payroll elements:', e);
+            }
             
             // Update attendance card
-            document.getElementById('attendance-rate').textContent = (data.summary?.attendance?.rate || 0).toFixed(1) + '%';
-            document.getElementById('attendance-absent').textContent = (data.summary?.attendance?.absent_count || 0).toLocaleString();
+            try {
+                document.getElementById('attendance-value').textContent = (data.summary?.attendance?.rate || 0).toFixed(1) + '%';
+                document.getElementById('attendance-absent').textContent = (data.summary?.attendance?.absent_count || 0).toLocaleString();
+            } catch (e) {
+                console.error('DEBUG: Error updating attendance elements:', e);
+            }
             
             // HMO Snapshot
-            document.getElementById('hmo-enrolled').textContent = (data.hmo?.enrolled || 0).toLocaleString();
-            document.getElementById('hmo-not-enrolled').textContent = ((data.summary?.headcount?.total || 0) - (data.hmo?.enrolled || 0)).toLocaleString();
-            document.getElementById('hmo-cost').textContent = 'PKR ' + (data.hmo?.total_cost || 0).toLocaleString();
+            try {
+                const elem = document.getElementById('hmo-enrolled');
+                if (elem) {
+                    elem.textContent = (data.hmo?.enrolled || 0).toLocaleString();
+                }
+                
+                const costElem = document.getElementById('hmo-avg-cost');
+                if (costElem) {
+                    costElem.textContent = 'PHP ' + ((data.hmo?.total_cost || 0) / (data.hmo?.enrolled || 1)).toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                }
+            } catch (e) {
+                console.error('DEBUG: Error updating HMO elements:', e);
+            }
             
             // Overtime
-            document.getElementById('overtime-hours').textContent = (data.overtime?.hours || 0).toFixed(1) + ' hrs';
-            document.getElementById('overtime-cost').textContent = 'PKR ' + (data.overtime?.cost || 0).toLocaleString();
+            try {
+                document.getElementById('overtime-hours').textContent = (data.overtime?.hours || 0).toFixed(1) + ' hrs';
+                document.getElementById('overtime-cost').textContent = 'PHP ' + (data.overtime?.cost || 0).toLocaleString();
+            } catch (e) {
+                console.error('DEBUG: Error updating overtime elements:', e);
+            }
             
             // Compliance
-            document.getElementById('compliance-contracts').textContent = (data.compliance?.expiring_contracts || 0).toLocaleString();
-            document.getElementById('compliance-documents').textContent = (data.compliance?.expiring_documents || 0).toLocaleString();
-            
+            try {
+                document.getElementById('compliance-contracts').textContent = (data.compliance?.expiring_contracts || 0).toLocaleString();
+                document.getElementById('compliance-docs').textContent = (data.compliance?.expiring_documents || 0).toLocaleString();
+            } catch (e) {
+                console.error('DEBUG: Error updating compliance elements:', e);
+            }
             // Update department dropdown
             if (data.departments && data.departments.length > 0) {
                 const deptFilter = document.getElementById('department-filter');
@@ -1049,15 +1434,15 @@ $userRole = $_SESSION['role'] ?? 'hr';
             const ctx = document.getElementById('headcount-trend-chart').getContext('2d');
             
             // Sample data - replace with API call
-            const labels = period === 'monthly' 
+            const labels = currentHeadcountView === 'monthly' 
                 ? ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
                 : ['Q1', 'Q2', 'Q3', 'Q4'];
             
-            const activeData = period === 'monthly'
+            const activeData = currentHeadcountView === 'monthly'
                 ? [450, 465, 480, 495, 510, 525]
                 : [465, 495, 530, 560];
             
-            const inactiveData = period === 'monthly'
+            const inactiveData = currentHeadcountView === 'monthly'
                 ? [15, 14, 13, 12, 11, 10]
                 : [14, 12, 10, 8];
 
@@ -1318,9 +1703,20 @@ $userRole = $_SESSION['role'] ?? 'hr';
 
         // ===== INITIALIZE ON PAGE LOAD =====
 
-        document.addEventListener('DOMContentLoaded', function() {
+        // Log to console that the script is loaded
+        console.log('Dashboard script loaded successfully');
+        
+        // Check if DOM is already loaded (it usually is since script is at bottom)
+        if (document.readyState === 'loading') {
+            console.log('DOM still loading, registering DOMContentLoaded listener...');
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('DOMContentLoaded event fired!');
+                loadDashboardData();
+            });
+        } else {
+            console.log('DOM already loaded, calling loadDashboardData immediately...');
             loadDashboardData();
-        });
+        }
     </script>
 </body>
 </html>

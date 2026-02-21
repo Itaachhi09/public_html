@@ -74,35 +74,35 @@ class AnalyticsController extends BaseController {
                         'detail' => 'License expires in 15 days',
                         'dueDate' => 'Feb 24, 2026',
                         'module' => 'HR Core',
-                        'actionUrl' => '/modules/hr_core/views/employees.php?action=edit&id=45'
+                        'actionUrl' => 'dashboard.php?module=hr_core&view=employees&action=edit&id=45'
                     ],
                     [
                         'name' => 'Fatima Khan - Service Contract Renewal',
                         'detail' => 'Service contract expires in 8 days',
                         'dueDate' => 'Feb 17, 2026',
                         'module' => 'Compensation',
-                        'actionUrl' => '/modules/compensation/views/pay_bonds_contracts.php?action=edit&id=23'
+                        'actionUrl' => 'dashboard.php?module=compensation&view=pay_bonds_contracts&action=edit&id=23'
                     ],
                     [
                         'name' => 'Purchase Order Approval - Medical Supplies',
                         'detail' => 'Pending approval for 3 days',
                         'dueDate' => 'Feb 10, 2026',
                         'module' => 'Payroll',
-                        'actionUrl' => '/modules/payroll/views/disbursement_bank_files.php?approval_id=156'
+                        'actionUrl' => 'dashboard.php?module=payroll&view=disbursement_bank_files&approval_id=156'
                     ],
                     [
                         'name' => 'Salary Adjustment Request - Ali Hassan',
                         'detail' => 'Pending manager review',
                         'dueDate' => 'Feb 12, 2026',
                         'module' => 'Compensation',
-                        'actionUrl' => '/modules/compensation/views/salary_adjustment.php?request_id=89'
+                        'actionUrl' => 'dashboard.php?module=compensation&view=salary_adjustment&request_id=89'
                     ],
                     [
                         'name' => 'HMO Enrollment - New Employees',
                         'detail' => '5 employees pending enrollment',
                         'dueDate' => 'Feb 28, 2026',
                         'module' => 'HMO',
-                        'actionUrl' => '/modules/hmo/views/enrollment.php?status=pending'
+                        'actionUrl' => 'dashboard.php?module=hmo&view=enrollment&status=pending'
                     ]
                 ]
             ];

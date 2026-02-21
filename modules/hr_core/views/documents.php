@@ -90,9 +90,12 @@
       <!-- Documents Table Section -->
       <section class="document-table-section">
         <div class="card">
-          <div class="card-header">
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <h3 class="card-title">Document Records</h3>
-            <button class="btn btn-outline btn-sm" onclick="window.resetFilters()" style="color: var(--text-light);">↻ Reset</button>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn btn-primary btn-sm" onclick="window.openDocumentModal()">+ Add Document</button>
+              <button class="btn btn-outline btn-sm" onclick="window.resetFilters()" style="color: var(--text-light);">↻ Reset</button>
+            </div>
           </div>
 
           <div class="table-container" style="overflow-x: auto;">
@@ -139,7 +142,7 @@
             <span class="doc-side-btn-icon">➕</span>
             <span>Add Document</span>
           </button>
-          <button class="doc-side-btn" onclick="alert('Bulk upload feature coming soon')">
+          <button class="doc-side-btn" onclick="window.openGlobalBulkUploadModal()">
             <span class="doc-side-btn-icon">📦</span>
             <span>Bulk Upload</span>
           </button>
@@ -391,6 +394,14 @@
       });
     };
 
+    window.formatDateForInput = function(dateStr) {
+      if (!dateStr) return '';
+      if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) return dateStr;
+      const d = new Date(dateStr);
+      if (isNaN(d)) return '';
+      return d.toISOString().split('T')[0];
+    };
+
     window.showEmployeeDocumentsModal = function(employeeId, employeeName, department) {
       // Find the employee's documents from current displayed documents
       const tbody = document.getElementById('documentsList');
@@ -424,6 +435,7 @@
                 <!-- Quick Actions -->
                 <div style="display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap;">
                   <button class="btn btn-primary btn-sm" onclick="window.openDocumentModal(${employeeId})">+ Add Document</button>
+                  <button class="btn btn-outline btn-sm" onclick="window.openEmployeeBulkUploadModal(${employeeId}, '${employeeName.replace(/'/g, "\\'")}')">📦 Bulk Upload</button>
                   <button class="btn btn-outline btn-sm" onclick="window.replaceDocument(${employeeId})">⟳ Replace</button>
                   <button class="btn btn-outline btn-sm" onclick="window.sendReminder(${employeeId})">📧 Send Reminder</button>
                 </div>
@@ -494,38 +506,7 @@
         .catch(error => console.error('Error:', error));
     };
 
-    window.showDocumentModal = function(title, content) {
-      let modal = document.getElementById('documentActionModal');
-      if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'documentActionModal';
-        modal.innerHTML = `
-          <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem;" onclick="if(event.target === this) window.closeDocumentModal()">
-            <div style="background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); max-width: 800px; width: 100%; max-height: 90vh; overflow-y: auto;">
-              <div style="padding: 2rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white;">
-                <h2 id="documentModalTitle" style="font-size: 20px; font-weight: 700; color: var(--text-dark); margin: 0;"></h2>
-                <button onclick="window.closeDocumentModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-light);">✕</button>
-              </div>
-              <div id="documentModalContent" style="padding: 2rem;"></div>
-            </div>
-          </div>
-        `;
-        document.body.appendChild(modal);
-      }
 
-      document.getElementById('documentModalTitle').textContent = title;
-      document.getElementById('documentModalContent').innerHTML = content;
-      if (modal) {
-        modal.style.display = 'flex';
-      }
-    };
-
-    window.closeDocumentModal = function() {
-      const modal = document.getElementById('documentActionModal');
-      if (modal) {
-        modal.style.display = 'none';
-      }
-    };
 
     window.replaceDocument = function(employeeId) {
       alert('Replace document feature for employee ' + employeeId);
@@ -535,31 +516,618 @@
       alert('Sending reminder to employee ' + employeeId);
     };
 
+    window.openGlobalBulkUploadModal = function() {
+      // Fetch all employees first
+      fetch('modules/hr_core/api.php?action=getAllEmployees')
+        .then(response => response.json())
+        .then(data => {
+          if (!data.success || !data.data.employees) {
+            alert('Failed to load employees');
+            return;
+          }
+
+          const employees = data.data.employees;
+          let employeeOptions = '<option value="">-- Select an Employee --</option>';
+          employees.forEach(emp => {
+            employeeOptions += `<option value="${emp.employee_id}">${emp.first_name} ${emp.last_name} (${emp.employee_code})</option>`;
+          });
+
+          const content = `
+            <form id="globalBulkForm" onsubmit="window.submitGlobalBulkUpload(event)">
+              <div style="margin-bottom: 1.5rem;">
+                <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Select Employee *</label>
+                <select id="globalBulkEmployee" name="employee_id" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+                  ${employeeOptions}
+                </select>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div>
+                  <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Document Type *</label>
+                  <select id="globalDocType" name="document_type" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+                    <option value="">Select type...</option>
+                    <option value="id">ID Documents</option>
+                    <option value="contract">Contracts</option>
+                    <option value="certification">Certifications</option>
+                    <option value="performance">Performance Appraisal</option>
+                    <option value="disciplinary">Disciplinary Record</option>
+                    <option value="leave">Leave Record</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Expiry Date</label>
+                  <input type="date" id="globalExpiryDate" name="expiry_date" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+                </div>
+              </div>
+
+              <div style="margin-top: 1.5rem;">
+                <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Notes</label>
+                <textarea id="globalNotes" name="notes" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; min-height: 80px;" placeholder="Additional notes..."></textarea>
+              </div>
+
+              <div style="margin-top: 1.5rem;">
+                <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Upload Documents *</label>
+                <div style="border: 2px dashed var(--border); border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; background: #f9fafb; transition: all 0.2s;" 
+                     id="globalDocDropZone"
+                     ondrop="event.preventDefault(); window.handleGlobalDocDrop(event)"
+                     ondragover="event.preventDefault(); event.currentTarget.style.background='#ede9fe'"
+                     ondragleave="event.currentTarget.style.background='#f9fafb'">
+                  <div style="font-size: 32px; margin-bottom: 0.5rem;">📄</div>
+                  <p style="font-weight: 600; margin-bottom: 0.5rem;">Drag files here</p>
+                  <p style="color: var(--text-light); font-size: 13px; margin-bottom: 1rem;">or click to browse</p>
+                  <input type="file" id="globalDocFiles" multiple required accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="display: none;" onchange="window.handleGlobalDocSelect(event);">
+                  <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('globalDocFiles').click()">Browse Files</button>
+                </div>
+                <div id="globalDocPreview" style="margin-top: 1rem; display: none;">
+                  <p style="font-size: 12px; color: var(--text-light); margin-bottom: 0.5rem;"><strong id="globalFileCount">0</strong> file(s) selected - PDF, DOC, DOCX, XLS, XLSX, JPG, JPEG, PNG (Max 10MB each)</p>
+                  <ul id="globalDocList" style="list-style: none; padding: 0; margin: 0;"></ul>
+                </div>
+              </div>
+
+              <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                <button type="button" class="btn btn-outline" onclick="window.closeDocumentModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary" id="globalBulkSubmitBtn" style="display: none;">📤 Upload Documents</button>
+              </div>
+            </form>
+          `;
+          window.showDocumentModal('Bulk Upload Documents', content);
+        })
+        .catch(error => console.error('Error loading employees:', error));
+    };
+
+    window.handleGlobalDocDrop = function(e) {
+      const files = e.dataTransfer.files;
+      window.processGlobalDocFiles(files);
+    };
+
+    window.handleGlobalDocSelect = function(e) {
+      window.processGlobalDocFiles(e.target.files);
+    };
+
+    window.processGlobalDocFiles = function(files) {
+      if (files.length === 0) return;
+
+      window.globalUploadFiles = Array.from(files);
+      
+      const preview = document.getElementById('globalDocPreview');
+      const list = document.getElementById('globalDocList');
+      const count = document.getElementById('globalFileCount');
+      
+      count.textContent = window.globalUploadFiles.length;
+      
+      list.innerHTML = window.globalUploadFiles.map((file, idx) => `
+        <li style="padding: 0.75rem; background: var(--bg-light); border-radius: 6px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 14px;">📎</span>
+            <div>
+              <p style="margin: 0; font-size: 14px; color: var(--text-dark);">${file.name}</p>
+              <p style="margin: 0; font-size: 12px; color: var(--text-light);">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm" style="background: #ef4444; color: white; border: none; padding: 0.25rem 0.75rem; font-size: 12px;" onclick="window.removeGlobalDoc(${idx})">Remove</button>
+        </li>
+      `).join('');
+      
+      preview.style.display = 'block';
+      document.getElementById('globalBulkSubmitBtn').style.display = 'block';
+    };
+
+    window.removeGlobalDoc = function(idx) {
+      window.globalUploadFiles.splice(idx, 1);
+      if (window.globalUploadFiles.length === 0) {
+        document.getElementById('globalDocPreview').style.display = 'none';
+        document.getElementById('globalBulkSubmitBtn').style.display = 'none';
+        document.getElementById('globalDocFiles').value = '';
+      } else {
+        window.processGlobalDocFiles(window.globalUploadFiles);
+      }
+    };
+
+    window.submitGlobalBulkUpload = function(event) {
+      event.preventDefault();
+      
+      if (!window.globalUploadFiles || window.globalUploadFiles.length === 0) {
+        alert('Please select files to upload');
+        return;
+      }
+
+      const employeeId = document.getElementById('globalBulkEmployee').value;
+      if (!employeeId) {
+        alert('Please select an employee');
+        return;
+      }
+
+      const form = document.getElementById('globalBulkForm');
+      const formData = new FormData();
+      formData.append('action', 'bulkUploadEmployeeDocuments');
+      formData.append('employee_id', employeeId);
+      formData.append('document_type', form.querySelector('[name="document_type"]').value);
+      formData.append('expiry_date', form.querySelector('[name="expiry_date"]').value);
+      formData.append('notes', form.querySelector('[name="notes"]').value);
+      
+      window.globalUploadFiles.forEach((file, idx) => {
+        formData.append(`document_file_${idx}`, file);
+      });
+
+      document.getElementById('globalBulkSubmitBtn').disabled = true;
+      document.getElementById('globalBulkSubmitBtn').textContent = '⏳ Uploading...';
+
+      fetch('modules/hr_core/api.php', {
+        method: 'POST',
+        body: formData
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert(`✓ Successfully uploaded ${data.data.count} document(s)`);
+            window.closeDocumentModal();
+            window.loadDocuments();
+          } else {
+            alert('Error: ' + (data.message || 'Upload failed'));
+          }
+          document.getElementById('globalBulkSubmitBtn').disabled = false;
+          document.getElementById('globalBulkSubmitBtn').textContent = '📤 Upload Documents';
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Upload error: ' + error.message);
+          document.getElementById('globalBulkSubmitBtn').disabled = false;
+          document.getElementById('globalBulkSubmitBtn').textContent = '📤 Upload Documents';
+        });
+    };
+
+    window.openEmployeeBulkUploadModal = function(employeeId, employeeName) {
+      const content = `
+        <form id="employeeBulkForm" onsubmit="window.submitEmployeeBulkUpload(event, ${employeeId})">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div>
+              <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Document Type *</label>
+              <select name="document_type" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+                <option value="">Select type...</option>
+                <option value="id">ID Documents</option>
+                <option value="contract">Contracts</option>
+                <option value="certification">Certifications</option>
+                <option value="performance">Performance Appraisal</option>
+                <option value="disciplinary">Disciplinary Record</option>
+                <option value="leave">Leave Record</option>
+              </select>
+            </div>
+            <div>
+              <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Expiry Date</label>
+              <input type="date" name="expiry_date" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+            </div>
+          </div>
+
+          <div style="margin-top: 1.5rem;">
+            <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Notes</label>
+            <textarea name="notes" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; min-height: 80px;" placeholder="Additional notes..."></textarea>
+          </div>
+
+          <div style="margin-top: 1.5rem;">
+            <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Upload Documents *</label>
+            <div style="border: 2px dashed var(--border); border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; background: #f9fafb; transition: all 0.2s;" 
+                 id="employeeDocDropZone"
+                 ondrop="event.preventDefault(); window.handleEmployeeDocDrop(event)"
+                 ondragover="event.preventDefault(); event.currentTarget.style.background='#ede9fe'"
+                 ondragleave="event.currentTarget.style.background='#f9fafb'">
+              <div style="font-size: 32px; margin-bottom: 0.5rem;">📄</div>
+              <p style="font-weight: 600; margin-bottom: 0.5rem;">Drag files here</p>
+              <p style="color: var(--text-light); font-size: 13px; margin-bottom: 1rem;">or click to browse</p>
+              <input type="file" id="employeeDocFiles" multiple required accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="display: none;" onchange="window.handleEmployeeDocSelect(event);">
+              <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('employeeDocFiles').click()">Browse Files</button>
+            </div>
+            <div id="employeeDocPreview" style="margin-top: 1rem; display: none;">
+              <p style="font-size: 12px; color: var(--text-light); margin-bottom: 0.5rem;"><strong id="fileCount">0</strong> file(s) selected - PDF, DOC, DOCX, XLS, XLSX, JPG, JPEG, PNG (Max 10MB each)</p>
+              <ul id="employeeDocList" style="list-style: none; padding: 0; margin: 0;"></ul>
+            </div>
+          </div>
+
+          <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+            <button type="button" class="btn btn-outline" onclick="window.closeDocumentModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="employeeBulkSubmitBtn" style="display: none;">📤 Upload Documents</button>
+          </div>
+        </form>
+      `;
+      window.showDocumentModal('Bulk Upload Documents - ' + employeeName, content);
+    };
+
+    window.handleEmployeeDocDrop = function(e) {
+      const files = e.dataTransfer.files;
+      window.processEmployeeDocFiles(files);
+    };
+
+    window.handleEmployeeDocSelect = function(e) {
+      window.processEmployeeDocFiles(e.target.files);
+    };
+
+    window.processEmployeeDocFiles = function(files) {
+      if (files.length === 0) return;
+
+      window.employeeUploadFiles = Array.from(files);
+      
+      const preview = document.getElementById('employeeDocPreview');
+      const list = document.getElementById('employeeDocList');
+      const count = document.getElementById('fileCount');
+      
+      count.textContent = window.employeeUploadFiles.length;
+      
+      list.innerHTML = window.employeeUploadFiles.map((file, idx) => `
+        <li style="padding: 0.75rem; background: var(--bg-light); border-radius: 6px; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 14px;">📎</span>
+            <div>
+              <p style="margin: 0; font-size: 14px; color: var(--text-dark);">${file.name}</p>
+              <p style="margin: 0; font-size: 12px; color: var(--text-light);">${(file.size / 1024 / 1024).toFixed(2)} MB</p>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm" style="background: #ef4444; color: white; border: none; padding: 0.25rem 0.75rem; font-size: 12px;" onclick="window.removeEmployeeDoc(${idx})">Remove</button>
+        </li>
+      `).join('');
+      
+      preview.style.display = 'block';
+      document.getElementById('employeeBulkSubmitBtn').style.display = 'block';
+    };
+
+    window.removeEmployeeDoc = function(idx) {
+      window.employeeUploadFiles.splice(idx, 1);
+      if (window.employeeUploadFiles.length === 0) {
+        document.getElementById('employeeDocPreview').style.display = 'none';
+        document.getElementById('employeeBulkSubmitBtn').style.display = 'none';
+        document.getElementById('employeeDocFiles').value = '';
+      } else {
+        window.processEmployeeDocFiles(window.employeeUploadFiles);
+      }
+    };
+
+    window.submitEmployeeBulkUpload = function(event, employeeId) {
+      event.preventDefault();
+      
+      if (!window.employeeUploadFiles || window.employeeUploadFiles.length === 0) {
+        alert('Please select files to upload');
+        return;
+      }
+
+      const form = document.getElementById('employeeBulkForm');
+      const formData = new FormData();
+      formData.append('action', 'bulkUploadEmployeeDocuments');
+      formData.append('employee_id', employeeId);
+      formData.append('document_type', form.querySelector('[name="document_type"]').value);
+      formData.append('expiry_date', form.querySelector('[name="expiry_date"]').value);
+      formData.append('notes', form.querySelector('[name="notes"]').value);
+      
+      window.employeeUploadFiles.forEach((file, idx) => {
+        formData.append(`document_file_${idx}`, file);
+      });
+
+      document.getElementById('employeeBulkSubmitBtn').disabled = true;
+      document.getElementById('employeeBulkSubmitBtn').textContent = '⏳ Uploading...';
+
+      fetch('modules/hr_core/api.php', {
+        method: 'POST',
+        body: formData
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert(`✓ Successfully uploaded ${data.data.count} document(s)`);
+            window.closeDocumentModal();
+            window.loadDocuments();
+          } else {
+            alert('Error: ' + (data.message || 'Upload failed'));
+          }
+          document.getElementById('employeeBulkSubmitBtn').disabled = false;
+          document.getElementById('employeeBulkSubmitBtn').textContent = '📤 Upload Documents';
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Upload error: ' + error.message);
+          document.getElementById('employeeBulkSubmitBtn').disabled = false;
+          document.getElementById('employeeBulkSubmitBtn').textContent = '📤 Upload Documents';
+        });
+    };
+
     // Legacy function for backward compatibility
     window.displayDocuments = function(documents) {
       window.displayDocumentsByEmployee(documents);
     };
 
+    window.openBulkUploadModal = function() {
+      const content = `
+        <div style="padding: 1rem;">
+          <div style="margin-bottom: 2rem;">
+            <h4 style="font-size: 16px; font-weight: 600; margin-bottom: 1rem;">Method 1: CSV + Documents</h4>
+            <p style="font-size: 14px; color: var(--text-light); margin-bottom: 1rem;">
+              Upload a CSV file with document mappings and the corresponding document files. 
+              <a href="javascript:window.downloadCSVTemplate()" style="color: #3b82f6; text-decoration: underline; cursor: pointer;">Download CSV Template</a>
+            </p>
+            <div style="border: 2px dashed var(--border); border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; background: #f9fafb; transition: all 0.2s;"
+                 id="csvDropZone" 
+                 ondrop="event.preventDefault(); window.handleCSVDrop(event)" 
+                 ondragover="event.preventDefault(); event.currentTarget.style.background='#ede9fe'" 
+                 ondragleave="event.currentTarget.style.background='#f9fafb'">
+              <div style="font-size: 32px; margin-bottom: 0.5rem;">📄</div>
+              <p style="font-weight: 600; margin-bottom: 0.5rem;">Drag CSV file here</p>
+              <p style="color: var(--text-light); font-size: 13px; margin-bottom: 1rem;">or click to browse</p>
+              <input type="file" id="csvFile" accept=".csv" style="display: none;" onchange="window.handleCSVSelect(event);">
+              <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('csvFile').click()">Browse Files</button>
+            </div>
+            <div id="csvPreview" style="margin-top: 1rem; display: none;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <thead style="background: var(--bg-light);">
+                  <tr>
+                    <th style="padding: 0.5rem; text-align: left; border: 1px solid var(--border);">Employee ID</th>
+                    <th style="padding: 0.5rem; text-align: left; border: 1px solid var(--border);">Document Type</th>
+                    <th style="padding: 0.5rem; text-align: left; border: 1px solid var(--border);">Notes</th>
+                  </tr>
+                </thead>
+                <tbody id="csvTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div style="margin-bottom: 2rem;">
+            <h4 style="font-size: 16px; font-weight: 600; margin-bottom: 1rem;">Method 2: Zip Archive</h4>
+            <p style="font-size: 14px; color: var(--text-light); margin-bottom: 1rem;">
+              Create a ZIP file with a CSV at the root and document files organized by employee ID.
+            </p>
+            <div style="border: 2px dashed var(--border); border-radius: 8px; padding: 2rem; text-align: center; cursor: pointer; background: #f9fafb; transition: all 0.2s;"
+                 id="zipDropZone" 
+                 ondrop="event.preventDefault(); window.handleZipDrop(event)" 
+                 ondragover="event.preventDefault(); event.currentTarget.style.background='#ede9fe'" 
+                 ondragleave="event.currentTarget.style.background='#f9fafb'">
+              <div style="font-size: 32px; margin-bottom: 0.5rem;">📦</div>
+              <p style="font-weight: 600; margin-bottom: 0.5rem;">Drag ZIP file here</p>
+              <p style="color: var(--text-light); font-size: 13px; margin-bottom: 1rem;">or click to browse</p>
+              <input type="file" id="zipFile" accept=".zip" style="display: none;" onchange="window.handleZipSelect(event);">
+              <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('zipFile').click()">Browse Files</button>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 2rem;">
+            <button type="button" class="btn btn-outline" onclick="window.closeDocumentModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" id="bulkUploadBtn" onclick="window.submitBulkUpload()" style="display: none;">📤 Upload Documents</button>
+          </div>
+        </div>
+      `;
+      window.showDocumentModal('Bulk Upload Documents', content);
+    };
+
+    window.downloadCSVTemplate = function() {
+      const csv = 'employee_id,employee_code,document_type,expiry_date,notes\n1,EMP001,id,2027-12-31,Valid National ID\n2,EMP002,contract,,Employment Contract';
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'bulk_upload_template.csv';
+      a.click();
+      window.URL.revokeObjectURL(url);
+    };
+
+    window.handleCSVDrop = function(e) {
+      const files = e.dataTransfer.files;
+      if (files.length > 0 && files[0].type === 'text/csv') {
+        window.processCSVFile(files[0]);
+      }
+    };
+
+    window.handleCSVSelect = function(e) {
+      if (e.target.files.length > 0) {
+        window.processCSVFile(e.target.files[0]);
+      }
+    };
+
+    window.processCSVFile = function(file) {
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const csv = e.target.result;
+        const lines = csv.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        
+        window.bulkUploadData = {
+          type: 'csv',
+          rows: []
+        };
+
+        for (let i = 1; i < lines.length; i++) {
+          if (lines[i].trim() === '') continue;
+          const values = lines[i].split(',').map(v => v.trim());
+          const row = {};
+          headers.forEach((h, idx) => {
+            row[h] = values[idx] || '';
+          });
+          window.bulkUploadData.rows.push(row);
+        }
+
+        // Show preview
+        const preview = document.getElementById('csvPreview');
+        const tbody = document.getElementById('csvTableBody');
+        tbody.innerHTML = window.bulkUploadData.rows.map(row => `
+          <tr>
+            <td style="padding: 0.5rem; border: 1px solid var(--border);">${row.employee_id || row.emp_id || ''}</td>
+            <td style="padding: 0.5rem; border: 1px solid var(--border);">${row.document_type || ''}</td>
+            <td style="padding: 0.5rem; border: 1px solid var(--border);">${row.notes || ''}</td>
+          </tr>
+        `).join('');
+        preview.style.display = 'block';
+        document.getElementById('bulkUploadBtn').style.display = 'block';
+      };
+      reader.readAsText(file);
+    };
+
+    window.handleZipDrop = function(e) {
+      const files = e.dataTransfer.files;
+      if (files.length > 0 && files[0].type === 'application/zip') {
+        window.bulkUploadData = {
+          type: 'zip',
+          file: files[0]
+        };
+        document.getElementById('bulkUploadBtn').style.display = 'block';
+      }
+    };
+
+    window.handleZipSelect = function(e) {
+      if (e.target.files.length > 0) {
+        window.bulkUploadData = {
+          type: 'zip',
+          file: e.target.files[0]
+        };
+        document.getElementById('bulkUploadBtn').style.display = 'block';
+      }
+    };
+
+    window.submitBulkUpload = function() {
+      if (!window.bulkUploadData) {
+        alert('Please select a file first');
+        return;
+      }
+
+      const formData = new FormData();
+      if (window.bulkUploadData.type === 'csv') {
+        formData.append('action', 'bulkUploadCSV');
+        formData.append('csv_data', JSON.stringify(window.bulkUploadData.rows));
+      } else if (window.bulkUploadData.type === 'zip') {
+        formData.append('action', 'bulkUploadZip');
+        formData.append('zip_file', window.bulkUploadData.file);
+      }
+
+      document.getElementById('bulkUploadBtn').disabled = true;
+      document.getElementById('bulkUploadBtn').textContent = '⏳ Uploading...';
+
+      fetch('modules/hr_core/api.php', {
+        method: 'POST',
+        body: formData
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert(`✓ Successfully uploaded ${data.data.count} document(s)`);
+            window.closeDocumentModal();
+            window.loadDocuments();
+          } else {
+            alert('Error: ' + (data.message || 'Upload failed'));
+          }
+          document.getElementById('bulkUploadBtn').disabled = false;
+          document.getElementById('bulkUploadBtn').textContent = '📤 Upload Documents';
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Upload error: ' + error.message);
+          document.getElementById('bulkUploadBtn').disabled = false;
+          document.getElementById('bulkUploadBtn').textContent = '📤 Upload Documents';
+        });
+    };
 
     window.openDocumentModal = function(employeeId) {
-      document.getElementById('documentForm').reset();
-      delete document.getElementById('documentForm').dataset.id;
-      
-      if (employeeId) {
-        // Set the employee ID in the form
-        const employeeSelect = document.getElementById('documentForm').querySelector('select[name="employee_id"]');
-        if (employeeSelect) {
-          employeeSelect.value = employeeId;
-          employeeSelect.disabled = true;
-        }
+      fetch('modules/hr_core/api.php?action=getAllEmployees')
+        .then(res => res.json())
+        .then(data => {
+          const employeeOptions = (data.data || []).map(emp => `<option value="${emp.employee_id}">${emp.first_name} ${emp.last_name} (${emp.employee_code})</option>`).join('');
+          
+          const content = `
+            <form id="documentCrudForm" onsubmit="window.submitDocumentForm(event)">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div>
+                  <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Employee *</label>
+                  <select name="employee_id" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+                    <option value="">Select employee...</option>
+                    ${employeeOptions}
+                  </select>
+                </div>
+                <div>
+                  <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Document Type *</label>
+                  <select name="document_type" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+                    <option value="">Select type...</option>
+                    <option value="id">ID Documents</option>
+                    <option value="contract">Contracts</option>
+                    <option value="certification">Certifications</option>
+                    <option value="performance">Performance Appraisal</option>
+                    <option value="disciplinary">Disciplinary Record</option>
+                    <option value="leave">Leave Record</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Upload Date *</label>
+                  <input type="date" name="upload_date" required value="${new Date().toISOString().split('T')[0]}" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+                </div>
+                <div>
+                  <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Expiry Date</label>
+                  <input type="date" name="expiry_date" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+                </div>
+                <div>
+                  <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Document File</label>
+                  <input type="file" name="document_file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+                  <p style="font-size: 11px; color: var(--text-light); margin-top: 0.5rem;">Accepted: PDF, DOC, DOCX, XLS, XLSX, JPG, JPEG, PNG (Max 10MB)</p>
+                </div>
+              </div>
+              <div style="margin-top: 1.5rem;">
+                <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Notes</label>
+                <textarea name="notes" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; min-height: 80px;" placeholder="Additional notes..."></textarea>
+              </div>
+              <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                <button type="button" class="btn btn-outline" onclick="window.closeDocumentModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">💾 Save Document</button>
+              </div>
+            </form>
+          `;
+          window.showDocumentModal('Add Document', content);
+          
+          if (employeeId) {
+            const select = document.querySelector('select[name="employee_id"]');
+            if (select) select.value = employeeId;
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Failed to load employees');
+        });
+    };
+
+    window.showDocumentModal = function(title, content) {
+      let modal = document.getElementById('documentCrudModal');
+      if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'documentCrudModal';
+        modal.innerHTML = `
+          <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem;" onclick="if(event.target === this) window.closeDocumentModal()">
+            <div style="background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); max-width: 90%; width: 1000px; max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column;">
+              <div style="padding: 2rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; flex-shrink: 0;">
+                <h2 id="documentModalTitle" style="font-size: 20px; font-weight: 700; color: var(--text-dark); margin: 0;"></h2>
+                <button onclick="window.closeDocumentModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-light);">✕</button>
+              </div>
+              <div id="documentModalContent" style="padding: 2rem; flex: 1; overflow-y: auto;"></div>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
       }
-      
-      document.querySelector('#documentModal .modal-title').textContent = 'Add Document';
-      document.getElementById('documentModal').classList.add('active');
+
+      document.getElementById('documentModalTitle').textContent = title;
+      document.getElementById('documentModalContent').innerHTML = content;
+      modal.style.display = 'flex';
     };
 
     window.closeDocumentModal = function() {
-      const modal = document.getElementById('documentActionModal');
+      const modal = document.getElementById('documentCrudModal');
       if (modal) {
         modal.style.display = 'none';
       }
@@ -571,14 +1139,59 @@
         .then(data => {
           if (data.success) {
             const doc = data.data;
-            alert(`Document: ${doc.document_type}\nEmployee: ${doc.employee_name}\nIssue Date: ${doc.issue_date}\nExpiry: ${doc.expiry_date || 'No expiry'}\nRemarks: ${doc.remarks || 'None'}`);
+            const content = `
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <div>
+                  <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; font-size: 12px; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">Employee Name</label>
+                    <p style="font-size: 16px; color: var(--text-dark); font-weight: 500;">${doc.employee_name || '-'}</p>
+                  </div>
+                  <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; font-size: 12px; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">Document Type</label>
+                    <p style="font-size: 16px; color: var(--text-dark); font-weight: 500;">${doc.document_type || '-'}</p>
+                  </div>
+                  <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; font-size: 12px; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">Upload Date</label>
+                    <p style="font-size: 16px; color: var(--text-dark); font-weight: 500;">${doc.upload_date || '-'}</p>
+                  </div>
+                </div>
+                <div>
+                  <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; font-size: 12px; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">Expiry Date</label>
+                    <p style="font-size: 16px; color: var(--text-dark); font-weight: 500;">${doc.expiry_date || 'No expiry'}</p>
+                  </div>
+                  <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; font-size: 12px; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">Status</label>
+                    <p style="font-size: 16px; color: var(--text-dark); font-weight: 500;">${doc.status || '-'}</p>
+                  </div>
+                </div>
+              </div>
+              <div style="margin-top: 2rem;">
+                <label style="display: block; font-size: 12px; color: var(--text-light); margin-bottom: 0.5rem; font-weight: 600;">Notes</label>
+                <p style="font-size: 14px; color: var(--text-dark);">${doc.notes || 'No notes'}</p>
+              </div>
+              <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                <button class="btn btn-outline" onclick="window.closeDocumentModal()">Close</button>
+                <button class="btn btn-primary" onclick="window.editDocument(${id})">✏️ Edit</button>
+              </div>
+            `;
+            window.showDocumentModal('View Document', content);
           }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Failed to load document');
+        });
     };
 
     window.downloadDocument = function(id) {
-      alert('Download feature coming soon');
+      // Create a temporary link and trigger download
+      const link = document.createElement('a');
+      link.href = `modules/hr_core/api.php?action=downloadDocument&id=${id}`;
+      link.download = ''; // Force download instead of opening in browser
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     };
 
     window.editDocument = function(id) {
@@ -587,28 +1200,139 @@
         .then(data => {
           if (data.success) {
             const doc = data.data;
-            alert(`Edit document: ${doc.document_type}\nThis feature will open the document edit form`);
+            
+            fetch('modules/hr_core/api.php?action=getAllEmployees')
+              .then(res => res.json())
+              .then(empData => {
+                const employeeOptions = (empData.data || []).map(emp => `<option value="${emp.employee_id}" ${emp.employee_id == doc.employee_id ? 'selected' : ''}>${emp.first_name} ${emp.last_name} (${emp.employee_code})</option>`).join('');
+                
+                const content = `
+                  <form id="documentCrudForm" onsubmit="window.submitDocumentForm(event, ${id})">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                      <div>
+                        <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Employee *</label>
+                        <select name="employee_id" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+                          ${employeeOptions}
+                        </select>
+                      </div>
+                      <div>
+                        <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Document Type *</label>
+                        <select name="document_type" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+                          <option value="id" ${doc.document_type === 'id' ? 'selected' : ''}>ID Documents</option>
+                          <option value="contract" ${doc.document_type === 'contract' ? 'selected' : ''}>Contracts</option>
+                          <option value="certification" ${doc.document_type === 'certification' ? 'selected' : ''}>Certifications</option>
+                          <option value="performance" ${doc.document_type === 'performance' ? 'selected' : ''}>Performance Appraisal</option>
+                          <option value="disciplinary" ${doc.document_type === 'disciplinary' ? 'selected' : ''}>Disciplinary Record</option>
+                          <option value="leave" ${doc.document_type === 'leave' ? 'selected' : ''}>Leave Record</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Upload Date *</label>
+                        <input type="date" name="upload_date" required value="${window.formatDateForInput(doc.upload_date)}" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+                      </div>
+                      <div>
+                        <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Expiry Date</label>
+                        <input type="date" name="expiry_date" value="${window.formatDateForInput(doc.expiry_date)}" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+                      </div>
+                    </div>
+                    <div style="margin-top: 1.5rem;">
+                      <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Notes</label>
+                      <textarea name="notes" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; min-height: 80px;" placeholder="Additional notes...">${doc.notes || ''}</textarea>
+                    </div>
+                    <div style="margin-top: 2rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                      <button type="button" class="btn btn-outline" onclick="window.closeDocumentModal()">Cancel</button>
+                      <button type="submit" class="btn btn-primary">💾 Update Document</button>
+                    </div>
+                  </form>
+                `;
+                window.showDocumentModal('Edit Document', content);
+              });
           }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Failed to load document details');
+        });
+    };
+
+    window.submitDocumentForm = function(event, docId) {
+      event.preventDefault();
+      const form = document.getElementById('documentCrudForm');
+      
+      // Use FormData to handle file uploads
+      const formData = new FormData();
+      formData.append('employee_id', form.querySelector('[name="employee_id"]').value);
+      formData.append('document_type', form.querySelector('[name="document_type"]').value);
+      formData.append('upload_date', form.querySelector('[name="upload_date"]').value);
+      formData.append('expiry_date', form.querySelector('[name="expiry_date"]').value);
+      formData.append('notes', form.querySelector('[name="notes"]').value);
+      
+      const fileInput = form.querySelector('[name="document_file"]');
+      if (fileInput && fileInput.files.length > 0) {
+        formData.append('document_file', fileInput.files[0]);
+      }
+
+      const url = docId ? 'modules/hr_core/api.php?action=updateDocument' : 'modules/hr_core/api.php?action=createDocument';
+      
+      if (docId) {
+        formData.append('document_id', docId);
+      }
+
+      fetch(url, {
+        method: 'POST',
+        body: formData
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert(docId ? 'Document updated successfully' : 'Document created successfully');
+            window.closeDocumentModal();
+            window.loadDocuments();
+          } else {
+            alert('Error: ' + (data.message || 'Failed to save document'));
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error saving document: ' + error.message);
+        });
     };
 
     window.deleteDocument = function(id) {
-      if (confirm('Are you sure you want to delete this document?')) {
-        fetch(`modules/hr_core/api.php?action=deleteDocument&id=${id}`, {
-          method: 'DELETE'
+      const content = `
+        <div style="text-align: center; padding: 2rem;">
+          <div style="font-size: 48px; margin-bottom: 1rem;">⚠️</div>
+          <h3 style="font-size: 18px; color: var(--text-dark); margin-bottom: 0.5rem;">Delete Document?</h3>
+          <p style="color: var(--text-light); margin-bottom: 2rem;">This action cannot be undone. The document record will be permanently deleted from the system.</p>
+          <div style="display: flex; gap: 1rem; justify-content: center;">
+            <button class="btn btn-outline" onclick="window.closeDocumentModal()">Cancel</button>
+            <button class="btn btn-danger" style="background: var(--danger); color: white; border: none;" onclick="window.confirmDeleteDocument(${id})">🗑 Delete Document</button>
+          </div>
+        </div>
+      `;
+      window.showDocumentModal('Delete Document', content);
+    };
+
+    window.confirmDeleteDocument = function(id) {
+      fetch(`modules/hr_core/api.php?action=deleteDocument&id=${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ document_id: id })
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Document deleted successfully');
+            window.closeDocumentModal();
+            window.loadDocuments();
+          } else {
+            alert('Error: ' + (data.message || 'Failed to delete document'));
+          }
         })
-          .then(response => response.json())
-          .then(data => {
-            if (data.success) {
-              alert('Document deleted successfully');
-              window.loadDocuments();
-            } else {
-              alert('Error deleting document');
-            }
-          })
-          .catch(error => console.error('Error:', error));
-      }
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error deleting document: ' + error.message);
+        });
     };
 
     window.showMoreActions = function(id) {
@@ -679,11 +1403,10 @@
         });
       }
 
-      const filters = ['typeFilter', 'statusFilter'];
-      filters.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('change', () => window.loadDocuments());
-      });
+      const typeFilter = document.getElementById('typeFilter');
+      if (typeFilter) {
+        typeFilter.addEventListener('change', () => window.loadDocuments());
+      }
 
       const form = document.getElementById('documentForm');
       if (form) {

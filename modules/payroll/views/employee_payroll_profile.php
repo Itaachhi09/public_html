@@ -1,7 +1,7 @@
 <?php
 /**
  * Employee Payroll Profile Module
- * Define payroll eligibility and profile details per employee
+ * Define payroll eligibility and profile details per employee. All data is stored in the database.
  */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -13,8 +13,42 @@ require_once __DIR__ . '/../models/EmployeeSalary.php';
 $employeeProfile = new EmployeePayrollProfile();
 $employeeSalary = new EmployeeSalary();
 
-// Fetch employee profiles
-$profiles = $employeeProfile->getEligibleEmployees();
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$selected_employee_id = isset($_SESSION['payroll_profile_employee_id']) ? (int) $_SESSION['payroll_profile_employee_id'] : (isset($_GET['employee_id']) ? (int) $_GET['employee_id'] : null);
+$isAjax = isset($_GET['ajax']) && $_GET['ajax'] === '1';
+$modal = $_GET['modal'] ?? null;
+if ($selected_employee_id && isset($_SESSION['payroll_profile_employee_id'])) {
+    unset($_SESSION['payroll_profile_employee_id']);
+}
+$msg = isset($_SESSION['payroll_profile_msg']) ? trim($_SESSION['payroll_profile_msg']) : (isset($_GET['msg']) ? trim($_GET['msg']) : '');
+$err = isset($_SESSION['payroll_profile_err']) ? trim($_SESSION['payroll_profile_err']) : (isset($_GET['err']) ? trim($_GET['err']) : '');
+if (isset($_SESSION['payroll_profile_msg'])) unset($_SESSION['payroll_profile_msg']);
+if (isset($_SESSION['payroll_profile_err'])) unset($_SESSION['payroll_profile_err']);
+
+// Fetch all employees with their payroll profile (for table)
+$employees = $employeeProfile->getEmployeesWithProfile($search);
+
+// If an employee is selected, load their details and profile for the form
+$selectedEmployee = null;
+$selectedProfile = null;
+$currentSalary = null;
+if ($selected_employee_id) {
+    $db = new Database();
+    $conn = $db->connect();
+    $stmt = $conn->prepare("SELECT e.employee_id, e.employee_code, e.first_name, e.last_name, e.department_id, e.job_title_id, d.department_name, j.title AS job_title FROM employees e LEFT JOIN departments d ON e.department_id = d.department_id LEFT JOIN job_titles j ON e.job_title_id = j.job_title_id WHERE e.employee_id = ?");
+    $stmt->execute([$selected_employee_id]);
+    $selectedEmployee = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($selectedEmployee) {
+        $selectedProfile = $employeeProfile->getByEmployee($selected_employee_id);
+        $currentSalary = $employeeSalary->getCurrentForEmployee($selected_employee_id);
+    }
+}
+
+// Handler and dashboard URLs (work when view is loaded via fetch into dashboard)
+// Use absolute paths from server root, not relative paths
+$handlerUrl = '/public_html/modules/payroll/employee_payroll_profile_handler.php';
+$dashboardUrl = '/public_html/dashboard.php';
+$baseQuery = 'ref=payroll&page=employee_payroll_profile';
 ?>
 
 <style>
@@ -388,7 +422,127 @@ $profiles = $employeeProfile->getEligibleEmployees();
   .profile-modal-body {
     padding: 2rem;
   }
+
+  /* Form Modal Overlay */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+  }
+
+  .modal-overlay.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-box {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    width: 95%;
+    max-width: 900px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 2px solid #e5e7eb;
+    background: #f9fafb;
+  }
+
+  .modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+  }
+
+  .modal-close {
+    display: inline-block;
+    text-decoration: none;
+    color: #9ca3af;
+    font-size: 24px;
+    line-height: 1;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.3s ease;
+  }
+
+  .modal-close:hover {
+    color: #1f2937;
+    background: #e5e7eb;
+  }
+
+  .modal-body {
+    padding: 2rem;
+  }
+
+  .modal-success {
+    background: #d1fae5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    font-size: 14px;
+  }
 </style>
+
+<script>
+  window.openProfileModal = function(mode, employeeId) {
+    // Fetch modal content via AJAX without page refresh
+    const currentUrl = new URL(window.location.href);
+    const search = currentUrl.searchParams.get('search') || '';
+    let url = 'dashboard.php?module=payroll&view=employee_payroll_profile&modal=' + mode + '&employee_id=' + employeeId;
+    if (search) {
+      url += '&search=' + encodeURIComponent(search);
+    }
+    
+    fetch(url)
+      .then(response => response.text())
+      .then(html => {
+        // Create a temporary container to parse the response
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+        const modalOverlay = temp.querySelector('.modal-overlay');
+        
+        if (modalOverlay) {
+          // Remove old modals if any
+          document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
+          // Add new modal to page
+          document.body.appendChild(modalOverlay);
+          // Add the show class to display modal
+          modalOverlay.classList.add('show');
+        }
+      })
+      .catch(error => console.error('Error loading modal:', error));
+  };
+
+  window.closeProfileModal = function() {
+    // Remove all modal overlays
+    document.querySelectorAll('.modal-overlay').forEach(m => {
+      m.classList.remove('show');
+      setTimeout(() => m.remove(), 300);
+    });
+    // Reset URL back to main dashboard
+    window.history.replaceState({}, '', 'dashboard.php');
+  };
+</script>
 
 <div class="profile-container">
   <!-- Page Header -->
@@ -400,17 +554,25 @@ $profiles = $employeeProfile->getEligibleEmployees();
     </div>
   </div>
 
+  <?php if ($msg): ?>
+  <div class="alert alert-info" style="margin-bottom: 1rem;"><?php echo htmlspecialchars($msg); ?></div>
+  <?php endif; ?>
+  <?php if ($err): ?>
+  <div class="alert alert-danger" style="margin-bottom: 1rem;"><?php echo htmlspecialchars($err); ?></div>
+  <?php endif; ?>
+
   <!-- Search and Filter -->
   <div class="section">
-    <form method="GET" action="">
+    <form method="GET" action="<?php echo htmlspecialchars($dashboardUrl); ?>">
+      <?php if ($selected_employee_id): ?><input type="hidden" name="employee_id" value="<?php echo $selected_employee_id; ?>"><?php endif; ?>
       <div class="search-box">
-        <input type="text" name="search" placeholder="Search by Employee ID or Name..." value="">
+        <input type="text" name="search" placeholder="Search by Employee ID or Name..." value="<?php echo htmlspecialchars($search); ?>">
         <button type="submit">Search</button>
       </div>
     </form>
   </div>
 
-  <!-- Employees Table -->
+  <!-- Employees Table (from database) -->
   <div class="section">
     <h3 class="section-header">Employee Payroll Profiles</h3>
 
@@ -427,368 +589,278 @@ $profiles = $employeeProfile->getEligibleEmployees();
           </tr>
         </thead>
         <tbody>
+          <?php if (empty($employees)): ?>
+          <tr><td colspan="6" class="no-data">No employees found.</td></tr>
+          <?php else: ?>
+          <?php foreach ($employees as $emp): 
+            $hasProfile = !empty($emp['profile_id']);
+            $payTypeLabel = !empty($emp['pay_type']) ? htmlspecialchars($emp['pay_type']) : '---';
+            $payrollActive = isset($emp['payroll_eligible']) && (int)$emp['payroll_eligible'] === 1;
+            $name = trim(($emp['first_name'] ?? '') . ' ' . ($emp['last_name'] ?? ''));
+            $code = $emp['employee_code'] ?? ('EMP-' . str_pad($emp['employee_id'], 3, '0', STR_PAD_LEFT));
+            $q = $baseQuery . '&employee_id=' . (int)$emp['employee_id'];
+            if ($search) $q .= '&search=' . urlencode($search);
+            ?>
           <tr>
-            <td>EMP-001</td>
-            <td>John Doe</td>
-            <td>Per Duty</td>
-            <td><span class="status-badge status-active">Active</span></td>
-            <td><span class="status-badge status-active">Configured</span></td>
+            <td><?php echo htmlspecialchars($code); ?></td>
+            <td><?php echo htmlspecialchars($name); ?></td>
+            <td><?php echo htmlspecialchars($payTypeLabel); ?></td>
+            <td><span class="status-badge <?php echo $payrollActive ? 'status-active' : 'status-inactive'; ?>"><?php echo $payrollActive ? 'Active' : 'Inactive'; ?></span></td>
+            <td><span class="status-badge <?php echo $hasProfile ? 'status-active' : 'status-no-profile'; ?>"><?php echo $hasProfile ? 'Configured' : 'No Profile'; ?></span></td>
             <td>
-              <button type="button" class="btn btn-secondary" onclick="window.openProfileModal('EMP-001', 'John Doe', 'edit')">View/Edit</button>
+              <?php if ($hasProfile): ?>
+              <button type="button" onclick="window.openProfileModal('edit', <?php echo (int)$emp['employee_id']; ?>)" class="btn btn-secondary">View/Edit</button>
+              <?php else: ?>
+              <button type="button" onclick="window.openProfileModal('create', <?php echo (int)$emp['employee_id']; ?>)" class="btn btn-primary">Create Profile</button>
+              <?php endif; ?>
             </td>
           </tr>
-          <tr>
-            <td>EMP-002</td>
-            <td>Jane Smith</td>
-            <td>Per Shift</td>
-            <td><span class="status-badge status-active">Active</span></td>
-            <td><span class="status-badge status-active">Configured</span></td>
-            <td>
-              <button type="button" class="btn btn-secondary" onclick="window.openProfileModal('EMP-002', 'Jane Smith', 'edit')">View/Edit</button>
-            </td>
-          </tr>
-          <tr>
-            <td>EMP-003</td>
-            <td>Michael Johnson</td>
-            <td>---</td>
-            <td><span class="status-badge status-inactive">Inactive</span></td>
-            <td><span class="status-badge status-no-profile">No Profile</span></td>
-            <td>
-              <button type="button" class="btn btn-primary" onclick="window.openProfileModal('EMP-003', 'Michael Johnson', 'create')">Create Profile</button>
-            </td>
-          </tr>
-          <tr>
-            <td>EMP-004</td>
-            <td>Sarah Williams</td>
-            <td>Per Duty</td>
-            <td><span class="status-badge status-active">Active</span></td>
-            <td><span class="status-badge status-active">Configured</span></td>
-            <td>
-              <button type="button" class="btn btn-secondary" onclick="window.openProfileModal('EMP-004', 'Sarah Williams', 'edit')">View/Edit</button>
-            </td>
-          </tr>
-          <tr>
-            <td>EMP-005</td>
-            <td>Robert Brown</td>
-            <td>---</td>
-            <td><span class="status-badge status-inactive">Inactive</span></td>
-            <td><span class="status-badge status-no-profile">No Profile</span></td>
-            <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="create">
-                <input type="hidden" name="employee_id" value="EMP-005">
-                <button type="submit" class="btn btn-primary">Create Profile</button>
-              </form>
-            </td>
-          </tr>
+          <?php endforeach; ?>
+          <?php endif; ?>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- Profile Form -->
-  <div class="section">
-    <h3 class="section-header">Payroll Profile Details</h3>
-
-    <form method="POST" action="../employee_payroll_profile_handler.php">
-      <!-- Employee Information (Read-Only) -->
-      <div class="form-section">
-        <h4>Employee Information</h4>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Employee ID</label>
-            <input type="text" value="EMP-001" disabled>
-          </div>
-          <div class="form-group">
-            <label>Employee Name</label>
-            <input type="text" value="John Doe" disabled>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Department</label>
-            <input type="text" value="Human Resources" disabled>
-          </div>
-          <div class="form-group">
-            <label>Job Title</label>
-            <input type="text" value="HR Manager" disabled>
-          </div>
-        </div>
+  <!-- Modal Overlay (shown when modal parameter exists) -->
+  <?php 
+  $modalMode = isset($_GET['modal']) ? htmlspecialchars($_GET['modal']) : null;
+  $modalEmployeeId = isset($_GET['employee_id']) ? (int)$_GET['employee_id'] : null;
+  $showModal = $modalMode && $modalEmployeeId && in_array($modalMode, ['create', 'edit'], true);
+  $modalSuccess = isset($_GET['success']) ? (int)$_GET['success'] === 1 : false;
+  
+  if ($showModal) {
+      // Load employee data for modal
+      $modalEmployee = null;
+      $modalProfile = null;
+      $modalSalary = null;
+      if ($modalMode === 'edit' || $modalMode === 'create') {
+          $db = new Database();
+          $conn = $db->connect();
+          $stmt = $conn->prepare("SELECT e.employee_id, e.employee_code, e.first_name, e.last_name, e.department_id, e.job_title_id, d.department_name, j.title AS job_title FROM employees e LEFT JOIN departments d ON e.department_id = d.department_id LEFT JOIN job_titles j ON e.job_title_id = j.job_title_id WHERE e.employee_id = ?");
+          $stmt->execute([$modalEmployeeId]);
+          $modalEmployee = $stmt->fetch(PDO::FETCH_ASSOC);
+          if ($modalEmployee) {
+              $modalProfile = $employeeProfile->getByEmployee($modalEmployeeId);
+              $modalSalary = $employeeSalary->getCurrentForEmployee($modalEmployeeId);
+          }
+      }
+  ?>
+  <div class="modal-overlay <?php echo $showModal ? 'show' : ''; ?>">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 class="modal-title"><?php echo $modalMode === 'create' ? 'Create Payroll Profile' : 'Edit Payroll Profile'; ?></h2>
+        <button type="button" onclick="window.closeProfileModal()" class="modal-close">✕</button>
       </div>
+      <div class="modal-body">
+        <?php if ($modalSuccess): ?>
+        <div class="modal-success">✓ Profile saved successfully!</div>
+        <?php endif; ?>
+        
+        <?php if ($modalEmployee): 
+          $p = $modalProfile;
+          $emp = $modalEmployee;
+          $sal = $modalSalary;
+          $code = $emp['employee_code'] ?? ('EMP-' . str_pad($emp['employee_id'], 3, '0', STR_PAD_LEFT));
+          $fullName = trim(($emp['first_name'] ?? '') . ' ' . ($emp['last_name'] ?? ''));
+          $basicRate = $sal ? number_format((float)$sal['basic_rate'], 2) : '0.00';
+        ?>
+        <form method="POST" action="<?php echo htmlspecialchars($handlerUrl); ?>">
+          <input type="hidden" name="employee_id" value="<?php echo (int)$emp['employee_id']; ?>">
 
-      <!-- Payroll Configuration -->
-      <div class="form-section">
-        <h4>Payroll Configuration</h4>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Pay Type <span style="color: #ef4444;">*</span></label>
-            <select name="pay_type" required>
-              <option value="">-- Select Pay Type --</option>
-              <option value="per_duty" selected>Per Duty</option>
-              <option value="per_shift">Per Shift</option>
-            </select>
-            <small>Determines how employee salary is calculated and paid</small>
+          <div class="form-section">
+            <h4>Employee Information</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Employee ID</label>
+                <input type="text" value="<?php echo htmlspecialchars($code); ?>" disabled>
+              </div>
+              <div class="form-group">
+                <label>Employee Name</label>
+                <input type="text" value="<?php echo htmlspecialchars($fullName); ?>" disabled>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Department</label>
+                <input type="text" value="<?php echo htmlspecialchars($emp['department_name'] ?? '—'); ?>" disabled>
+              </div>
+              <div class="form-group">
+                <label>Job Title</label>
+                <input type="text" value="<?php echo htmlspecialchars($emp['job_title'] ?? '—'); ?>" disabled>
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Payroll Status <span style="color: #ef4444;">*</span></label>
-            <select name="payroll_status" required>
-              <option value="">-- Select Status --</option>
-              <option value="active" selected>Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-            <small>Active employees are included in payroll processing</small>
-          </div>
-        </div>
-      </div>
 
-      <!-- Salary Source (Read-Only from Compensation) -->
-      <div class="form-section">
-        <h4>Salary Information (Read-Only from Compensation Module)</h4>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Basic Salary</label>
-            <input type="number" value="50000.00" step="0.01" disabled>
-            <small>Read-only from Compensation module</small>
+          <div class="form-section">
+            <h4>Payroll Configuration</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Pay Type <span style="color: #ef4444;">*</span></label>
+                <select name="pay_type" required>
+                  <option value="">-- Select Pay Type --</option>
+                  <option value="Per Duty" <?php echo ($p && ($p['pay_type'] ?? '') === 'Per Duty') ? 'selected' : ''; ?>>Per Duty</option>
+                  <option value="Per Shift" <?php echo ($p && ($p['pay_type'] ?? '') === 'Per Shift') ? 'selected' : ''; ?>>Per Shift</option>
+                  <option value="Hourly" <?php echo ($p && ($p['pay_type'] ?? '') === 'Hourly') ? 'selected' : ''; ?>>Hourly</option>
+                  <option value="Daily" <?php echo ($p && ($p['pay_type'] ?? '') === 'Daily') ? 'selected' : ''; ?>>Daily</option>
+                  <option value="Monthly" <?php echo ($p && ($p['pay_type'] ?? '') === 'Monthly') ? 'selected' : ''; ?>>Monthly</option>
+                </select>
+                <small>Determines how employee salary is calculated and paid</small>
+              </div>
+              <div class="form-group">
+                <label>Payroll Status <span style="color: #ef4444;">*</span></label>
+                <select name="payroll_status" required>
+                  <option value="">-- Select Status --</option>
+                  <option value="active" <?php echo ((!$p || !isset($p['payroll_eligible']) || (int)$p['payroll_eligible'] === 1) ? 'selected' : ''); ?>>Active</option>
+                  <option value="inactive" <?php echo ($p && (int)($p['payroll_eligible'] ?? 1) === 0) ? 'selected' : ''; ?>>Inactive</option>
+                </select>
+                <small>Active employees are included in payroll processing</small>
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Total Allowances</label>
-            <input type="number" value="5000.00" step="0.01" disabled>
-            <small>Read-only from Compensation module</small>
-          </div>
-        </div>
-        <div class="form-row full">
-          <div class="form-group">
-            <label>Gross Monthly Salary</label>
-            <input type="number" value="55000.00" step="0.01" disabled>
-            <small>Automatic calculation: Basic + Allowances</small>
-          </div>
-        </div>
-      </div>
 
-      <!-- Tax Status -->
-      <div class="form-section">
-        <h4>Tax Status</h4>
-        <div class="form-row full">
-          <div class="form-group">
-            <label>Tax Exemption Status</label>
-            <select name="tax_status" required>
-              <option value="">-- Select Tax Status --</option>
-              <option value="taxable" selected>Taxable</option>
-              <option value="exempt">Tax Exempt</option>
-            </select>
-            <small>Determines if employee is subject to withholding tax</small>
+          <div class="form-section">
+            <h4>Salary Information (Read-Only)</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Basic Salary</label>
+                <input type="number" value="<?php echo $basicRate; ?>" step="0.01" disabled>
+                <small>From Compensation module</small>
+              </div>
+              <div class="form-group">
+                <label>Total Allowances</label>
+                <input type="number" value="0.00" step="0.01" disabled>
+                <small>From Compensation module</small>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <!-- Government Contributions -->
-      <div class="form-section">
-        <h4>Government Contributions & Benefits</h4>
-        <div class="form-row">
-          <div class="form-group">
-            <label>SSS Status</label>
-            <select name="sss_status">
-              <option value="">-- Select --</option>
-              <option value="enrolled" selected>Enrolled</option>
-              <option value="not_enrolled">Not Enrolled</option>
-              <option value="exempt">Exempt</option>
-            </select>
-            <small>Social Security System enrollment status</small>
+          <div class="form-section">
+            <h4>Tax Information</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>TIN (Tax Identification Number)</label>
+                <input type="text" name="tin" placeholder="e.g., XXX-XXX-XXX-XXX" value="<?php echo htmlspecialchars($p['tax_identification_number'] ?? ''); ?>">
+              </div>
+              <div class="form-group">
+                <label>Tax Status</label>
+                <select name="tax_status">
+                  <option value="">-- Select --</option>
+                  <option value="taxable" <?php echo ($p && ($p['tax_status'] ?? '') === 'taxable') ? 'selected' : ''; ?>>Taxable</option>
+                  <option value="exempt" <?php echo ($p && ($p['tax_status'] ?? '') === 'exempt') ? 'selected' : ''; ?>>Tax Exempt</option>
+                </select>
+                <small>Determines if subject to withholding tax</small>
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label>SSS Number</label>
-            <input type="text" name="sss_number" placeholder="e.g., XX-XXXXXXX-X" value="">
-          </div>
-        </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label>PhilHealth Status</label>
-            <select name="philhealth_status">
-              <option value="">-- Select --</option>
-              <option value="enrolled" selected>Enrolled</option>
-              <option value="not_enrolled">Not Enrolled</option>
-              <option value="exempt">Exempt</option>
-            </select>
-            <small>Philippine Health Insurance Corporation status</small>
+          <div class="form-section">
+            <h4>Government Contributions</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>SSS Status</label>
+                <select name="sss_status">
+                  <option value="">-- Select --</option>
+                  <option value="enrolled" <?php echo ($p && ($p['sss_status'] ?? '') === 'enrolled') ? 'selected' : ''; ?>>Enrolled</option>
+                  <option value="not_enrolled" <?php echo ($p && ($p['sss_status'] ?? '') === 'not_enrolled') ? 'selected' : ''; ?>>Not Enrolled</option>
+                  <option value="exempt" <?php echo ($p && ($p['sss_status'] ?? '') === 'exempt') ? 'selected' : ''; ?>>Exempt</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>SSS Number</label>
+                <input type="text" name="sss_number" placeholder="XX-XXXXXXX-X" value="<?php echo htmlspecialchars($p['sss_number'] ?? ''); ?>">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>PhilHealth Status</label>
+                <select name="philhealth_status">
+                  <option value="">-- Select --</option>
+                  <option value="enrolled" <?php echo ($p && ($p['philhealth_status'] ?? '') === 'enrolled') ? 'selected' : ''; ?>>Enrolled</option>
+                  <option value="not_enrolled" <?php echo ($p && ($p['philhealth_status'] ?? '') === 'not_enrolled') ? 'selected' : ''; ?>>Not Enrolled</option>
+                  <option value="exempt" <?php echo ($p && ($p['philhealth_status'] ?? '') === 'exempt') ? 'selected' : ''; ?>>Exempt</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>PhilHealth Number</label>
+                <input type="text" name="philhealth_number" placeholder="XX-XXXXXXXXXX-X" value="<?php echo htmlspecialchars($p['philhealth_number'] ?? ''); ?>">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Pag-IBIG Status</label>
+                <select name="pagibig_status">
+                  <option value="">-- Select --</option>
+                  <option value="enrolled" <?php echo ($p && ($p['pagibig_status'] ?? '') === 'enrolled') ? 'selected' : ''; ?>>Enrolled</option>
+                  <option value="not_enrolled" <?php echo ($p && ($p['pagibig_status'] ?? '') === 'not_enrolled') ? 'selected' : ''; ?>>Not Enrolled</option>
+                  <option value="exempt" <?php echo ($p && ($p['pagibig_status'] ?? '') === 'exempt') ? 'selected' : ''; ?>>Exempt</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Pag-IBIG Number</label>
+                <input type="text" name="pagibig_number" placeholder="XXXX-XXXX-XXXX" value="<?php echo htmlspecialchars($p['pagibig_number'] ?? ''); ?>">
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label>PhilHealth Number</label>
-            <input type="text" name="philhealth_number" placeholder="e.g., XX-XXXXXXXXXX-X" value="">
-          </div>
-        </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label>Pag-IBIG Status</label>
-            <select name="pagibig_status">
-              <option value="">-- Select --</option>
-              <option value="enrolled" selected>Enrolled</option>
-              <option value="not_enrolled">Not Enrolled</option>
-              <option value="exempt">Exempt</option>
-            </select>
-            <small>Home Development Mutual Fund status</small>
+          <div class="form-section">
+            <h4>Bank Account</h4>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Bank Name</label>
+                <input type="text" name="bank_name" placeholder="e.g., BDO, BPI, Metrobank" value="<?php echo htmlspecialchars($p['bank_name'] ?? ''); ?>">
+              </div>
+              <div class="form-group">
+                <label>Account Type</label>
+                <select name="account_type">
+                  <option value="">-- Select --</option>
+                  <option value="savings" <?php echo ($p && ($p['account_type'] ?? '') === 'savings') ? 'selected' : ''; ?>>Savings</option>
+                  <option value="checking" <?php echo ($p && ($p['account_type'] ?? '') === 'checking') ? 'selected' : ''; ?>>Checking</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Bank Account Number</label>
+                <input type="text" name="bank_account_number" placeholder="Account number" value="<?php echo htmlspecialchars($p['bank_account_number'] ?? ''); ?>">
+              </div>
+              <div class="form-group">
+                <label>Account Holder Name</label>
+                <input type="text" name="account_holder_name" value="<?php echo htmlspecialchars($p['bank_account_holder'] ?? $fullName); ?>">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Account Status</label>
+                <select name="account_status">
+                  <option value="">-- Select --</option>
+                  <option value="active" <?php echo (!$p || ($p['account_status'] ?? '') === 'active') ? 'selected' : ''; ?>>Active</option>
+                  <option value="inactive" <?php echo ($p && ($p['account_status'] ?? '') === 'inactive') ? 'selected' : ''; ?>>Inactive</option>
+                </select>
+              </div>
+            </div>
           </div>
-          <div class="form-group">
-            <label>Pag-IBIG Member Number</label>
-            <input type="text" name="pagibig_number" placeholder="e.g., XXXX-XXXX-XXXX" value="">
-          </div>
-        </div>
 
-        <div class="form-row full">
-          <div class="form-group">
-            <label>TIN (Tax Identification Number)</label>
-            <input type="text" name="tin" placeholder="e.g., XXX-XXX-XXX-XXX" value="">
-            <small>Bureau of Internal Revenue TIN for tax purposes</small>
+          <div class="btn-group">
+            <button type="submit" class="btn btn-primary"><?php echo $modalProfile ? 'Update' : 'Save'; ?> Profile</button>
+            <button type="button" onclick="window.closeProfileModal()" class="btn btn-secondary" style="text-decoration: none;">Cancel</button>
           </div>
-        </div>
-      </div>
-
-      <!-- Bank Account Details -->
-      <div class="form-section">
-        <h4>Bank Account & Disbursement</h4>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Bank Name <span style="color: #ef4444;">*</span></label>
-            <select name="bank_name" required>
-              <option value="">-- Select Bank --</option>
-              <option value="bdo" selected>BDO</option>
-              <option value="bpi">BPI</option>
-              <option value="metrobank">Metrobank</option>
-              <option value="pnb">PNB</option>
-              <option value="ucpb">UCPB</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Account Type <span style="color: #ef4444;">*</span></label>
-            <select name="account_type" required>
-              <option value="">-- Select Type --</option>
-              <option value="savings" selected>Savings</option>
-              <option value="checking">Checking</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-row full">
-          <div class="form-group">
-            <label>Bank Account Number <span style="color: #ef4444;">*</span></label>
-            <input type="text" name="bank_account_number" placeholder="Bank account number for salary deposits" required value="">
-            <small>Account must be in employee's name</small>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>Account Holder Name</label>
-            <input type="text" name="account_holder_name" value="John Doe" disabled>
-            <small>Read-only verification field</small>
-          </div>
-          <div class="form-group">
-            <label>Account Status</label>
-            <select name="account_status">
-              <option value="">-- Select --</option>
-              <option value="active" selected>Active</option>
-              <option value="inactive">Inactive</option>
-            </select>
-            <small>Inactive accounts will not receive salary deposits</small>
-          </div>
-        </div>
-      </div>
-
-      <!-- Alerts -->
-      <div class="alert alert-warning">
-        <strong>⚠️ Important Rules:</strong>
-        <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
-          <li>Salary values are read-only and linked to Compensation module</li>
-          <li>Employees without a payroll profile are excluded from payroll runs</li>
-          <li>Changes to this profile affect future payroll periods only</li>
-          <li>Bank account details must be verified before payroll processing</li>
-        </ul>
-      </div>
-
-      <!-- Action Buttons -->
-      <div class="btn-group">
-        <button type="submit" class="btn btn-primary">Save Profile</button>
-        <button type="reset" class="btn btn-secondary">Reset</button>
-        <form method="POST" style="display: inline;">
-          <input type="hidden" name="action" value="delete">
-          <input type="hidden" name="employee_id" value="EMP-001">
-          <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this payroll profile? The employee will be excluded from payroll.');">Delete Profile</button>
         </form>
+        <?php if ($modalProfile): ?>
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+          <form method="POST" action="<?php echo htmlspecialchars($handlerUrl); ?>" style="display: inline;">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="employee_id" value="<?php echo (int)$emp['employee_id']; ?>">
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this profile?');">Delete Profile</button>
+          </form>
+        </div>
+        <?php endif; ?>
+        <?php else: ?>
+        <p style="color: #6b7280;">Employee not found.</p>
+        <?php endif; ?>
       </div>
-    </form>
-  </div>
-
-</div>
-
-<!-- Profile Modal -->
-<div class="profile-modal-overlay" id="profile-modal-overlay" onclick="if(event.target === this) window.closeProfileModal()">
-  <div class="profile-modal">
-    <div class="profile-modal-header">
-      <h2 class="profile-modal-title" id="profile-modal-title">Employee Profile</h2>
-      <button type="button" class="profile-modal-close" onclick="window.closeProfileModal()">×</button>
-    </div>
-    <div class="profile-modal-body" id="profile-modal-body">
-      <!-- Content will be injected here -->
     </div>
   </div>
+  <?php } ?>
+
 </div>
-
-<script>
-// Profile Modal Functions
-window.openProfileModal = function(empId, empName, action) {
-  const modal = document.getElementById('profile-modal-overlay');
-  const title = document.getElementById('profile-modal-title');
-  const body = document.getElementById('profile-modal-body');
-  
-  title.textContent = (action === 'create' ? 'Create ' : 'View/Edit ') + 'Payroll Profile - ' + empName;
-  
-  let html = '<div style="padding: 1rem;">';
-  html += '<div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; margin-bottom: 1.5rem;">';
-  html += '<h3 style="margin: 0 0 1rem 0; font-size: 14px; font-weight: 600; color: #1f2937;">Employee Information</h3>';
-  html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">';
-  html += '<div><label style="font-size: 11px; color: #6b7280; font-weight: 500;">Employee ID</label><div style="font-size: 14px; font-weight: 600; color: #1f2937;">' + empId + '</div></div>';
-  html += '<div><label style="font-size: 11px; color: #6b7280; font-weight: 500;">Name</label><div style="font-size: 14px; font-weight: 600; color: #1f2937;">' + empName + '</div></div>';
-  html += '</div>';
-  html += '</div>';
-  
-  html += '<div style="background: white; padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 1.5rem;">';
-  html += '<h3 style="margin: 0 0 1rem 0; font-size: 14px; font-weight: 600; color: #1f2937;">Payroll Settings</h3>';
-  html += '<div style="display: grid; gap: 1rem;">';
-  html += '<div><label style="display: flex; align-items: center; gap: 0.5rem; font-weight: 500; color: #374151;"><input type="checkbox" checked style="width: 16px; height: 16px;"> Payroll Eligible</label></div>';
-  html += '<div><label style="font-size: 12px; color: #6b7280; font-weight: 500;">Pay Frequency</label><div style="font-size: 13px; color: #1f2937;">Monthly</div></div>';
-  html += '<div><label style="font-size: 12px; color: #6b7280; font-weight: 500;">Basic Salary</label><div style="font-size: 13px; color: #1f2937; font-family: monospace; font-weight: 600;">₱6,000.00</div></div>';
-  html += '</div>';
-  html += '</div>';
-  
-  html += '<div style="background: white; padding: 1.5rem; border: 1px solid #e5e7eb; border-radius: 8px;">';
-  html += '<h3 style="margin: 0 0 1rem 0; font-size: 14px; font-weight: 600; color: #1f2937;">Bank Account</h3>';
-  html += '<div style="display: grid; gap: 1rem;">';
-  html += '<div><label style="font-size: 12px; color: #6b7280; font-weight: 500;">Bank Name</label><div style="font-size: 13px; color: #1f2937;">BDO</div></div>';
-  html += '<div><label style="font-size: 12px; color: #6b7280; font-weight: 500;">Account Number</label><div style="font-size: 13px; color: #1f2937; font-family: monospace;">•••••••••••...1234</div></div>';
-  html += '<div><label style="font-size: 12px; color: #6b7280; font-weight: 500;">Account Type</label><div style="font-size: 13px; color: #1f2937;">Savings</div></div>';
-  html += '</div>';
-  html += '</div>';
-  
-  html += '<div style="margin-top: 1.5rem; display: flex; gap: 1rem;">';
-  html += '<button type="button" onclick="window.closeProfileModal()" class="btn btn-primary" style="flex: 1;">Close</button>';
-  html += '</div>';
-  html += '</div>';
-  
-  body.innerHTML = html;
-  modal.classList.add('active');
-  body.scrollTop = 0;
-};
-
-window.closeProfileModal = function() {
-  const modal = document.getElementById('profile-modal-overlay');
-  modal.classList.remove('active');
-};
-
-// Close modal on Escape key
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    window.closeProfileModal();
-  }
-});
-</script>

@@ -12,6 +12,16 @@ if (empty($_SESSION['token'])) {
 }
 
 require_once __DIR__ . '/../../config/Database.php';
+require_once __DIR__ . '/../../config/BaseConfig.php';
+
+// Role-based access control
+if (!canAccessMenuItem('compensation', 'compensation_versioning')) {
+    http_response_code(403);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Access denied: compensation_versioning']);
+    exit;
+}
+
 require_once __DIR__ . '/models/CompensationVersionHistory.php';
 
 $version = new CompensationVersionHistory();
@@ -56,5 +66,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $params = ['ref' => 'compensation', 'page' => 'compensation_versioning'];
 if ($msg) $params['msg'] = urlencode($msg);
 if ($err) $params['err'] = urlencode($err);
-header('Location: ../../dashboard.php?' . http_build_query($params));
+header('Location: ' . BASE_URL . 'dashboard.php?' . http_build_query($params));
 exit;

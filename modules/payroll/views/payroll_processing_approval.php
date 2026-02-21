@@ -2,16 +2,46 @@
 /**
  * Payroll Processing and Approval Module
  * Execute payroll safely with multi-level approval workflow
+ * Follows MVC pattern - all routing through PayrollRunController
+ * 
+ * SECURITY: This view must only be accessed through dashboard.php
+ * Direct access via URL is blocked by SYSTEM_INIT check below
  */
+
+// Enforce single-entry routing: this file should only be loaded through dashboard.php
+if (!defined('SYSTEM_INIT')) {
+    http_response_code(403);
+    die('No direct access allowed. Please use dashboard.php');
+}
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../../../config/Database.php';
+require_once __DIR__ . '/../../../config/BaseConfig.php';
 require_once __DIR__ . '/../models/PayrollApproval.php';
 require_once __DIR__ . '/../models/PayrollRun.php';
+require_once __DIR__ . '/../models/PayrollRunEmployee.php';
+require_once __DIR__ . '/../controllers/PayrollRunController.php';
 
 $payrollApproval = new PayrollApproval();
 $payrollRun = new PayrollRun();
+$payrollRunEmployee = new PayrollRunEmployee();
+
+// Route controller actions (handles POST/GET requests)
+$controllerData = PayrollRunController::route();
+
+// Check if user selected a payroll to preview
+$previewPayrollId = $_SESSION['preview_payroll_id'] ?? null;
+$previewData = null;
+$previewEmployees = [];
+
+if ($previewPayrollId) {
+    $previewData = $payrollRun->find($previewPayrollId);
+    if ($previewData) {
+        $previewEmployees = $payrollRunEmployee->getByRunWithEmployee($previewPayrollId);
+    }
+}
 
 // Fetch approval data
 $pendingApprovals = $payrollApproval->getByStatus('pending');
@@ -545,7 +575,43 @@ $rejectedRuns = $payrollApproval->getByStatus('rejected');
     </div>
   </div>
 
+  <!-- Message Display -->
+  <?php 
+  $current_payroll_id = $previewPayrollId ?? null;
+  $message = $_SESSION['payroll_message'] ?? null;
+  $message_payroll_id = $_SESSION['payroll_message_payroll_id'] ?? null;
+  
+  if ($message && ($message_payroll_id === $current_payroll_id || !$current_payroll_id)) {
+      $bg_color = match($message['type']) {
+          'success' => '#d1fae5',
+          'error' => '#fee2e2',
+          'warning' => '#fef3c7',
+          default => '#e0e7ff'
+      };
+      $text_color = match($message['type']) {
+          'success' => '#065f46',
+          'error' => '#7f1d1d',
+          'warning' => '#92400e',
+          default => '#3730a3'
+      };
+      $icon = match($message['type']) {
+          'success' => '✓',
+          'error' => '✕',
+          'warning' => '⚠',
+          default => 'ℹ'
+      };
+      ?>
+      <div style="margin-bottom: 2rem; padding: 1rem; background: <?php echo $bg_color; ?>; border-radius: 4px; color: <?php echo $text_color; ?>; font-size: 14px; border-left: 4px solid <?php echo $text_color; ?>;">
+          <strong><?php echo $icon; ?> <?php echo ucfirst($message['type']); ?>:</strong> <?php echo htmlspecialchars($message['text']); ?>
+      </div>
+      <?php 
+      unset($_SESSION['payroll_message']);
+      unset($_SESSION['payroll_message_payroll_id']);
+  } 
+  ?>
+
   <!-- Payroll Runs List -->
+  <?php if (!$previewData): ?>
   <div class="section">
     <h3 class="section-header">📋 Payroll Runs</h3>
 
@@ -561,9 +627,9 @@ $rejectedRuns = $payrollApproval->getByStatus('rejected');
           </p>
         </div>
         <div class="payroll-actions">
-          <form method="GET" style="display: inline;">
+          <form method="POST" action="<?= BASE_URL ?>dashboard.php" style="display: inline;">
             <input type="hidden" name="action" value="preview">
-            <input type="hidden" name="payroll_id" value="PAYROLL-2026-02-01">
+            <input type="hidden" name="payroll_id" value="1">
             <button type="submit" class="btn btn-primary btn-sm">Preview & Process</button>
           </form>
         </div>
@@ -601,7 +667,7 @@ $rejectedRuns = $payrollApproval->getByStatus('rejected');
     </div>
 
     <!-- Create New Payroll Run -->
-    <form method="POST" action="../payroll_processing_approval_handler.php">
+    <form method="POST" action="<?= BASE_URL ?>dashboard.php">
       <div class="form-section">
         <h4>🚀 Create New Payroll Run</h4>
         <div class="form-row">
@@ -629,10 +695,18 @@ $rejectedRuns = $payrollApproval->getByStatus('rejected');
       </div>
     </form>
   </div>
+  <?php endif; ?>
 
   <!-- Payroll Preview (After Running) -->
+  <?php if ($previewData): ?>
   <div class="section">
-    <h3 class="section-header">👁️ Payroll Preview - February 2026 Period 1</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+      <h3 class="section-header" style="margin: 0;">👁️ Payroll Preview</h3>
+      <form method="POST" action="<?= BASE_URL ?>dashboard.php" style="display: inline; margin: 0;">
+        <input type="hidden" name="action" value="cancel_preview">
+        <button type="submit" class="btn btn-secondary btn-sm">← Back to List</button>
+      </form>
+    </div>
 
     <div class="alert alert-info">
       This is a preview of the payroll run. Review all details carefully before proceeding to approval workflow.
@@ -641,32 +715,42 @@ $rejectedRuns = $payrollApproval->getByStatus('rejected');
     <!-- Preview Summary -->
     <div class="preview-summary">
       <h4 style="margin: 0 0 1rem 0; color: #1e40af;">Payroll Summary</h4>
+      <?php 
+        $totalGross = 0;
+        $totalDeductions = 0;
+        $totalNet = 0;
+        foreach ($previewEmployees as $emp) {
+          $totalGross += (float)$emp['gross_pay'];
+          $totalDeductions += (float)$emp['total_deductions'];
+          $totalNet += (float)$emp['net_pay'];
+        }
+      ?>
       <div class="preview-summary-row">
         <div class="preview-summary-item">
           <label>Payroll Period</label>
-          <value>Feb 1-15, 2026</value>
+          <value><?php echo htmlspecialchars($previewData['period_name'] ?? ''); ?></value>
         </div>
         <div class="preview-summary-item">
           <label>Employee Count</label>
-          <value>8</value>
+          <value><?php echo count($previewEmployees); ?></value>
         </div>
         <div class="preview-summary-item">
           <label>Total Gross Earnings</label>
-          <value>₱ 87,000.00</value>
+          <value>₱ <?php echo number_format($totalGross, 2); ?></value>
         </div>
       </div>
       <div class="preview-summary-row" style="margin-top: 1rem;">
         <div class="preview-summary-item">
           <label>Total Deductions</label>
-          <value>₱ 26,500.00</value>
+          <value>₱ <?php echo number_format($totalDeductions, 2); ?></value>
         </div>
         <div class="preview-summary-item">
           <label>Total Net Payable</label>
-          <value>₱ 60,500.00</value>
+          <value>₱ <?php echo number_format($totalNet, 2); ?></value>
         </div>
         <div class="preview-summary-item">
           <label>Status</label>
-          <value style="color: #f59e0b;">DRAFT</value>
+          <value style="color: #f59e0b;"><?php echo htmlspecialchars($previewData['status'] ?? 'DRAFT'); ?></value>
         </div>
       </div>
     </div>
@@ -689,95 +773,27 @@ $rejectedRuns = $payrollApproval->getByStatus('rejected');
           </tr>
         </thead>
         <tbody>
+          <?php foreach ($previewEmployees as $emp): ?>
           <tr>
-            <td>EMP-001</td>
-            <td>John Doe</td>
-            <td class="amount">11,000.00</td>
-            <td class="amount">2,850.00</td>
-            <td class="amount">500.00</td>
-            <td class="amount">3,350.00</td>
-            <td class="amount">7,650.00</td>
+            <td><?php echo htmlspecialchars($emp['employee_code'] ?? ''); ?></td>
+            <td><?php echo htmlspecialchars(($emp['first_name'] ?? '') . ' ' . ($emp['last_name'] ?? '')); ?></td>
+            <td class="amount"><?php echo number_format((float)$emp['gross_pay'], 2); ?></td>
+            <td class="amount">—</td>
+            <td class="amount">—</td>
+            <td class="amount"><?php echo number_format((float)$emp['total_deductions'], 2); ?></td>
+            <td class="amount"><?php echo number_format((float)$emp['net_pay'], 2); ?></td>
             <td><span class="badge badge-draft">DRAFT</span></td>
           </tr>
-          <tr>
-            <td>EMP-002</td>
-            <td>Jane Smith</td>
-            <td class="amount">11,000.00</td>
-            <td class="amount">2,900.00</td>
-            <td class="amount">800.00</td>
-            <td class="amount">3,700.00</td>
-            <td class="amount">7,300.00</td>
-            <td><span class="badge badge-draft">DRAFT</span></td>
-          </tr>
-          <tr>
-            <td>EMP-003</td>
-            <td>Michael Johnson</td>
-            <td class="amount">12,500.00</td>
-            <td class="amount">3,250.00</td>
-            <td class="amount">1,200.00</td>
-            <td class="amount">4,450.00</td>
-            <td class="amount">8,050.00</td>
-            <td><span class="badge badge-draft">DRAFT</span></td>
-          </tr>
-          <tr>
-            <td>EMP-004</td>
-            <td>Sarah Williams</td>
-            <td class="amount">9,000.00</td>
-            <td class="amount">2,200.00</td>
-            <td class="amount">400.00</td>
-            <td class="amount">2,600.00</td>
-            <td class="amount">6,400.00</td>
-            <td><span class="badge badge-draft">DRAFT</span></td>
-          </tr>
-          <tr>
-            <td>EMP-005</td>
-            <td>Robert Brown</td>
-            <td class="amount">9,000.00</td>
-            <td class="amount">2,150.00</td>
-            <td class="amount">600.00</td>
-            <td class="amount">2,750.00</td>
-            <td class="amount">6,250.00</td>
-            <td><span class="badge badge-draft">DRAFT</span></td>
-          </tr>
-          <tr>
-            <td>EMP-006</td>
-            <td>Emily Davis</td>
-            <td class="amount">11,000.00</td>
-            <td class="amount">2,875.00</td>
-            <td class="amount">700.00</td>
-            <td class="amount">3,575.00</td>
-            <td class="amount">7,425.00</td>
-            <td><span class="badge badge-draft">DRAFT</span></td>
-          </tr>
-          <tr>
-            <td>EMP-007</td>
-            <td>David Martinez</td>
-            <td class="amount">9,700.00</td>
-            <td class="amount">2,380.00</td>
-            <td class="amount">850.00</td>
-            <td class="amount">3,230.00</td>
-            <td class="amount">6,470.00</td>
-            <td><span class="badge badge-draft">DRAFT</span></td>
-          </tr>
-          <tr>
-            <td>EMP-008</td>
-            <td>Jessica Wilson</td>
-            <td class="amount">13,800.00</td>
-            <td class="amount">3,595.00</td>
-            <td class="amount">1,395.00</td>
-            <td class="amount">4,990.00</td>
-            <td class="amount">8,810.00</td>
-            <td><span class="badge badge-draft">DRAFT</span></td>
-          </tr>
+          <?php endforeach; ?>
         </tbody>
         <tfoot>
           <tr style="background: #f3f4f6; font-weight: 600;">
             <td colspan="2" style="text-align: right;">TOTAL</td>
-            <td class="amount">87,000.00</td>
-            <td class="amount">22,200.00</td>
-            <td class="amount">6,445.00</td>
-            <td class="amount">28,645.00</td>
-            <td class="amount">58,355.00</td>
+            <td class="amount"><?php echo number_format($totalGross, 2); ?></td>
+            <td class="amount">—</td>
+            <td class="amount">—</td>
+            <td class="amount"><?php echo number_format($totalDeductions, 2); ?></td>
+            <td class="amount"><?php echo number_format($totalNet, 2); ?></td>
             <td></td>
           </tr>
         </tfoot>
@@ -819,9 +835,10 @@ $rejectedRuns = $payrollApproval->getByStatus('rejected');
         <p>Verifies employee records and calculations</p>
         <div class="status">AWAITING APPROVAL</div>
         <div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid;">
-          <form method="POST" action="../payroll_processing_approval_handler.php" style="display: flex; gap: 0.5rem;">
-            <button type="submit" name="action" value="hr_approve" class="btn btn-success btn-sm">Approve</button>
-            <button type="submit" name="action" value="hr_reject" class="btn btn-danger btn-sm">Reject</button>
+          <form method="POST" action="<?= BASE_URL ?>dashboard.php" style="display: flex; gap: 0.5rem;">
+            <input type="hidden" name="payroll_id" value="<?php echo isset($previewData['id']) ? (int)$previewData['id'] : ''; ?>">
+            <button type="submit" name="action" value="approve_hr" class="btn btn-success btn-sm">Approve</button>
+            <button type="submit" name="action" value="reject_hr" class="btn btn-danger btn-sm">Reject</button>
           </form>
         </div>
       </div>
@@ -840,7 +857,8 @@ $rejectedRuns = $payrollApproval->getByStatus('rejected');
         As HR Manager, verify that all employee records, earnings, and deductions are accurate before proceeding to Finance approval.
       </div>
 
-      <form method="POST" action="../payroll_processing_approval_handler.php">
+      <form method="POST" action="<?= BASE_URL ?>dashboard.php">
+        <input type="hidden" name="payroll_id" value="<?php echo isset($previewData['id']) ? (int)$previewData['id'] : ''; ?>">
         <div class="form-row full">
           <div class="form-group">
             <label>Review Notes (Optional)</label>
@@ -875,13 +893,14 @@ $rejectedRuns = $payrollApproval->getByStatus('rejected');
         </div>
 
         <div class="btn-group">
-          <button type="submit" name="action" value="hr_approve" class="btn btn-success">Approve for Finance Review</button>
-          <button type="submit" name="action" value="hr_reject" class="btn btn-danger">Reject - Request Corrections</button>
+          <button type="submit" name="action" value="approve_hr" class="btn btn-success">Approve for Finance Review</button>
+          <button type="submit" name="action" value="reject_hr" class="btn btn-danger">Reject - Request Corrections</button>
           <button type="reset" class="btn btn-secondary">Clear Form</button>
         </div>
       </form>
     </div>
   </div>
+  <?php endif; ?>
 
   <!-- Locked Payroll View -->
   <div class="section">

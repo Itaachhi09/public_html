@@ -104,6 +104,7 @@ class AnalyticsService
     {
         $startDate = date($this->dateFormat, strtotime("-$days days"));
         
+        // Get internal movements (transfers, promotions, demotions)
         $sql = "SELECT 
                     SUM(CASE WHEN movement_type = 'Transfer' THEN 1 ELSE 0 END) as transfers,
                     SUM(CASE WHEN movement_type = 'Promotion' THEN 1 ELSE 0 END) as promotions,
@@ -111,7 +112,7 @@ class AnalyticsService
                     COUNT(*) as total_movements
                 FROM employee_movements
                 WHERE effective_date >= ? AND effective_date <= NOW()
-                AND status = 'Completed'";
+                AND status IN ('Approved', 'Pending')";
         
         $params = [$startDate];
         if ($department) {
@@ -120,22 +121,73 @@ class AnalyticsService
             $params[] = $department;
         }
 
+        $transfers = 0;
+        $promotions = 0;
+        $demotions = 0;
+        
         try {
             $stmt = $this->db->prepare($sql);
             $stmt->execute($params);
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             
-            return [
-                'transfers' => (int)($row['transfers'] ?? 0),
-                'promotions' => (int)($row['promotions'] ?? 0),
-                'demotions' => (int)($row['demotions'] ?? 0),
-                'new_hires' => 0, // Would need separate query for new hires by hire date
-                'resignations' => 0 // Would need to query from last_working_day
-            ];
+            $transfers = (int)($row['transfers'] ?? 0);
+            $promotions = (int)($row['promotions'] ?? 0);
+            $demotions = (int)($row['demotions'] ?? 0);
         } catch (Exception $e) {
-            error_log('Analytics Error - getMovementData: ' . $e->getMessage());
-            return ['transfers' => 0, 'promotions' => 0, 'demotions' => 0, 'new_hires' => 0, 'resignations' => 0];
+            error_log('Analytics Error - getMovementData (internal movements): ' . $e->getMessage());
         }
+        
+        // Get new hires (employees hired in the period)
+        $newHiresSql = "SELECT COUNT(*) as count
+                       FROM employees
+                       WHERE date_of_joining >= ? AND date_of_joining <= NOW()";
+        
+        $newHiresParams = [$startDate];
+        if ($department) {
+            $newHiresSql .= " AND department_id = ?";
+            $newHiresParams[] = $department;
+        }
+        
+        $newHires = 0;
+        try {
+            $stmt = $this->db->prepare($newHiresSql);
+            $stmt->execute($newHiresParams);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $newHires = (int)($row['count'] ?? 0);
+        } catch (Exception $e) {
+            error_log('Analytics Error - getMovementData (new hires): ' . $e->getMessage());
+        }
+        
+        // Get resignations (employees with last_working_day in the period)
+        $resignationsSql = "SELECT COUNT(*) as count
+                           FROM employees
+                           WHERE employment_status != 'Active'
+                           AND last_working_day IS NOT NULL
+                           AND last_working_day >= ? AND last_working_day <= NOW()";
+        
+        $resignationsParams = [$startDate];
+        if ($department) {
+            $resignationsSql .= " AND department_id = ?";
+            $resignationsParams[] = $department;
+        }
+        
+        $resignations = 0;
+        try {
+            $stmt = $this->db->prepare($resignationsSql);
+            $stmt->execute($resignationsParams);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $resignations = (int)($row['count'] ?? 0);
+        } catch (Exception $e) {
+            error_log('Analytics Error - getMovementData (resignations): ' . $e->getMessage());
+        }
+        
+        return [
+            'transfers' => $transfers,
+            'promotions' => $promotions,
+            'demotions' => $demotions,
+            'new_hires' => $newHires,
+            'resignations' => $resignations
+        ];
     }
 
     public function getContractExpiryData()
@@ -145,8 +197,7 @@ class AnalyticsService
                     SUM(CASE WHEN DATEDIFF(end_date, CURDATE()) BETWEEN 31 AND 60 THEN 1 ELSE 0 END) as expiring_60,
                     SUM(CASE WHEN DATEDIFF(end_date, CURDATE()) BETWEEN 61 AND 90 THEN 1 ELSE 0 END) as expiring_90,
                     SUM(CASE WHEN end_date < CURDATE() THEN 1 ELSE 0 END) as expired
-                FROM pay_contracts
-                WHERE status = 'Active'";
+                FROM pay_contracts";
         
         try {
             $stmt = $this->db->prepare($sql);
@@ -200,8 +251,9 @@ class AnalyticsService
                     COUNT(DISTINCT pre.employee_id) as employees
                 FROM payroll_run_employees pre
                 JOIN payroll_runs pr ON pre.payroll_run_id = pr.id
-                WHERE pr.start_date >= ? AND pr.end_date <= NOW()
-                AND pr.status IN ('Processed', 'Closed')";
+                JOIN employees e ON pre.employee_id = e.employee_id
+                WHERE pr.start_date >= ?
+                AND pr.status IN ('Draft', 'Processed', 'Closed')";
         
         $params = [$startDate];
         if ($department) {
@@ -266,9 +318,9 @@ class AnalyticsService
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
             
             return [
-                'average' => (int)($row['avg_salary'] ?? 0),
-                'minimum' => (int)($row['min_salary'] ?? 0),
-                'maximum' => (int)($row['max_salary'] ?? 0)
+                'average' => (float)($row['avg_salary'] ?? 0),
+                'minimum' => (float)($row['min_salary'] ?? 0),
+                'maximum' => (float)($row['max_salary'] ?? 0)
             ];
         } catch (Exception $e) {
             error_log('Analytics Error - getAverageSalary: ' . $e->getMessage());
@@ -539,7 +591,7 @@ class AnalyticsService
                 FROM payroll_runs pr
                 JOIN payroll_run_employees pre ON pr.id = pre.payroll_run_id
                 JOIN employees e ON pre.employee_id = e.employee_id
-                WHERE pr.status IN ('Processed', 'Closed')";
+                WHERE pr.status IN ('Draft', 'Processed', 'Closed')";
         
         $params = [];
         if ($department) {
@@ -569,7 +621,7 @@ class AnalyticsService
                 FROM payroll_run_employees pre
                 JOIN payroll_runs pr ON pre.payroll_run_id = pr.id
                 JOIN employees e ON pre.employee_id = e.employee_id
-                WHERE pr.status IN ('Processed', 'Closed')
+                WHERE pr.status IN ('Draft', 'Processed', 'Closed')
                 AND pr.end_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
         
         $params = [];
@@ -605,8 +657,8 @@ class AnalyticsService
             $params[] = $department;
         }
         
-        $sql .= " ORDER BY es.basic_rate DESC LIMIT ?";
-        $params[] = $limit;
+        // Don't use placeholder for LIMIT
+        $sql .= " ORDER BY es.basic_rate DESC LIMIT " . intval($limit);
         
         try {
             $stmt = $this->db->prepare($sql);

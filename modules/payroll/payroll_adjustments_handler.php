@@ -11,6 +11,7 @@ if (empty($_SESSION['token'])) {
 }
 
 require_once __DIR__ . '/../../config/Database.php';
+require_once __DIR__ . '/../../config/BaseConfig.php';
 require_once __DIR__ . '/models/PayrollAdjustment.php';
 
 $adjustment = new PayrollAdjustment();
@@ -55,5 +56,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $params = ['ref' => 'payroll', 'page' => 'payroll_adjustments_special_pay'];
 if ($msg) $params['msg'] = urlencode($msg);
 if ($err) $params['err'] = urlencode($err);
-header('Location: ../../dashboard.php?' . http_build_query($params));
+header('Location: ' . BASE_URL . 'dashboard.php?' . http_build_query($params));
 exit;

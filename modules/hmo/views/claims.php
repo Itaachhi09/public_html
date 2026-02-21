@@ -260,6 +260,11 @@
       font-size: 14px;
     }
 
+    .claims-table td:last-child {
+      padding: 1.25rem 1rem;
+      text-align: center;
+    }
+
     .employee-cell {
       display: flex;
       align-items: center;
@@ -373,28 +378,43 @@
     .btn-icon {
       background: transparent;
       color: #6b7280;
-      width: 32px;
-      height: 32px;
-      padding: 0;
-      display: flex;
+      width: 40px;
+      height: 40px;
+      padding: 4px;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       border-radius: 6px;
-      font-size: 14px;
+      font-size: 18px;
       cursor: pointer;
-      border: none;
+      border: 1px solid transparent;
       transition: all 0.2s ease;
+      min-width: 40px;
+      line-height: 1;
+      vertical-align: middle;
     }
 
     .btn-icon:hover {
       background: #f3f4f6;
       color: #1e40af;
+      border-color: #d1d5db;
+    }
+
+    .btn-icon:active {
+      transform: scale(0.95);
+    }
+
+    .btn-icon:focus {
+      outline: 2px solid #1e40af;
+      outline-offset: 2px;
     }
 
     .actions-cell {
       display: flex;
       gap: 0.5rem;
       align-items: center;
+      justify-content: center;
+      width: 80px;
     }
 
     /* Empty State */
@@ -439,6 +459,256 @@
       color: #374151;
       margin-bottom: 1rem;
     }
+
+    /* Modal Styles */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      display: block;
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .side-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 450px;
+      height: 100vh;
+      background: white;
+      box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+      z-index: 1001;
+      transform: translateX(500px);
+      transition: transform 0.3s ease;
+      overflow-y: auto;
+    }
+
+    .side-modal.active {
+      display: block;
+      transform: translateX(0);
+    }
+
+    .modal-content {
+      position: relative;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modal-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      color: #111827;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      color: #6b7280;
+      cursor: pointer;
+      padding: 0.5rem;
+      transition: color 0.2s ease;
+    }
+
+    .close-btn:hover {
+      color: #111827;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+      overflow-y: auto;
+      flex-grow: 1;
+    }
+
+    .edit-form-modal {
+      display: none;
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      width: 450px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1001;
+      max-height: calc(100vh - 40px);
+      overflow-y: auto;
+    }
+
+    .edit-form-modal.show {
+      display: flex;
+      flex-direction: column;
+    }
+
+    #reject-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    #reject-modal-overlay.show {
+      display: block;
+      opacity: 1;
+      visibility: visible;
+    }
+
+    /* Form Styles */
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.5rem;
+      font-size: 14px;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: border-color 0.2s ease;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #1e40af;
+      box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+      margin-top: 2rem;
+      padding-top: 1rem;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 14px;
+    }
+
+    .btn-primary {
+      background: #1e40af;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #1e3a8a;
+    }
+
+    .btn-secondary {
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .btn-secondary:hover {
+      background: #d1d5db;
+    }
+
+    /* Detail Lists */
+    .detail-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .detail-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.25rem;
+    }
+
+    .detail-value {
+      font-size: 14px;
+      color: #111827;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .badge-pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge-approved {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .badge-rejected {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .badge-active {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .badge-inactive {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
   </style>
 
   <!-- Stats Section -->
@@ -463,7 +733,7 @@
     </div>
     <div class="stat-card accent-utilization">
       <div class="stat-icon">📊</div>
-      <div class="stat-value" id="claimAmount">KES 0</div>
+      <div class="stat-value" id="claimAmount">PHP 0</div>
       <div class="stat-subtitle">Total claims amount</div>
       <div class="stat-label">Cost exposure</div>
     </div>
@@ -576,10 +846,49 @@
         </table>
       </div>
     </div>
+
+    <!-- Side Modal for Viewing Claim Details -->
+    <div class="modal-overlay" id="modal-overlay"></div>
+    <div class="side-modal" id="side-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Claim Details</h3>
+          <button class="close-btn" onclick="closeSideModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="claim-details-content">Loading...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal for Rejecting Claims -->
+    <div id="reject-modal-overlay" class="modal-overlay"></div>
+    <div class="edit-form-modal" id="reject-claim-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Reject Claim</h3>
+          <button class="close-btn" onclick="closeRejectModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <form onsubmit="submitRejectClaim(event)">
+            <div class="form-group">
+              <label>Rejection Reason</label>
+              <textarea id="rejection-reason" placeholder="Provide reason for rejection" required></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="button" class="btn btn-secondary" onclick="closeRejectModal()">Cancel</button>
+              <button type="submit" class="btn btn-primary">Reject Claim</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
+  // Global variables
+  var currentClaimId = null;
   if (typeof allClaims === 'undefined') { var allClaims = []; }
   allClaims = [];
   if (typeof allHighUtilization === 'undefined') { var allHighUtilization = []; }
@@ -599,12 +908,12 @@
 
   function formatCurrency(amount) {
     const numAmount = parseFloat(amount || 0);
-    return 'KES ' + numAmount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return 'PHP ' + numAmount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   function formatDate(dateString) {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-KE', { year: 'numeric', month: 'short', day: 'numeric' });
+    return new Date(dateString).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
   // ============================================
@@ -723,7 +1032,7 @@
 
       return `
         <tr>
-          <td>
+          <td onclick="viewClaimDetails(${claim.id}, event)">
             <div class="employee-cell">
               <div class="employee-avatar">${initials}</div>
               <div class="employee-info">
@@ -732,19 +1041,19 @@
               </div>
             </div>
           </td>
-          <td>${claim.plan_name || 'N/A'}</td>
-          <td>
+          <td onclick="viewClaimDetails(${claim.id}, event)">${claim.plan_name || 'N/A'}</td>
+          <td onclick="viewClaimDetails(${claim.id}, event)">
             <span class="service-type-badge">${(claim.service_type || 'N/A').replace(/_/g, ' ')}</span>
           </td>
-          <td>${formatDate(claim.service_date)}</td>
-          <td class="claim-amount">${formatCurrency(claim.claim_amount)}</td>
-          <td>
-            <span class="badge badge-${claim.claim_status}">${claim.claim_status ? claim.claim_status.toUpperCase() : 'PENDING'}</span>
+          <td onclick="viewClaimDetails(${claim.id}, event)">${formatDate(claim.service_date)}</td>
+          <td class="claim-amount" onclick="viewClaimDetails(${claim.id}, event)">${formatCurrency(claim.claim_amount)}</td>
+          <td onclick="viewClaimDetails(${claim.id}, event)">
+            <span class="badge badge-${claim.claim_status || 'pending'}">${claim.claim_status ? claim.claim_status.toUpperCase() : 'PENDING'}</span>
           </td>
           <td>
             <div class="actions-cell">
-              <button class="btn-icon" onclick="viewClaimDetails(${claim.id})" title="View">👁️</button>
-              ${claim.claim_status === 'pending' ? `<button class="btn-icon" onclick="approveClaim(${claim.id})" title="Approve">✓</button>` : ''}
+              <button class="btn-icon" style="display: inline-flex !important;" onclick="viewClaimDetails(${claim.id}, event)" title="View Details">👁️</button>
+              ${claim.claim_status && claim.claim_status.toLowerCase() === 'pending' ? `<button class="btn-icon" style="display: inline-flex !important;" onclick="openRejectModal(${claim.id}, event)" title="Reject Claim">✕</button>` : ''}
             </div>
           </td>
         </tr>
@@ -886,35 +1195,217 @@
   // Action Functions
   // ============================================
 
-  function viewClaimDetails(claimId) {
-    alert('Claim details for ID: ' + claimId);
-  }
+  function viewClaimDetails(claimId, event) {
+    if (event) event.stopPropagation();
+    currentClaimId = claimId;
 
-  function approveClaim(claimId) {
-    if (confirm('Approve this claim?')) {
-      fetch('modules/hmo/api.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'approveClaim',
-          id: claimId
-        })
-      })
+    fetch(`modules/hmo/api.php?action=getClaimDetail&id=${claimId}`)
       .then(response => response.json())
       .then(data => {
-        if (data.success) {
-          alert('Claim approved successfully');
-          loadAllClaims();
+        if (data.success && data.data) {
+          populateSideModal(data.data);
+          
+          const overlay = document.getElementById('modal-overlay');
+          const modal = document.getElementById('side-modal');
+          
+          if (overlay) overlay.classList.add('active');
+          if (modal) modal.classList.add('active');
+        } else {
+          alert('Error loading claim details');
         }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Error loading claim details');
       });
-    }
   }
 
-  function viewEmployeeUtilization(employeeId) {
+  function populateSideModal(claim) {
+    const contentElement = document.getElementById('claim-details-content');
+    if (!contentElement) {
+      console.error('claim-details-content element not found');
+      return;
+    }
+
+    const content = `
+      <div class="detail-group">
+        <div class="detail-label">Claim Number</div>
+        <div class="detail-value">${claim.claim_number || claim.id || 'N/A'}</div>
+      </div>
+      <div class="detail-group">
+        <div class="detail-label">Employee</div>
+        <div class="detail-value">${claim.employee_name || 'N/A'}</div>
+      </div>
+      <div class="detail-group">
+        <div class="detail-label">Employee ID</div>
+        <div class="detail-value">${claim.employee_code || 'N/A'}</div>
+      </div>
+      <div class="detail-group">
+        <div class="detail-label">Plan</div>
+        <div class="detail-value">${claim.plan_name || 'N/A'}</div>
+      </div>
+      <div class="detail-group">
+        <div class="detail-label">Service Type</div>
+        <div class="detail-value">${(claim.service_type || 'N/A').replace(/_/g, ' ').toUpperCase()}</div>
+      </div>
+      <div class="detail-group">
+        <div class="detail-label">Date of Service</div>
+        <div class="detail-value">${formatDate(claim.service_date)}</div>
+      </div>
+      <div class="detail-group">
+        <div class="detail-label">Hospital/Provider</div>
+        <div class="detail-value">${claim.hospital_name || claim.provider_name || 'N/A'}</div>
+      </div>
+      <div class="detail-group">
+        <div class="detail-label">Doctor Name</div>
+        <div class="detail-value">${claim.doctor_name || 'N/A'}</div>
+      </div>
+      <div class="detail-group">
+        <div class="detail-label">Claim Amount</div>
+        <div class="detail-value" style="font-weight: 600; color: #1e40af;">${formatCurrency(claim.claim_amount)}</div>
+      </div>
+      <div class="detail-group">
+        <div class="detail-label">Approved Amount</div>
+        <div class="detail-value" style="font-weight: 600; color: #10b981;">${formatCurrency(claim.approved_amount)}</div>
+      </div>
+      <div class="detail-group">
+        <div class="detail-label">Status</div>
+        <div class="detail-value">
+          <span class="badge badge-${claim.claim_status || 'pending'}">${(claim.claim_status || 'pending').toUpperCase()}</span>
+        </div>
+      </div>
+      ${claim.rejection_reason ? `
+      <div class="detail-group">
+        <div class="detail-label">Rejection Reason</div>
+        <div class="detail-value">${claim.rejection_reason}</div>
+      </div>
+      ` : ''}
+      ${claim.notes ? `
+      <div class="detail-group">
+        <div class="detail-label">Notes</div>
+        <div class="detail-value">${claim.notes}</div>
+      </div>
+      ` : ''}
+      <div class="detail-group">
+        <div class="detail-label">Submitted Date</div>
+        <div class="detail-value">${formatDate(claim.created_at)}</div>
+      </div>
+      <div class="detail-group">
+        <div class="detail-label">Last Updated</div>
+        <div class="detail-value">${formatDate(claim.updated_at)}</div>
+      </div>
+      ${claim.claim_status && claim.claim_status.toLowerCase() === 'pending' ? `
+      <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+        <button class="btn btn-primary" style="flex: 1;" onclick="approveClaim(${claim.id}, event)">Approve Claim</button>
+        <button class="btn btn-secondary" style="flex: 1;" onclick="openRejectModal(${claim.id}, event)">Reject Claim</button>
+      </div>
+      ` : ''}
+    `;
+    
+    contentElement.innerHTML = content;
+  }
+
+  function approveClaim(claimId, event) {
+    if (event) event.stopPropagation();
+    
+    if (!confirm('Are you sure you want to approve this claim?')) {
+      return;
+    }
+
+    fetch(`modules/hmo/api.php?action=approveClaim&id=${claimId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Claim approved successfully');
+        closeSideModal();
+        loadAllClaims();
+      } else {
+        alert('Error: ' + (data.error || 'Failed to approve claim'));
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error approving claim');
+    });
+  }
+
+  function openRejectModal(claimId, event) {
+    if (event) event.stopPropagation();
+    currentClaimId = claimId;
+    
+    const reasonInput = document.getElementById('rejection-reason');
+    const overlay = document.getElementById('reject-modal-overlay');
+    const modal = document.getElementById('reject-claim-modal');
+    
+    if (reasonInput) reasonInput.value = '';
+    if (overlay) overlay.classList.add('show');
+    if (modal) modal.classList.add('show');
+  }
+
+  function closeRejectModal() {
+    const overlay = document.getElementById('reject-modal-overlay');
+    const modal = document.getElementById('reject-claim-modal');
+    
+    if (overlay) overlay.classList.remove('show');
+    if (modal) modal.classList.remove('show');
+  }
+
+  function submitRejectClaim(event) {
+    event.preventDefault();
+    
+    const reasonElement = document.getElementById('rejection-reason');
+    if (!reasonElement) {
+      alert('Error: Unable to find rejection reason field');
+      return;
+    }
+    
+    const reason = reasonElement.value.trim();
+    if (!reason) {
+      alert('Please provide a rejection reason');
+      return;
+    }
+
+    fetch(`modules/hmo/api.php?action=rejectClaim&id=${currentClaimId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: reason })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Claim rejected successfully');
+        closeRejectModal();
+        closeSideModal();
+        loadAllClaims();
+      } else {
+        alert('Error: ' + (data.error || 'Failed to reject claim'));
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error rejecting claim');
+    });
+  }
+
+  function closeSideModal() {
+    const overlay = document.getElementById('modal-overlay');
+    const modal = document.getElementById('side-modal');
+    
+    if (overlay) overlay.classList.remove('active');
+    if (modal) modal.classList.remove('active');
+  }
+
+  function viewEmployeeUtilization(employeeId, event) {
+    if (event) event.stopPropagation();
     alert('Employee utilization details for ID: ' + employeeId);
   }
 
-  function viewProviderDetails(providerId) {
+  function viewProviderDetails(providerId, event) {
+    if (event) event.stopPropagation();
     alert('Provider details for ID: ' + providerId);
   }
 
@@ -925,4 +1416,24 @@
   // Initialize on page load (runs immediately for dynamic loading)
   loadAllClaims();
   updateCounts();
+
+  // Modal event listeners - with null checks
+  window.modalOverlay = document.getElementById('modal-overlay');
+  window.rejectModalOverlay = document.getElementById('reject-modal-overlay');
+  
+  if (window.modalOverlay) {
+    window.modalOverlay.addEventListener('click', closeSideModal);
+  }
+  if (window.rejectModalOverlay) {
+    window.rejectModalOverlay.addEventListener('click', closeRejectModal);
+  }
+
+  window.onclick = function(event) {
+    if (event.target && event.target.id === 'modal-overlay') {
+      closeSideModal();
+    }
+    if (event.target && event.target.id === 'reject-modal-overlay') {
+      closeRejectModal();
+    }
+  };
 </script>

@@ -10,11 +10,144 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Load base configuration with URL constants
+require_once __DIR__ . '/config/BaseConfig.php';
+
 // Require login: redirect to login page if no session token
 if (empty($_SESSION['token'])) {
-    header('Location: index.php');
+    header('Location: ' . BASE_URL . 'index.php');
     exit;
 }
+
+// ===== CLEAN UP OLD URL PARAMETERS =====
+// If accessing dashboard with old ref/page parameters (legacy navigation), redirect to clean dashboard URL
+// This ensures the URL is always clean and dashboard always loads on refresh
+if (isset($_GET['ref']) || isset($_GET['page'])) {
+    // Old URL patterns with ref/page params - redirect to clean dashboard
+    header('Location: ' . BASE_URL . 'dashboard.php');
+    exit;
+}
+
+// ===== POST REQUEST HANDLING FOR MODULE ACTIONS =====
+// Handle form submissions from module views
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $ref = $_POST['ref'] ?? $_GET['ref'] ?? null;
+    $page = $_POST['page'] ?? $_GET['page'] ?? null;
+    $action = $_POST['action'] ?? $_GET['action'] ?? null;
+    $payroll_id = $_POST['payroll_id'] ?? $_GET['payroll_id'] ?? null;
+
+    // Route payroll module actions
+    if ($ref === 'payroll' && $page === 'payroll_processing_approval') {
+        // Validate required parameters
+        if (!$action) {
+            // No action specified, just redirect back to the page
+            header('Location: ' . BASE_URL . 'dashboard.php?ref=payroll&page=payroll_processing_approval');
+            exit;
+        }
+
+        // Route to PayrollRunController
+        require_once __DIR__ . '/modules/payroll/controllers/PayrollRunController.php';
+        
+        // Controller processes the action and updates session/database
+        // It does NOT redirect - it returns arrays with results
+        $controllerResult = PayrollRunController::route();
+        
+        // After controller processes the action, redirect back to the same page
+        // This ensures the view reloads with updated state and displays messages
+        $redirect_url = BASE_URL . 'dashboard.php?ref=payroll&page=payroll_processing_approval';
+        
+        // For approval actions, don't preserve preview state - redirect to list view
+        // This allows user to see updated status in the list
+        if (!in_array($action, ['preview'])) {
+            // After approval/rejection, clear preview state and show list
+            // User can then select another payroll if needed
+        }
+        
+        // Preserve payroll_id only for specific actions
+        if (in_array($action, ['preview', 'cancel_preview']) && $payroll_id) {
+            $redirect_url .= '&payroll_id=' . urlencode($payroll_id);
+            if ($action === 'preview') {
+                $redirect_url .= '&action=' . urlencode($action);
+            }
+        }
+        
+        header('Location: ' . $redirect_url);
+        exit;
+    }
+
+    // Route payslip management actions
+    if ($ref === 'payroll' && $page === 'payslip_management') {
+        // Validate required parameters
+        if (!$action) {
+            // No action specified, just redirect back to the page
+            header('Location: ' . BASE_URL . 'dashboard.php?ref=payroll&page=payslip_management');
+            exit;
+        }
+
+        // Route to PayslipController
+        require_once __DIR__ . '/modules/payroll/controllers/PayslipController.php';
+        
+        // Controller processes the action and updates session/database
+        $controllerResult = PayslipController::route();
+        
+        // After controller processes the action, redirect back to the same page
+        // This ensures the view reloads with updated state and displays messages
+        $redirect_url = BASE_URL . 'dashboard.php?ref=payroll&page=payslip_management';
+        
+        // Preserve payroll_id if provided
+        if ($payroll_id) {
+            $redirect_url .= '&payroll_id=' . urlencode($payroll_id);
+        }
+        
+        header('Location: ' . $redirect_url);
+        exit;
+    }
+    
+    // Add additional module action routes here as needed
+}
+
+// ===== GET REQUEST HANDLING FOR VIEW LOADING =====
+// Handle view file requests routed through dashboard.php (enforce single-entry routing)
+// Never allow direct access to /modules/.../views/ files
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && (isset($_GET['module']) || isset($_GET['view']))) {
+    // Extract module and view parameters
+    $module = $_GET['module'] ?? null;
+    $view = $_GET['view'] ?? null;
+    
+    // Validate module and view names (alphanumeric + underscore only)
+    $validModule = $module && preg_match('/^[a-z0-9_]+$/', $module);
+    $validView = $view && preg_match('/^[a-z0-9_]+$/', $view);
+    
+    if ($validModule && $validView) {
+        // Build the view file path
+        $viewFile = __DIR__ . "/modules/{$module}/views/{$view}.php";
+        
+        // Security: Check if file exists and is within modules directory
+        $realPath = realpath($viewFile);
+        $modulesPath = realpath(__DIR__ . '/modules');
+        
+        if ($realPath && $modulesPath && strpos($realPath, $modulesPath) === 0 && file_exists($realPath)) {
+            // Set security constant to prevent direct module access
+            define('SYSTEM_INIT', true);
+            
+            // Load and render the view file
+            ob_start();
+            include $realPath;
+            $content = ob_get_clean();
+            
+            // Return the content as HTML
+            header('Content-Type: text/html; charset=utf-8');
+            echo $content;
+            exit;
+        } else {
+            // Invalid path - security violation or file not found
+            http_response_code(404);
+            echo '<div class="card"><p>View not found or access denied</p></div>';
+            exit;
+        }
+    }
+}
+
 
 // User from session for display
 $name = isset($_SESSION['name']) ? trim($_SESSION['name']) : '';
@@ -133,6 +266,27 @@ $notifications = 3;
       letter-spacing: 0.5px;
       text-transform: uppercase;
       margin: 0;
+    }
+
+    .navbar-toggle-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      transition: background 0.3s ease;
+      margin-right: 0.5rem;
+      width: 40px;
+      height: 40px;
+    }
+
+    .navbar-toggle-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
     }
 
     .navbar-center {
@@ -739,6 +893,19 @@ $notifications = 3;
       margin-left: 240px;
     }
 
+    /* Sidebar Hidden State */
+    .sidebar.hidden {
+      transform: translateX(-100%);
+      opacity: 0;
+      visibility: hidden;
+      transition: all 300ms ease-in-out;
+    }
+
+    .main-container.sidebar-hidden {
+      margin-left: 0;
+      transition: margin-left 300ms ease-in-out;
+    }
+
     .page-header {
       padding: 1.5rem;
       border-bottom: 1px solid var(--border);
@@ -909,6 +1076,16 @@ $notifications = 3;
         width: 240px;
       }
 
+      .sidebar.hidden {
+        transform: translateX(-100%);
+        opacity: 0;
+        visibility: hidden;
+      }
+
+      .main-container.sidebar-hidden {
+        margin-left: 0;
+      }
+
       .toggle-btn {
         display: flex;
       }
@@ -993,6 +1170,9 @@ $notifications = 3;
   <!-- TOP NAVIGATION BAR -->
   <nav class="top-navbar">
     <div class="navbar-left">
+      <button class="navbar-toggle-btn" onclick="toggleSidebar()" title="Toggle Sidebar">
+        <i class='bx bx-menu'></i>
+      </button>
       <img src="logo.png" alt="Healthcare HR Logo" class="navbar-brand-icon" style="width: 40px; height: 40px; object-fit: contain;">
       <div class="navbar-brand-text">
         <p class="navbar-brand-name">Healthcare HR</p>
@@ -1097,22 +1277,30 @@ $notifications = 3;
           <div style="padding: 0.5rem 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 0.5rem 0;"></div>
           <span class="nav-section-title" style="margin-left: 1rem;">Master Data</span>
 
+          <?php if (canAccessMenuItem('hr_core', 'job_titles')): ?>
           <a href="#" onclick="loadHRCorePage(event, 'job_titles')" class="nav-subitem" data-page="job_titles">
             <i class='bx bx-briefcase'></i>
             <span>Job Titles</span>
           </a>
+          <?php endif; ?>
+          <?php if (canAccessMenuItem('hr_core', 'employment_types')): ?>
           <a href="#" onclick="loadHRCorePage(event, 'employment_types')" class="nav-subitem" data-page="employment_types">
             <i class='bx bx-id-card'></i>
             <span>Employment Types</span>
           </a>
+          <?php endif; ?>
+          <?php if (canAccessMenuItem('hr_core', 'locations')): ?>
           <a href="#" onclick="loadHRCorePage(event, 'locations')" class="nav-subitem" data-page="locations">
             <i class='bx bx-map'></i>
             <span>Locations</span>
           </a>
+          <?php endif; ?>
+          <?php if (canAccessMenuItem('hr_core', 'roles')): ?>
           <a href="#" onclick="loadHRCorePage(event, 'roles')" class="nav-subitem" data-page="roles">
             <i class='bx bx-shield'></i>
             <span>Roles & Permissions</span>
           </a>
+          <?php endif; ?>
           <a href="#" onclick="loadHRCorePage(event, 'shifts')" class="nav-subitem" data-page="shifts">
             <i class='bx bx-time'></i>
             <span>Shifts</span>
@@ -1133,10 +1321,12 @@ $notifications = 3;
           <i class='bx bx-chevron-down'></i>
         </div>
         <div class="nav-submenu">
+          <?php if (canAccessMenuItem('payroll', 'setup_configuration')): ?>
           <a href="#" onclick="loadPayrollPage(event, 'setup_configuration')" class="nav-subitem">
             <i class='bx bx-cog'></i>
             <span>Setup & Configuration</span>
           </a>
+          <?php endif; ?>
           <a href="#" onclick="loadPayrollPage(event, 'employee_payroll_profile')" class="nav-subitem">
             <i class='bx bx-user'></i>
             <span>Employee Payroll Profile</span>
@@ -1149,10 +1339,12 @@ $notifications = 3;
             <i class='bx bx-trending-down'></i>
             <span>Deductions Management</span>
           </a>
+          <?php if (canAccessMenuItem('payroll', 'tax_contributions_engine')): ?>
           <a href="#" onclick="loadPayrollPage(event, 'tax_contributions_engine')" class="nav-subitem">
             <i class='bx bx-calculator'></i>
             <span>Tax & Contributions Engine</span>
           </a>
+          <?php endif; ?>
           <a href="#" onclick="loadPayrollPage(event, 'payroll_processing_approval')" class="nav-subitem">
             <i class='bx bx-check-circle'></i>
             <span>Processing & Approval</span>
@@ -1161,22 +1353,28 @@ $notifications = 3;
             <i class='bx bx-file-blank'></i>
             <span>Payslip Management</span>
           </a>
+          <?php if (canAccessMenuItem('payroll', 'disbursement_bank_files')): ?>
           <a href="#" onclick="loadPayrollPage(event, 'disbursement_bank_files')" class="nav-subitem">
             <i class='bx bx-bank'></i>
             <span>Disbursement & Bank Files</span>
           </a>
+          <?php endif; ?>
+          <?php if (canAccessMenuItem('payroll', 'government_reports_compliance')): ?>
           <a href="#" onclick="loadPayrollPage(event, 'government_reports_compliance')" class="nav-subitem">
             <i class='bx bx-clipboard'></i>
             <span>Government Reports & Compliance</span>
           </a>
+          <?php endif; ?>
           <a href="#" onclick="loadPayrollPage(event, 'payroll_adjustments_special_pay')" class="nav-subitem">
             <i class='bx bx-adjust'></i>
             <span>Adjustments & Special Pay</span>
           </a>
+          <?php if (canAccessMenuItem('payroll', 'security_audit_trail')): ?>
           <a href="#" onclick="loadPayrollPage(event, 'security_audit_trail')" class="nav-subitem">
             <i class='bx bx-lock'></i>
             <span>Security & Audit Trail</span>
           </a>
+          <?php endif; ?>
         </div>
       </div>
 
@@ -1208,18 +1406,24 @@ $notifications = 3;
             <i class='bx bx-star'></i>
             <span>Incentives & Bonus</span>
           </a>
+          <?php if (canAccessMenuItem('compensation', 'pay_bonds_contracts')): ?>
           <a href="#" onclick="loadCompensationPage(event, 'pay_bonds_contracts')" class="nav-subitem">
             <i class='bx bx-file'></i>
             <span>Pay Bonds & Contracts</span>
           </a>
+          <?php endif; ?>
+          <?php if (canAccessMenuItem('compensation', 'compensation_approval')): ?>
           <a href="#" onclick="loadCompensationPage(event, 'compensation_approval')" class="nav-subitem">
             <i class='bx bx-check-circle'></i>
             <span>Approval Workflow</span>
           </a>
+          <?php endif; ?>
+          <?php if (canAccessMenuItem('compensation', 'compensation_versioning')): ?>
           <a href="#" onclick="loadCompensationPage(event, 'compensation_versioning')" class="nav-subitem">
             <i class='bx bx-history'></i>
             <span>Version History</span>
           </a>
+          <?php endif; ?>
         </div>
       </div>
 
@@ -1252,10 +1456,12 @@ $notifications = 3;
             <i class='bx bx-receipt'></i>
             <span>Claims & Utilization</span>
           </a>
+          <?php if (canAccessMenuItem('hmo', 'billing')): ?>
           <a href="#" onclick="loadHMOPage(event, 'billing')" class="nav-subitem">
             <i class='bx bx-money'></i>
             <span>Billing & Reconciliation</span>
           </a>
+          <?php endif; ?>
           <a href="#" onclick="loadHMOPage(event, 'lifeevents')" class="nav-subitem">
             <i class='bx bx-calendar'></i>
             <span>Eligibility & Life Events</span>
@@ -1435,14 +1641,15 @@ $notifications = 3;
     <p>Loading...</p>
   </div>
 
-  </script>
-
   <script>
     // ===== SIDEBAR & NAVIGATION =====
     function toggleSidebar() {
-      // Sidebar is now fixed at 240px, no collapse
-      // This function kept for backward compatibility
       event.preventDefault();
+      const sidebar = document.getElementById('sidebar');
+      const mainContainer = document.getElementById('main-container');
+      
+      sidebar.classList.toggle('hidden');
+      mainContainer.classList.toggle('sidebar-hidden');
     }
 
     function toggleNavGroup(headerElement) {
@@ -1557,10 +1764,14 @@ $notifications = 3;
       // Show loading state
       if (loader) loader.style.display = 'block';
       
-      // Fetch module data
-      const viewPath = `modules/${module}/views/${page}.php`;
+      // Fetch module data through dashboard.php (enforce single-entry routing)
+      // Never fetch view files directly - always route through dashboard.php
+      const viewPath = `dashboard.php?module=${module}&view=${page}`;
+      const queryString = document.location.search ? document.location.search.substring(1) : '';
+      // Append additional parameters (e.g. employee_id, payroll_id) if present
+      const viewUrl = queryString ? viewPath + '&' + queryString.replace(/^[^&]+=|&module=[^&]*|&view=[^&]*/g, '').replace(/^\&/, '') : viewPath;
       
-      fetch(viewPath)
+      fetch(viewUrl)
         .then(response => {
           if (!response.ok) throw new Error(`HTTP ${response.status}`);
           return response.text();
@@ -1743,8 +1954,30 @@ $notifications = 3;
       location.reload();
     }
 
-    // ===== GLOBAL SEARCH FUNCTIONALITY =====
     document.addEventListener('DOMContentLoaded', function() {
+      // Auto-load module if ref and page parameters are present
+      const urlParams = new URLSearchParams(window.location.search);
+      const ref = urlParams.get('ref');
+      const page = urlParams.get('page');
+      
+      if (ref && page) {
+        // Map ref to loader function
+        const refLoaders = {
+          'hr_core': () => loadHRCorePage(null, page),
+          'payroll': () => loadPayrollPage(null, page),
+          'compensation': () => loadCompensationPage(null, page),
+          'hmo': () => loadHMOPage(null, page),
+          'analytics': () => loadAnalyticsPage(null, page)
+        };
+        
+        if (refLoaders[ref]) {
+          // Delay slightly to ensure DOM is ready
+          setTimeout(() => {
+            refLoaders[ref]();
+          }, 100);
+        }
+      }
+      
       const globalSearch = document.getElementById('global-search');
       if (globalSearch) {
         globalSearch.addEventListener('keyup', function(e) {
@@ -1974,6 +2207,8 @@ $notifications = 3;
 
     // Load stats when page loads
     document.addEventListener('DOMContentLoaded', function() {
+      // Always load dashboard stats - don't auto-load modules based on URL parameters
+      // Modules are only loaded when user explicitly clicks navigation items
       loadDashboardStats();
       // Refresh stats every 5 minutes
       setInterval(loadDashboardStats, 5 * 60 * 1000);

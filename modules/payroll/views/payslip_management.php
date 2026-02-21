@@ -2,11 +2,22 @@
 /**
  * Payslip Management Module
  * Generate and manage employee payslips with employee portal access
+ * 
+ * SECURITY: This view must only be accessed through dashboard.php
+ * Direct access via URL is blocked by SYSTEM_INIT check below
  */
+
+// Enforce single-entry routing: this file should only be loaded through dashboard.php
+if (!defined('SYSTEM_INIT')) {
+    http_response_code(403);
+    die('No direct access allowed. Please use dashboard.php');
+}
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../../../config/Database.php';
+require_once __DIR__ . '/../../../config/BaseConfig.php';
 require_once __DIR__ . '/../models/EmployeeSalary.php';
 require_once __DIR__ . '/../models/PayrollRunEmployee.php';
 
@@ -27,6 +38,7 @@ $payslips = $payrollEmployee->query("SELECT pre.*, pr.period_name, pr.pay_date, 
     margin: 0 auto;
     padding: 2rem;
   }
+(...existing code...)
 
   .section {
     background: white;
@@ -586,21 +598,61 @@ $payslips = $payrollEmployee->query("SELECT pre.*, pr.period_name, pr.pay_date, 
     </div>
   </div>
 
+  <?php
+  // Display status messages
+  $message = $_SESSION['payslip_message'] ?? null;
+  $payroll_id_msg = $_SESSION['payslip_message_payroll_id'] ?? null;
+  $payroll_id_param = $_GET['payroll_id'] ?? null;
+  
+  if ($message && ($payroll_id_msg == $payroll_id_param || !$payroll_id_param)) {
+    $bg_color = match($message['type']) {
+      'success' => '#d1fae5',
+      'error' => '#fee2e2',
+      'warning' => '#fef3c7',
+      default => '#e0e7ff'
+    };
+    $text_color = match($message['type']) {
+      'success' => '#065f46',
+      'error' => '#7f1d1d',
+      'warning' => '#92400e',
+      default => '#3730a3'
+    };
+    $icon = match($message['type']) {
+      'success' => '✓',
+      'error' => '✕',
+      'warning' => '⚠',
+      default => 'ℹ'
+    };
+    
+    echo "<div style=\"background: {$bg_color}; color: {$text_color}; padding: 1rem; margin: 1rem 0; border-radius: 4px; border-left: 4px solid {$text_color}; display: flex; align-items: flex-start; gap: 0.75rem; font-size: 14px;\">";
+    echo "<div style=\"flex-shrink: 0; font-weight: bold; font-size: 18px; margin-top: -2px;\">{$icon}</div>";
+    echo "<div style=\"flex: 1;\">{$message['text']}</div>";
+    echo "</div>";
+    
+    unset($_SESSION['payslip_message']);
+    unset($_SESSION['payslip_message_payroll_id']);
+  }
+  ?>
+
   <!-- Generate Payslips -->
   <div class="section">
     <h3 class="section-header">🚀 Generate Payslips</h3>
 
-    <form method="POST" action="../payslip_management_handler.php">
+    <form method="POST" action="<?= BASE_URL ?>dashboard.php">
+      <input type="hidden" name="module" value="payroll">
+      <input type="hidden" name="view" value="payslip_management">
+      <input type="hidden" name="payroll_id" id="payroll_id_generate">
+      
       <div class="form-section">
         <h4>Select Payroll Period</h4>
         <div class="form-row">
           <div class="form-group">
             <label>Payroll Period <span style="color: #ef4444;">*</span></label>
-            <select name="payroll_period" required>
+            <select name="payroll_id" id="payroll_period_select" required onchange="document.getElementById('payroll_id_generate').value = this.value;">
               <option value="">-- Select Period --</option>
-              <option value="PAYROLL-2026-02-01" selected>February 2026 Period 1 (Feb 1-15)</option>
-              <option value="PAYROLL-2026-01-16">January 2026 Period 2 (Jan 16-31)</option>
-              <option value="PAYROLL-2026-01-01">January 2026 Period 1 (Jan 1-15)</option>
+              <option value="1" selected>February 2026 Period 1 (Feb 1-15)</option>
+              <option value="2">January 2026 Period 2 (Jan 16-31)</option>
+              <option value="3">January 2026 Period 1 (Jan 1-15)</option>
             </select>
             <small>Select the approved payroll to generate payslips</small>
           </div>
@@ -617,8 +669,8 @@ $payslips = $payrollEmployee->query("SELECT pre.*, pr.period_name, pr.pay_date, 
         </div>
 
         <div class="btn-group">
-          <button type="submit" name="action" value="generate_payslips" class="btn btn-primary">Generate All Payslips</button>
-          <button type="submit" name="action" value="send_email" class="btn btn-success">Generate & Send via Email</button>
+          <button type="submit" name="action" value="generate_all" class="btn btn-primary">Generate All Payslips</button>
+          <button type="submit" name="action" value="generate_and_email" class="btn btn-success">Generate & Send via Email</button>
         </div>
       </div>
     </form>
@@ -972,7 +1024,10 @@ $payslips = $payrollEmployee->query("SELECT pre.*, pr.period_name, pr.pay_date, 
   <div class="section">
     <h3 class="section-header">📧 Email Distribution Settings</h3>
 
-    <form method="POST" action="../payslip_management_handler.php">
+    <form method="POST" action="<?= BASE_URL ?>dashboard.php">
+      <input type="hidden" name="module" value="payroll">
+      <input type="hidden" name="view" value="payslip_management">
+      
       <div class="form-section">
         <h4>Email Configuration</h4>
         <div class="form-row full">
@@ -986,20 +1041,18 @@ $payslips = $payrollEmployee->query("SELECT pre.*, pr.period_name, pr.pay_date, 
         <div class="form-row">
           <div class="form-group">
             <label>Email From Address</label>
-            <div style="padding: 0.75rem; background: white; border: 1px solid #d1d5db; border-radius: 4px; color: #6b7280; font-size: 13px;">
-              payroll@healthcare.com
-            </div>
+            <input type="text" name="email_from" value="payroll@healthcare.com" style="background: #f3f4f6;">
           </div>
           <div class="form-group">
             <label>Email Subject</label>
-            <input type="text" value="Your Payslip for [PERIOD]" readonly style="background: #f3f4f6;">
+            <input type="text" name="email_subject" value="Your Payslip for [PERIOD]" style="background: #f3f4f6;">
           </div>
         </div>
 
         <div class="form-row full">
           <div class="form-group">
-            <label>Email Body Template Preview</label>
-            <textarea readonly style="min-height: 150px; background: #f3f4f6; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; font-family: 'Courier New', monospace;">Dear [EMPLOYEE_NAME],
+            <label>Email Body Template</label>
+            <textarea name="email_template" style="min-height: 150px; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; font-family: 'Courier New', monospace;">Dear [EMPLOYEE_NAME],
 
 Your payslip for [PAY_PERIOD] has been generated and is ready for download.
 
@@ -1023,8 +1076,8 @@ Payroll Department</textarea>
         </div>
 
         <div class="btn-group">
-          <button type="submit" class="btn btn-primary">Update Email Settings</button>
-          <button type="reset" class="btn btn-secondary">Reset</button>
+          <button type="submit" name="action" value="update_email_settings" class="btn btn-primary">Update Email Settings</button>
+          <button type="submit" name="action" value="reset_email_settings" class="btn btn-secondary">Reset</button>
         </div>
       </div>
     </form>

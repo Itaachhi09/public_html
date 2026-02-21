@@ -8,7 +8,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-if (empty($_SESSION['token'])) {
+// Check for AJAX requests - don't redirect for XMLHttpRequest
+if (empty($_SESSION['token']) && (!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || $_SERVER['HTTP_X_REQUESTED_WITH'] !== 'XMLHttpRequest')) {
     header('Location: ../../../index.php');
     exit;
 }
@@ -271,11 +272,12 @@ if (empty($_SESSION['token'])) {
     </div>
 
     <script>
-        let charts = {};
+        // Use global charts cache to avoid redeclaration conflicts when injected into dashboard
+        window.chartsHMO = window.chartsHMO || {};
 
         async function loadData() {
             try {
-                const response = await fetch('../api.php?action=getHMOInsights');
+                const response = await fetch('/public_html/modules/analytics/api.php?action=getHMOInsights');
                 const result = await response.json();
 
                 if (result.success) {
@@ -305,10 +307,10 @@ if (empty($_SESSION['token'])) {
             const byProvider = data.enrollment_by_provider || [];
 
             // Provider Market Share
-            if (charts.provider) charts.provider.destroy();
+            if (window.chartsHMO.provider) window.chartsHMO.provider.destroy();
             
             const ctx1 = document.getElementById('providerChart').getContext('2d');
-            charts.provider = new Chart(ctx1, {
+            window.chartsHMO.provider = new Chart(ctx1, {
                 type: 'doughnut',
                 data: {
                     labels: providers.map(p => p.provider_name || 'N/A'),
@@ -324,10 +326,10 @@ if (empty($_SESSION['token'])) {
             });
 
             // Enrollments by Provider
-            if (charts.enrollment) charts.enrollment.destroy();
+            if (window.chartsHMO.enrollment) window.chartsHMO.enrollment.destroy();
             
             const ctx2 = document.getElementById('enrollmentChart').getContext('2d');
-            charts.enrollment = new Chart(ctx2, {
+            window.chartsHMO.enrollment = new Chart(ctx2, {
                 type: 'bar',
                 data: {
                     labels: providers.map(p => p.provider_name || 'N/A'),
@@ -376,7 +378,10 @@ if (empty($_SESSION['token'])) {
                 const result = await response.json();
                 
                 if (result.success) {
-                    window.location.href = result.downloadUrl;
+                    const a = document.createElement('a');
+                    a.href = result.downloadUrl;
+                    a.download = 'report.csv';
+                    a.click();
                 }
             } catch (error) {
                 alert('Error exporting report: ' + error.message);

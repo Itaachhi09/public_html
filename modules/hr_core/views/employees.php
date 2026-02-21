@@ -125,11 +125,12 @@
       <!-- Employee Table Section -->
       <section class="table-section">
         <div class="card">
-          <div class="card-header">
+          <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
             <div>
               <h3 class="card-title">Employee Directory</h3>
               <p class="card-subtitle">Showing <strong id="totalCount">0</strong> of <strong id="grandTotal">0</strong> employees</p>
             </div>
+            <button class="btn btn-outline" onclick="window.openArchiveModal()" title="View archived employees" style="white-space: nowrap; position: relative;">📦 Archive <span id="archiveCount" style="display: inline-block; background: var(--danger); color: white; border-radius: 50%; width: 20px; height: 20px; line-height: 20px; text-align: center; font-size: 12px; font-weight: 600; margin-left: 0.5rem;">0</span></button>
           </div>
 
           <!-- Table Container with Fixed Header -->
@@ -532,22 +533,22 @@
                   <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
                     <div>
                       <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">First Name</label>
-                      <input type="text" value="${emp.first_name || ''}" placeholder="First name" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+                      <input type="text" name="first_name" value="${emp.first_name || ''}" placeholder="First name" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
                     </div>
                     <div>
                       <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Last Name</label>
-                      <input type="text" value="${emp.last_name || ''}" placeholder="Last name" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+                      <input type="text" name="last_name" value="${emp.last_name || ''}" placeholder="Last name" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
                     </div>
                     <div>
                       <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Email</label>
-                      <input type="email" value="${emp.email || ''}" placeholder="Email" style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+                      <input type="email" name="email" value="${emp.email || ''}" placeholder="Email" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
                     </div>
                     <div>
                       <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Status</label>
-                      <select style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
-                        <option ${emp.employment_status === 'Active' ? 'selected' : ''}>Active</option>
-                        <option ${emp.employment_status === 'On Leave' ? 'selected' : ''}>On Leave</option>
-                        <option ${emp.employment_status === 'Resigned' ? 'selected' : ''}>Resigned</option>
+                      <select name="employment_status" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px;">
+                        <option value="Active" ${emp.employment_status === 'Active' ? 'selected' : ''}>Active</option>
+                        <option value="On Leave" ${emp.employment_status === 'On Leave' ? 'selected' : ''}>On Leave</option>
+                        <option value="Resigned" ${emp.employment_status === 'Resigned' ? 'selected' : ''}>Resigned</option>
                       </select>
                     </div>
                   </div>
@@ -566,13 +567,12 @@
       window.submitEditEmployee = function(event, id) {
         event.preventDefault();
         const form = event.target;
-        const inputs = form.querySelectorAll('input, select');
         const data = {
           id: id,
-          first_name: inputs[0].value,
-          last_name: inputs[1].value,
-          email: inputs[2].value,
-          employment_status: inputs[3].value
+          first_name: form.querySelector('[name="first_name"]').value,
+          last_name: form.querySelector('[name="last_name"]').value,
+          email: form.querySelector('[name="email"]').value,
+          employment_status: form.querySelector('[name="employment_status"]').value
         };
 
         fetch(`modules/hr_core/api.php?action=updateEmployee`, {
@@ -590,7 +590,10 @@
               alert('Error: ' + (result.message || 'Failed to update employee'));
             }
           })
-          .catch(error => console.error('Error:', error));
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Error updating employee: ' + error.message);
+          });
       };
 
       window.deleteEmployee = function(id) {
@@ -632,12 +635,12 @@
           modal.id = 'actionModal';
           modal.innerHTML = `
             <div style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem;" onclick="if(event.target === this) window.closeModal()">
-              <div style="background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); max-width: 500px; width: 100%; max-height: 90vh; overflow-y: auto;">
-                <div style="padding: 2rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white;">
+              <div style="background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); max-width: 90%; width: 1000px; max-height: 85vh; overflow-y: auto; display: flex; flex-direction: column;">
+                <div style="padding: 2rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: white; flex-shrink: 0;">
                   <h2 id="modalTitle" style="font-size: 20px; font-weight: 700; color: var(--text-dark); margin: 0;"></h2>
                   <button onclick="window.closeModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-light);">✕</button>
                 </div>
-                <div id="modalContent" style="padding: 2rem;"></div>
+                <div id="modalContent" style="padding: 2rem; flex: 1; overflow-y: auto;"></div>
               </div>
             </div>
           `;
@@ -851,8 +854,165 @@
         });
       }
 
+      window.updateArchiveCount = function() {
+        fetch(`modules/hr_core/api.php?action=getArchivedEmployees`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              const count = (data.data || []).length;
+              const countBadge = document.getElementById('archiveCount');
+              if (countBadge) {
+                countBadge.textContent = count;
+                countBadge.style.display = count > 0 ? 'inline-block' : 'none';
+              }
+            }
+          })
+          .catch(error => console.error('Error updating archive count:', error));
+      };
+
+      window.openArchiveModal = function() {
+        fetch(`modules/hr_core/api.php?action=getArchivedEmployees`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              const employees = data.data || [];
+              let content = '';
+
+              if (employees.length === 0) {
+                content = `
+                  <div style="text-align: center; padding: 2rem;">
+                    <div style="font-size: 48px; margin-bottom: 1rem;">📦</div>
+                    <h3 style="font-size: 18px; color: var(--text-dark); margin-bottom: 0.5rem;">No Archived Employees</h3>
+                    <p style="color: var(--text-light);">No deleted or archived employees at this time.</p>
+                  </div>
+                `;
+              } else {
+                content = `
+                  <div style="max-height: 600px; overflow-y: auto;">
+                    <table class="table table-striped" style="width: 100%;">
+                      <thead class="table-head-fixed">
+                        <tr>
+                          <th style="width: 15%; text-align: left;">Code</th>
+                          <th style="width: 25%; text-align: left;">Name</th>
+                          <th style="width: 25%; text-align: left;">Email</th>
+                          <th style="width: 20%; text-align: left;">Department</th>
+                          <th style="width: 15%; text-align: center;">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${employees.map(emp => `
+                          <tr>
+                            <td><code style="background: var(--bg-light); padding: 2px 6px; border-radius: 3px; font-size: 12px;">${emp.code || emp.employee_code || ''}</code></td>
+                            <td style="font-weight: 500;">${(emp.first_name || '') + ' ' + (emp.last_name || '')}</td>
+                            <td style="font-size: 14px; color: var(--text-light);">${emp.email || '-'}</td>
+                            <td>${emp.department || '-'}</td>
+                            <td style="text-align: center; display: flex; justify-content: center; gap: 0.5rem;">
+                              <button class="btn btn-sm" style="background: var(--success); color: white; padding: 0.4rem 0.8rem; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" onclick="window.restoreEmployee(${emp.id})">↺ Restore</button>
+                              <button class="btn btn-sm" style="background: var(--danger); color: white; padding: 0.4rem 0.8rem; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;" onclick="window.permanentlyDeleteEmployee(${emp.id})">🗑 Delete</button>
+                            </td>
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                `;
+              }
+
+              window.showModal('Archived Employees', content, 'archive');
+            } else {
+              alert('Error loading archived employees: ' + (data.message || 'Unknown error'));
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading archived employees: ' + error.message);
+          });
+      };
+
+      window.restoreEmployee = function(id) {
+        if (!confirm('Restore this employee?')) return;
+
+        fetch(`modules/hr_core/api.php?action=restoreEmployee&id=${id}`, {
+          method: 'POST'
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('Employee restored successfully');
+              window.openArchiveModal();
+              window.loadEmployees();
+              window.updateArchiveCount();
+            } else {
+              alert('Error: ' + (data.message || 'Failed to restore employee'));
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Error restoring employee: ' + error.message);
+          });
+      };
+
+      window.permanentlyDeleteEmployee = function(id) {
+        const content = `
+          <div style="text-align: center; padding: 2rem;">
+            <div style="font-size: 48px; margin-bottom: 1rem;">⚠️</div>
+            <h3 style="font-size: 18px; color: var(--text-dark); margin-bottom: 0.5rem;">Permanently Delete Employee?</h3>
+            <p style="color: var(--text-light); margin-bottom: 2rem;">This action cannot be undone. The employee record will be permanently removed from the database. <strong>Admin authentication required.</strong></p>
+            
+            <form id="permanentDeleteForm" onsubmit="window.confirmPermanentDelete(event, ${id})" style="margin-bottom: 1.5rem;">
+              <div style="margin-bottom: 1.5rem; text-align: left; max-width: 300px; margin-left: auto; margin-right: auto;">
+                <label style="display: block; font-size: 12px; color: var(--text-dark); margin-bottom: 0.5rem; font-weight: 600;">Enter Admin Password</label>
+                <input type="password" id="adminPassword" name="password" placeholder="Admin password" required style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+              </div>
+              
+              <div style="display: flex; gap: 1rem; justify-content: center;">
+                <button type="button" class="btn btn-outline" onclick="window.closeModal()">Cancel</button>
+                <button type="submit" class="btn btn-danger" style="background: var(--danger); color: white; border: none;">🗑 Permanently Delete</button>
+              </div>
+            </form>
+          </div>
+        `;
+        window.showModal('Permanent Delete Employee', content, 'delete');
+        setTimeout(() => {
+          const passwordInput = document.getElementById('adminPassword');
+          if (passwordInput) passwordInput.focus();
+        }, 100);
+      };
+
+      window.confirmPermanentDelete = function(event, id) {
+        event.preventDefault();
+        const password = document.getElementById('adminPassword').value;
+
+        if (!password) {
+          alert('Please enter the admin password');
+          return;
+        }
+
+        fetch(`modules/hr_core/api.php?action=permanentlyDeleteEmployee&id=${id}`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password: password })
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('Employee permanently deleted');
+              window.closeModal();
+              window.openArchiveModal();
+              window.updateArchiveCount();
+            } else {
+              alert('Error: ' + (data.message || 'Failed to delete employee'));
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting employee: ' + error.message);
+          });
+      };
+
       setTimeout(attachEventListeners, 100);
       window.loadEmployees();
+      window.updateArchiveCount();
     })();
   </script>
 

@@ -466,9 +466,15 @@
       background-color: rgba(0, 0, 0, 0.5);
     }
 
+    .modal.show,
+    .modal.active {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
     .modal-content {
       background-color: white;
-      margin: 5% auto;
       padding: 2rem;
       border-radius: 8px;
       width: 90%;
@@ -496,6 +502,39 @@
 
     .form-group {
       margin-bottom: 1.5rem;
+    }
+
+    /* Action Button Styling */
+    .action-tooltip {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .action-tooltip .tooltip-text {
+      visibility: hidden;
+      width: 60px;
+      background-color: #111827;
+      color: #fff;
+      text-align: center;
+      padding: 0.375rem 0.5rem;
+      border-radius: 4px;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      margin-left: -30px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-size: 11px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+
+    .action-tooltip:hover .tooltip-text {
+      visibility: visible;
+      opacity: 1;
     }
 
     .form-label {
@@ -979,11 +1018,11 @@
         <div class="section-content">
           <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem;">
             <span>Employee Premium:</span>
-            <strong id="modal-employee-premium">KES 0</strong>
+            <strong id="modal-employee-premium">PHP 0</strong>
           </div>
           <div style="display: flex; justify-content: space-between; border-top: 1px solid #e5e7eb; padding-top: 0.5rem;">
             <span>Monthly Cost:</span>
-            <strong id="modal-total-premium">KES 0</strong>
+            <strong id="modal-total-premium">PHP 0</strong>
           </div>
         </div>
       </div>
@@ -1230,7 +1269,7 @@
    */
   function formatCurrency(amount) {
     const numAmount = parseFloat(amount || 0);
-    return 'KES ' + numAmount.toLocaleString('en-KE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return 'PHP ' + numAmount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   /**
@@ -1238,7 +1277,7 @@
    */
   function formatDate(dateString) {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-KE', { year: 'numeric', month: 'short', day: 'numeric' });
+    return new Date(dateString).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' });
   }
 
   // ============================================
@@ -1419,6 +1458,27 @@
       const initials = getInitials(firstName, lastName);
       const avatar = createAvatar(initials);
       
+      // Generate action buttons based on enrollment status
+      let actionButtons = '';
+      if (status === 'suspended') {
+        actionButtons = `
+          <button class="btn-icon" onclick="viewEnrollment(${enroll.id}, event)" title="View Details">👁️</button>
+          <button class="btn-icon" onclick="unsuspendEnrollment(${enroll.id}, event)" title="Restore">🔄</button>
+          <button class="btn-icon" onclick="terminateEnrollment(${enroll.id}, event)" title="Terminate">✕</button>
+        `;
+      } else if (status === 'terminated' || status === 'expired') {
+        actionButtons = `
+          <button class="btn-icon" onclick="viewEnrollment(${enroll.id}, event)" title="View Details">👁️</button>
+        `;
+      } else {
+        // active, pending, waiting
+        actionButtons = `
+          <button class="btn-icon" onclick="viewEnrollment(${enroll.id}, event)" title="View Details">👁️</button>
+          <button class="btn-icon" onclick="suspendEnrollment(${enroll.id}, event)" title="Suspend">⏸</button>
+          <button class="btn-icon" onclick="terminateEnrollment(${enroll.id}, event)" title="Terminate">✕</button>
+        `;
+      }
+      
       return `
         <tr onclick="openSideModal(${enroll.id}, event)">
           <td>
@@ -1450,9 +1510,7 @@
           </td>
           <td>
             <div class="actions-cell">
-              <button class="btn-icon" onclick="viewEnrollment(${enroll.id}, event)" title="View Details">👁️</button>
-              <button class="btn-icon" onclick="suspendEnrollment(${enroll.id}, event)" title="Suspend">⏸</button>
-              <button class="btn-icon" onclick="terminateEnrollment(${enroll.id}, event)" title="Terminate">✕</button>
+              ${actionButtons}
             </div>
           </td>
         </tr>
@@ -1547,26 +1605,27 @@
     
     if (!currentEnrollmentId) return;
     
-    if (confirm('Suspend this enrollment?')) {
-      fetch('modules/hmo/api.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'suspendEnrollment', 
-          id: currentEnrollmentId 
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          alert('Enrollment suspended successfully');
-          closeSideModal();
-          loadTabData(currentTab);
-        } else {
-          alert('Error: ' + (data.error || 'Failed to suspend enrollment'));
-        }
-      });
-    }
+    if (!confirm('Are you sure you want to suspend this enrollment?')) return;
+    
+    fetch('modules/hmo/api.php?action=suspendEnrollment&id=' + currentEnrollmentId, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Enrollment suspended successfully');
+        closeSideModal();
+        loadTabData(currentTab);
+      } else {
+        alert('Error: ' + (data.error || 'Failed to suspend enrollment'));
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error suspending enrollment');
+    });
   }
 
   function terminateEnrollment(enrollmentId = null, event) {
@@ -1575,26 +1634,57 @@
     
     if (!currentEnrollmentId) return;
     
-    if (confirm('Terminate this enrollment? This action cannot be undone.')) {
-      fetch('modules/hmo/api.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          action: 'terminateEnrollment', 
-          id: currentEnrollmentId 
-        })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          alert('Enrollment terminated successfully');
-          closeSideModal();
-          loadTabData(currentTab);
-        } else {
-          alert('Error: ' + (data.error || 'Failed to terminate enrollment'));
-        }
-      });
-    }
+    if (!confirm('Are you sure? This will terminate the enrollment.')) return;
+    
+    fetch('modules/hmo/api.php?action=terminateEnrollment&id=' + currentEnrollmentId, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Enrollment terminated successfully');
+        closeSideModal();
+        loadTabData(currentTab);
+      } else {
+        alert('Error: ' + (data.error || 'Failed to terminate enrollment'));
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error terminating enrollment');
+    });
+  }
+
+  function unsuspendEnrollment(enrollmentId = null, event) {
+    if (event) event.stopPropagation();
+    if (enrollmentId) currentEnrollmentId = enrollmentId;
+    
+    if (!currentEnrollmentId) return;
+    
+    if (!confirm('Restore this suspended enrollment to active?')) return;
+    
+    fetch('modules/hmo/api.php?action=unsuspendEnrollment&id=' + currentEnrollmentId, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Enrollment restored successfully');
+        closeSideModal();
+        loadTabData(currentTab);
+        updateCounts();
+      } else {
+        alert('Error: ' + (data.error || 'Failed to restore enrollment'));
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error restoring enrollment');
+    });
   }
 
   function changePlan() {
@@ -1608,12 +1698,12 @@
         select.innerHTML = '<option value="">Select a plan...</option>';
         if (data.success && data.data) {
           data.data.forEach(plan => {
-            select.innerHTML += `<option value="${plan.id}">${plan.plan_name} (${formatCurrency(plan.premium_amount)})</option>`;
+            select.innerHTML += `<option value="${plan.id}">${plan.plan_name} (${formatCurrency(plan.annual_premium_per_employee || plan.premium_amount || 0)})</option>`;
           });
         }
       });
     
-    document.getElementById('planChangeModal').style.display = 'block';
+    openModal('planChangeModal');
   }
 
   function submitPlanChange() {
@@ -1630,12 +1720,10 @@
       return;
     }
 
-    fetch('modules/hmo/api.php', {
+    fetch('modules/hmo/api.php?action=requestPlanChange&enrollment_id=' + currentEnrollmentId, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: 'requestPlanChange',
-        enrollment_id: currentEnrollmentId,
         new_plan_id: newPlanId,
         effective_date: effectiveDate,
         reason: reason
@@ -1650,11 +1738,15 @@
       } else {
         alert('Error: ' + (data.error || 'Failed to request plan change'));
       }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error requesting plan change');
     });
   }
 
   function openAddEnrollmentModal() {
-    document.getElementById('newEnrollmentModal').style.display = 'block';
+    openModal('newEnrollmentModal');
     // Load providers
     fetch('modules/hmo/api.php?action=getProviders')
       .then(response => response.json())
@@ -1670,11 +1762,22 @@
   }
 
   function openAddDependentModal() {
-    document.getElementById('addDependentModal').style.display = 'block';
+    openModal('addDependentModal');
   }
 
   function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
+    const modal = document.getElementById(modalId);
+    if (modal) {
+      modal.classList.remove('show');
+      modal.classList.remove('active');
+    }
+  }
+
+  function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+      modal.classList.add('show');
+    }
   }
 
   function submitAddDependent() {
@@ -1687,12 +1790,10 @@
       return;
     }
 
-    fetch('modules/hmo/api.php', {
+    fetch('modules/hmo/api.php?action=addDependent&enrollment_id=' + currentEnrollmentId, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: 'addDependent',
-        enrollment_id: currentEnrollmentId,
         name: name,
         relationship: relationship,
         date_of_birth: dob
@@ -1704,7 +1805,13 @@
         alert('Dependent added successfully');
         closeModal('addDependentModal');
         loadTabData(currentTab);
+      } else {
+        alert('Error: ' + (data.error || 'Failed to add dependent'));
       }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Error adding dependent');
     });
   }
 
@@ -1804,13 +1911,19 @@
   // Load providers for filter dropdown
   loadProvidersForFilter();
 
+  // Load all enrollment data to populate KPI board
+  loadActiveEnrollments();
+  loadPendingEnrollments();
+  loadWaitingEnrollments();
+  loadSuspendedEnrollments();
+  loadTerminatedEnrollments();
+  updateCounts();
+
   // Restore tab preference from localStorage
   const savedTab = localStorage.getItem('selectedTab-enrollment') || 'active';
   
-  // Set default to active and load data
+  // Set default to active tab
   currentTab = 'active';
-  loadActiveEnrollments();
-  updateCounts();
 
   // Close modals when clicking overlay
   const overlayModal = document.getElementById('modal-overlay');

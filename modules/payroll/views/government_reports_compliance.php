@@ -11,6 +11,109 @@ require_once __DIR__ . '/../models/GovernmentReport.php';
 
 $governmentReport = new GovernmentReport();
 
+$isAjax = isset($_GET['ajax']) && $_GET['ajax'] == 1;
+$modal = isset($_GET['modal']) ? $_GET['modal'] : null;
+
+// Handle AJAX requests for downloads
+if ($isAjax && $modal === 'download') {
+    $reportId = isset($_GET['report_id']) ? $_GET['report_id'] : '';
+    
+    // Create sample report file content based on report type
+    $filename = 'report_' . $reportId . '_' . date('Y-m-d') . '.pdf';
+    $reportContent = "Healthcare Hospital Inc. - Government Report\n";
+    $reportContent .= "Report ID: " . $reportId . "\n";
+    $reportContent .= "Generated: " . date('Y-m-d H:i:s') . "\n";
+    $reportContent .= "======================================\n";
+    $reportContent .= "This is a sample government report.\n";
+    $reportContent .= "Actual content would include detailed employee data and contributions.\n";
+    
+    // Set response headers for file download
+    header('Content-Type: application/pdf');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Content-Length: ' . strlen($reportContent));
+    
+    echo $reportContent;
+    exit;
+}
+
+// Handle AJAX requests for modals
+if ($isAjax && $modal === 'preview') {
+    $reportType = isset($_GET['type']) ? $_GET['type'] : '';
+    $period = isset($_GET['period']) ? $_GET['period'] : 'February 2026';
+    $totalEmployees = isset($_GET['employees']) ? $_GET['employees'] : '8';
+    $totalContributions = isset($_GET['contributions']) ? $_GET['contributions'] : '₱3,250.12';
+    
+    // Sample report preview HTML
+    ?>
+    <div class="modal-overlay active" style="display: flex;">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h3>Report Preview - <?php echo ucwords(str_replace('_', ' ', $reportType)); ?></h3>
+          <button type="button" class="modal-close" onclick="window.closeGovernmentModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="report-preview">
+            <div style="text-align: center; margin-bottom: 1.5rem;">
+              <h4 style="margin: 0 0 0.5rem 0;">Healthcare Hospital Inc.</h4>
+              <p style="margin: 0; color: #666; font-size: 13px;">BIR TIN: 012-345-678</p>
+              <p style="margin: 0.5rem 0 0 0; color: #666; font-size: 13px;">Period: <?php echo $period; ?></p>
+            </div>
+            
+            <div style="background: #f9fafb; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.5rem;">
+                <div>
+                  <label style="font-size: 12px; color: #666;">Total Employees</label>
+                  <p style="margin: 0; font-weight: 600; font-size: 16px;"><?php echo $totalEmployees; ?></p>
+                </div>
+                <div>
+                  <label style="font-size: 12px; color: #666;">Total Contributions</label>
+                  <p style="margin: 0; font-weight: 600; font-size: 16px;"><?php echo $totalContributions; ?></p>
+                </div>
+              </div>
+            </div>
+            
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 1rem;">
+              <thead>
+                <tr style="background: #f3f4f6; border-bottom: 1px solid #e5e7eb;">
+                  <th style="padding: 0.75rem; text-align: left; font-weight: 600;">Employee Name</th>
+                  <th style="padding: 0.75rem; text-align: center; font-weight: 600;">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                  <td style="padding: 0.75rem;">Sarah Williams</td>
+                  <td style="padding: 0.75rem; text-align: center;">₱450.00</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                  <td style="padding: 0.75rem;">John Smith</td>
+                  <td style="padding: 0.75rem; text-align: center;">₱380.00</td>
+                </tr>
+                <tr style="border-bottom: 1px solid #e5e7eb;">
+                  <td style="padding: 0.75rem;">Maria Garcia</td>
+                  <td style="padding: 0.75rem; text-align: center;">₱420.00</td>
+                </tr>
+                <tr style="background: #f3f4f6; border-bottom: 1px solid #e5e7eb;">
+                  <td style="padding: 0.75rem; font-weight: 600;">Total</td>
+                  <td style="padding: 0.75rem; text-align: center; font-weight: 600;">₱1,250.00</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div class="alert alert-info" style="background: #dbeafe; border: 1px solid #7dd3fc; padding: 0.75rem; border-radius: 4px; font-size: 13px; color: #0369a1; margin: 0;">
+              ℹ️ This is a sample preview of the report format. Actual report will include all employees in the selected period.
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
+          <button type="button" onclick="window.closeGovernmentModal()" class="btn btn-secondary" style="margin: 0;">Close</button>
+          <button type="button" class="btn btn-primary" style="margin: 0;">Export Now</button>
+        </div>
+      </div>
+    </div>
+    <?php
+    exit;
+}
+
 // Fetch government reports
 $reports = $governmentReport->getAll();
 $totalReports = count($reports ?? []);
@@ -447,6 +550,95 @@ $totalReports = count($reports ?? []);
     font-weight: 500;
   }
 
+  /* Modal Styles */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+  }
+
+  .modal-overlay.active {
+    display: flex !important;
+    animation: slideIn 0.3s ease;
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateY(-20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .modal-box {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    max-width: 650px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+  }
+
+  .modal-close:hover {
+    background: #f3f4f6;
+    color: #1f2937;
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+  }
+
+  .modal-footer {
+    padding: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+  }
+
   @media print {
     .section {
       page-break-inside: avoid;
@@ -558,7 +750,7 @@ $totalReports = count($reports ?? []);
         </div>
 
         <div class="btn-group">
-          <button type="submit" name="action" value="preview_sss" class="btn btn-secondary">Preview Report</button>
+          <button type="button" onclick="window.openGovernmentModal('sss')" class="btn btn-secondary">Preview Report</button>
           <button type="submit" name="action" value="export_sss_csv" class="btn btn-primary">Export as CSV</button>
           <button type="submit" name="action" value="export_sss_pdf" class="btn btn-primary">Export as PDF</button>
           <button type="submit" name="action" value="print_sss" class="btn btn-secondary">Print HTML</button>
@@ -598,7 +790,7 @@ $totalReports = count($reports ?? []);
         </div>
 
         <div class="btn-group">
-          <button type="submit" name="action" value="preview_ph" class="btn btn-secondary">Preview Report</button>
+          <button type="button" onclick="window.openGovernmentModal('philhealth')" class="btn btn-secondary">Preview Report</button>
           <button type="submit" name="action" value="export_ph_csv" class="btn btn-primary">Export as CSV</button>
           <button type="submit" name="action" value="export_ph_pdf" class="btn btn-primary">Export as PDF</button>
           <button type="submit" name="action" value="print_ph" class="btn btn-secondary">Print HTML</button>
@@ -638,7 +830,7 @@ $totalReports = count($reports ?? []);
         </div>
 
         <div class="btn-group">
-          <button type="submit" name="action" value="preview_pagibig" class="btn btn-secondary">Preview Report</button>
+          <button type="button" onclick="window.openGovernmentModal('pagibig')" class="btn btn-secondary">Preview Report</button>
           <button type="submit" name="action" value="export_pagibig_csv" class="btn btn-primary">Export as CSV</button>
           <button type="submit" name="action" value="export_pagibig_pdf" class="btn btn-primary">Export as PDF</button>
           <button type="submit" name="action" value="print_pagibig" class="btn btn-secondary">Print HTML</button>
@@ -681,7 +873,7 @@ $totalReports = count($reports ?? []);
         </div>
 
         <div class="btn-group">
-          <button type="submit" name="action" value="preview_bir1601" class="btn btn-secondary">Preview Report</button>
+          <button type="button" onclick="window.openGovernmentModal('bir1601')" class="btn btn-secondary">Preview Report</button>
           <button type="submit" name="action" value="export_bir1601_csv" class="btn btn-primary">Export as CSV</button>
           <button type="submit" name="action" value="export_bir1601_pdf" class="btn btn-primary">Export as PDF</button>
           <button type="submit" name="action" value="print_bir1601" class="btn btn-secondary">Print HTML</button>
@@ -721,7 +913,7 @@ $totalReports = count($reports ?? []);
         </div>
 
         <div class="btn-group">
-          <button type="submit" name="action" value="preview_bir2316" class="btn btn-secondary">Preview Certificate</button>
+          <button type="button" onclick="window.openGovernmentModal('bir2316')" class="btn btn-secondary">Preview Certificate</button>
           <button type="submit" name="action" value="export_bir2316_csv" class="btn btn-primary">Export All as CSV</button>
           <button type="submit" name="action" value="export_bir2316_pdf" class="btn btn-primary">Export All as PDF</button>
           <button type="submit" name="action" value="print_bir2316" class="btn btn-secondary">Print HTML</button>
@@ -761,7 +953,7 @@ $totalReports = count($reports ?? []);
         </div>
 
         <div class="btn-group">
-          <button type="submit" name="action" value="preview_alphalist" class="btn btn-secondary">Preview Report</button>
+          <button type="button" onclick="window.openGovernmentModal('alphalist')" class="btn btn-secondary">Preview Report</button>
           <button type="submit" name="action" value="export_alphalist_csv" class="btn btn-primary">Export as CSV</button>
           <button type="submit" name="action" value="export_alphalist_txt" class="btn btn-primary">Export as TXT (BIR Format)</button>
           <button type="submit" name="action" value="print_alphalist" class="btn btn-secondary">Print HTML</button>
@@ -942,10 +1134,7 @@ $totalReports = count($reports ?? []);
             <td>SSS</td>
             <td><span class="badge badge-verified">Verified</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="report_id" value="SSS-202601">
-                <button type="submit" class="btn btn-secondary btn-sm">Download</button>
-              </form>
+              <button type="button" onclick="window.downloadGovernmentReport('SSS-202601')" class="btn btn-secondary btn-sm">Download</button>
             </td>
           </tr>
           <tr>
@@ -956,10 +1145,7 @@ $totalReports = count($reports ?? []);
             <td>PhilHealth</td>
             <td><span class="badge badge-verified">Verified</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="report_id" value="PH-202601">
-                <button type="submit" class="btn btn-secondary btn-sm">Download</button>
-              </form>
+              <button type="button" onclick="window.downloadGovernmentReport('PH-202601')" class="btn btn-secondary btn-sm">Download</button>
             </td>
           </tr>
           <tr>
@@ -970,10 +1156,7 @@ $totalReports = count($reports ?? []);
             <td>Pag-IBIG</td>
             <td><span class="badge badge-verified">Verified</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="report_id" value="PAGIBIG-202601">
-                <button type="submit" class="btn btn-secondary btn-sm">Download</button>
-              </form>
+              <button type="button" onclick="window.downloadGovernmentReport('PAGIBIG-202601')" class="btn btn-secondary btn-sm">Download</button>
             </td>
           </tr>
           <tr>
@@ -984,10 +1167,7 @@ $totalReports = count($reports ?? []);
             <td>BIR</td>
             <td><span class="badge badge-verified">Verified</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="report_id" value="BIR1601-2025">
-                <button type="submit" class="btn btn-secondary btn-sm">Download</button>
-              </form>
+              <button type="button" onclick="window.downloadGovernmentReport('BIR1601-2025')" class="btn btn-secondary btn-sm">Download</button>
             </td>
           </tr>
           <tr>
@@ -998,10 +1178,7 @@ $totalReports = count($reports ?? []);
             <td>Employees</td>
             <td><span class="badge badge-verified">Verified</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="report_id" value="BIR2316-2025">
-                <button type="submit" class="btn btn-secondary btn-sm">Download</button>
-              </form>
+              <button type="button" onclick="window.downloadGovernmentReport('BIR2316-2025')" class="btn btn-secondary btn-sm">Download</button>
             </td>
           </tr>
           <tr>
@@ -1012,10 +1189,7 @@ $totalReports = count($reports ?? []);
             <td>BIR</td>
             <td><span class="badge badge-submitted">Submitted</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="report_id" value="ALPHALIST-2025">
-                <button type="submit" class="btn btn-secondary btn-sm">Download</button>
-              </form>
+              <button type="button" onclick="window.downloadGovernmentReport('ALPHALIST-2025')" class="btn btn-secondary btn-sm">Download</button>
             </td>
           </tr>
         </tbody>
@@ -1121,4 +1295,76 @@ function switchTab(event, tabName) {
   // Add active class to clicked tab
   event.target.classList.add('active');
 }
+
+window.openGovernmentModal = function(reportType) {
+  // Get report details
+  let period = 'February 2026';
+  let employees = '8';
+  let contributions = '₱3,250.12';
+  
+  // Map for different report types
+  const reportMap = {
+    'sss': { name: 'SSS Report', employees: '8', contributions: '₱3,250.12' },
+    'philhealth': { name: 'PhilHealth Report', employees: '8', contributions: '₱1,980.00' },
+    'pagibig': { name: 'Pag-IBIG Report', employees: '8', contributions: '₱2,100.00' },
+    'bir1601': { name: 'BIR 1601-C Report', employees: '8', contributions: '₱18,750.00' },
+    'bir2316': { name: 'BIR 2316 Certificate', employees: '8', contributions: '₱8,500.00' },
+    'alphalist': { name: 'BIR Alphalist', employees: '8', contributions: '₱45,250.00' }
+  };
+  
+  let reportInfo = reportMap[reportType] || { name: 'Report', employees: '8', contributions: '₱3,250.12' };
+  
+  let url = 'dashboard.php?module=payroll&view=government_reports_compliance&ajax=1&modal=preview&type=' + 
+            encodeURIComponent(reportType) +
+            '&period=' + encodeURIComponent(period) +
+            '&employees=' + encodeURIComponent(reportInfo.employees) +
+            '&contributions=' + encodeURIComponent(reportInfo.contributions);
+  
+  fetch(url)
+    .then(response => response.text())
+    .then(html => {
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+      const modalOverlay = temp.querySelector('.modal-overlay');
+      
+      if (modalOverlay) {
+        document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
+        document.body.appendChild(modalOverlay);
+        modalOverlay.classList.add('active');
+      }
+    })
+    .catch(error => console.error('Error loading modal:', error));
+};
+
+window.closeGovernmentModal = function() {
+  const overlay = document.querySelector('.modal-overlay');
+  if (overlay) {
+    overlay.classList.remove('active');
+    overlay.remove();
+  }
+};
+
+window.downloadGovernmentReport = function(reportId) {
+  // Create download link
+  let url = 'dashboard.php?module=payroll&view=government_reports_compliance&ajax=1&modal=download&report_id=' + 
+            encodeURIComponent(reportId);
+  
+  // Trigger download by opening in new tab/window (browser will handle download)
+  let link = document.createElement('a');
+  link.href = url;
+  link.download = true;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+  const modal = document.querySelector('.modal-box');
+  const overlay = document.querySelector('.modal-overlay');
+  if (overlay && event.target === overlay && modal) {
+    window.closeGovernmentModal();
+  }
+});
+
 </script>

@@ -12,6 +12,16 @@ if (empty($_SESSION['token'])) {
 }
 
 require_once __DIR__ . '/../../config/Database.php';
+require_once __DIR__ . '/../../config/BaseConfig.php';
+
+// Role-based access control
+if (!canAccessMenuItem('compensation', 'compensation_approval')) {
+    http_response_code(403);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Access denied: compensation_approval']);
+    exit;
+}
+
 require_once __DIR__ . '/models/CompensationApprovalRequest.php';
 
 $approval = new CompensationApprovalRequest();

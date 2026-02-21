@@ -149,11 +149,9 @@
         </div>
       </div>
     </aside>
-  </div>
-</main>
 
-<!-- Onboarding Modal -->
-<div id="onboardingModal" class="modal">
+    <!-- Onboarding Modal -->
+    <div id="onboardingModal" class="modal" style="position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.4); display: none;">
   <div class="modal-content" style="max-width: 600px;">
     <div class="modal-header">
       <h2 class="modal-title">Add Onboarding</h2>
@@ -195,9 +193,9 @@
       </div>
     </form>
   </div>
-</div>
-
-
+    </div>
+  </div>
+</main>
 
 <script>
   (function() {
@@ -289,7 +287,11 @@
             </td>
             <td style="text-align: left; font-size: 13px; color: var(--text-light);">${record.remarks || '-'}</td>
             <td style="text-align: center;">
-              <button class="action-btn action-btn-primary" onclick="window.viewOnboarding(${record.id})" title="View">👁 View</button>
+              <div style="display: flex; gap: 0.5rem; justify-content: center;">
+                <button onclick="window.viewOnboarding(${record.id})" title="View" style="padding: 0.5rem; background: rgba(30, 64, 175, 0.1); border: none; border-radius: 4px; cursor: pointer; font-size: 14px; color: var(--primary); transition: all 0.2s ease;">👁</button>
+                <button onclick="window.editOnboarding(${record.id})" title="Edit" style="padding: 0.5rem; background: rgba(30, 64, 175, 0.1); border: none; border-radius: 4px; cursor: pointer; font-size: 14px; color: var(--primary); transition: all 0.2s ease;">✏</button>
+                <button onclick="window.deleteOnboarding(${record.id})" title="Delete" style="padding: 0.5rem; background: rgba(239, 68, 68, 0.1); border: none; border-radius: 4px; cursor: pointer; font-size: 14px; color: var(--danger); transition: all 0.2s ease;">🗑</button>
+              </div>
             </td>
           </tr>
         `;
@@ -298,14 +300,137 @@
     };
 
     window.openOnboardingModal = function() {
-      document.getElementById('onboardingForm').reset();
-      delete document.getElementById('onboardingForm').dataset.id;
-      document.querySelector('#onboardingModal .modal-title').textContent = 'Add Onboarding';
-      document.getElementById('onboardingModal').classList.add('active');
+      const form = document.getElementById('onboardingForm');
+      if (form) {
+        form.reset();
+        delete form.dataset.id;
+        const title = document.querySelector('#onboardingModal .modal-title');
+        title.textContent = 'Add Onboarding';
+        
+        const modal = document.getElementById('onboardingModal');
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+      }
     };
 
     window.closeOnboardingModal = function() {
-      document.getElementById('onboardingModal').classList.remove('active');
+      const modal = document.getElementById('onboardingModal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    };
+
+    window.viewOnboarding = function(id) {
+      fetch(`modules/hr_core/api.php?action=getOnboardingById&id=${id}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            const record = data.data;
+            const viewContent = `
+              <div class="modal-header">
+                <h2 class="modal-title">View Onboarding</h2>
+                <button class="modal-close" onclick="window.closeOnboardingModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+              </div>
+              <div style="padding: 1.5rem;">
+                <div style="margin-bottom: 1.5rem;">
+                  <p style="font-size: 12px; color: var(--text-light); margin: 0; text-transform: uppercase; font-weight: 600;">Employee</p>
+                  <p style="font-size: 18px; color: var(--text-dark); font-weight: 600; margin: 0.5rem 0 0 0;">${record.employee_name || 'N/A'}</p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                  <div>
+                    <p style="font-size: 12px; color: var(--text-light); margin: 0; text-transform: uppercase; font-weight: 600;">Start Date</p>
+                    <p style="font-size: 16px; color: var(--text-dark); font-weight: 600; margin: 0.5rem 0 0 0;">${record.start_date || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p style="font-size: 12px; color: var(--text-light); margin: 0; text-transform: uppercase; font-weight: 600;">Status</p>
+                    <p style="font-size: 16px; color: ${record.status === 'Completed' ? '#10b981' : record.status === 'Overdue' ? '#ef4444' : '#f59e0b'}; font-weight: 600; margin: 0.5rem 0 0 0;">${record.status || 'Pending'}</p>
+                  </div>
+                </div>
+
+                ${record.assigned_mentor ? `<div style="background: var(--bg-light); padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+                  <p style="font-size: 12px; color: var(--text-light); margin: 0; text-transform: uppercase; font-weight: 600;">Mentor / HR Owner</p>
+                  <p style="font-size: 16px; font-weight: 600; margin: 0.5rem 0 0 0; color: var(--text-dark);">${record.assigned_mentor}</p>
+                </div>` : ''}
+
+                ${record.notes ? `<div style="text-align: left; background: #f9fafb; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+                  <p style="font-size: 12px; color: var(--text-light); margin: 0; font-weight: 600;">Notes</p>
+                  <p style="margin: 0.5rem 0 0 0; font-size: 14px; color: var(--text-dark);">${record.notes}</p>
+                </div>` : ''}
+
+                <div style="display: flex; gap: 1rem; justify-content: center;">
+                  <button class="btn btn-outline" onclick="window.closeOnboardingModal()">Close</button>
+                  <button class="btn btn-primary" onclick="window.editOnboarding(${id})">Edit</button>
+                </div>
+              </div>
+            `;
+            const modalContent = document.querySelector('#onboardingModal .modal-content');
+            if (modalContent) {
+              modalContent.innerHTML = viewContent;
+              const modal = document.getElementById('onboardingModal');
+              modal.style.display = 'flex';
+              modal.style.alignItems = 'center';
+              modal.style.justifyContent = 'center';
+            }
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error loading onboarding details');
+        });
+    };
+
+    window.editOnboarding = function(id) {
+      fetch(`modules/hr_core/api.php?action=getOnboardingById&id=${id}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            const record = data.data;
+            const form = document.getElementById('onboardingForm');
+            if (form) {
+              form.reset();
+              form.dataset.id = id;
+              form.querySelector('select[name="employee_id"]').value = record.employee_id || '';
+              form.querySelector('input[name="department"]').value = record.department || '';
+              form.querySelector('input[name="start_date"]').value = record.start_date || '';
+              form.querySelector('select[name="status"]').value = record.status || 'In Progress';
+              form.querySelector('input[name="assigned_mentor"]').value = record.assigned_mentor || '';
+              form.querySelector('textarea[name="notes"]').value = record.notes || '';
+              
+              const modal = document.getElementById('onboardingModal');
+              const title = modal.querySelector('.modal-title');
+              title.textContent = 'Edit Onboarding';
+              
+              modal.style.display = 'flex';
+              modal.style.alignItems = 'center';
+              modal.style.justifyContent = 'center';
+            }
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error loading onboarding details');
+        });
+    };
+
+    window.deleteOnboarding = function(id) {
+      if (confirm('Delete this onboarding record?')) {
+        fetch(`modules/hr_core/api.php?action=deleteOnboarding&id=${id}`, {method: 'POST'})
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('✓ Onboarding record deleted successfully');
+              window.loadOnboarding();
+            } else {
+              alert('Error: ' + (data.message || 'Failed to delete'));
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting onboarding record');
+          });
+      }
     };
 
     window.toggleOnboardingFilter = function(filter) {
@@ -318,41 +443,6 @@
       document.getElementById('searchInput').value = '';
       document.querySelectorAll('.filter-chip').forEach(chip => chip.classList.remove('active'));
       window.loadOnboarding();
-    };
-
-    window.editOnboarding = function(id) {
-      fetch(`modules/hr_core/api.php?action=getOnboardingById&id=${id}`)
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            const record = data.data;
-            const form = document.getElementById('onboardingForm');
-            if (form) {
-              form.querySelector('select[name="employee_id"]').value = record.employee_id || '';
-              form.querySelector('input[name="department"]').value = record.department || '';
-              form.querySelector('input[name="start_date"]').value = record.start_date || '';
-              form.querySelector('select[name="status"]').value = record.status || 'In Progress';
-              form.querySelector('input[name="assigned_mentor"]').value = record.assigned_mentor || '';
-              form.querySelector('textarea[name="notes"]').value = record.notes || '';
-              form.dataset.id = id;
-              document.querySelector('#onboardingModal .modal-title').textContent = 'Edit Onboarding';
-              window.openOnboardingModal();
-            }
-          }
-        })
-        .catch(error => console.error('Error:', error));
-    };
-
-    window.viewOnboarding = function(id) {
-      fetch(`modules/hr_core/api.php?action=getOnboardingById&id=${id}`)
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            const record = data.data;
-            alert(`Employee: ${record.employee_name}\nDepartment: ${record.department}\nStart Date: ${record.start_date}\nStatus: ${record.status}\nProgress: ${record.completion_percentage || 0}%\nNotes: ${record.notes || 'None'}`);
-          }
-        })
-        .catch(error => console.error('Error:', error));
     };
 
     window.loadStartingThisWeek = function(employees) {
@@ -404,6 +494,20 @@
     };
 
     function attachEventListeners() {
+      // Load employees for dropdown
+      fetch('modules/hr_core/api.php?action=getAllEmployees')
+        .then(res => res.json())
+        .then(data => {
+          const employeeSelect = document.querySelector('select[name="employee_id"]');
+          if (employeeSelect && data.success && data.data.employees) {
+            employeeSelect.innerHTML = '<option value="">Select employee...</option>';
+            data.data.employees.forEach(emp => {
+              employeeSelect.innerHTML += `<option value="${emp.employee_id}">${emp.first_name} ${emp.last_name} (${emp.employee_code})</option>`;
+            });
+          }
+        })
+        .catch(error => console.error('Error loading employees:', error));
+
       // Search
       const searchInput = document.getElementById('searchInput');
       if (searchInput) {

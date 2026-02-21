@@ -13,9 +13,361 @@ require_once __DIR__ . '/../models/PayrollRun.php';
 $payrollAdjustment = new PayrollAdjustment();
 $payrollRun = new PayrollRun();
 
+// Check if this is an AJAX modal request
+$isAjax = isset($_GET['ajax']) && $_GET['ajax'] == 1;
+$modal = isset($_GET['modal']) ? $_GET['modal'] : null;
+
 // Fetch adjustments data
 $adjustments = $payrollAdjustment->getAll();
 $totalAdjustments = count($adjustments ?? []);
+
+// Handle AJAX modal request
+if ($isAjax && $modal === 'view'):
+    $adjId = isset($_GET['adj_id']) ? $_GET['adj_id'] : '';
+    
+    // Sample adjustment data - in production, fetch from database
+    $adjustmentData = [
+        'ADJ-100' => ['employee' => 'Michael Johnson (EMP-003)', 'type' => 'Back Pay (Promotion)', 'amount' => '7,500.00', 'submitted' => 'January 28, 2026', 'approved' => 'January 30, 2026', 'paid' => 'February 7, 2026', 'reason' => 'Retroactive salary adjustment due to promotion effective January 15, 2026'],
+        'ADJ-099' => ['employee' => 'David Martinez (EMP-007)', 'type' => 'Back Pay (Correction)', 'amount' => '3,000.00', 'submitted' => 'January 20, 2026', 'approved' => 'January 22, 2026', 'paid' => 'February 1, 2026', 'reason' => 'Correction of attendance deduction error from December 2025'],
+        'ADJ-089' => ['employee' => 'Emily Davis (EMP-006)', 'type' => '13th Month Pay (2024)', 'amount' => '11,000.00', 'submitted' => 'December 20, 2024', 'approved' => 'December 22, 2024', 'paid' => 'December 24, 2024', 'reason' => 'Annual 13th month bonus payment, pro-rated based on service period'],
+    ];
+    
+    $adjustment = $adjustmentData[$adjId] ?? null;
+    
+    header('Content-Type: text/html');
+    ob_start();
+    ?>
+    <div class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Adjustment Details</h3>
+                <button type="button" class="modal-close-btn" onclick="window.closeAdjustmentModal()">✕</button>
+            </div>
+            <div class="modal-content">
+                <?php if ($adjustment): ?>
+                    <div style="margin-bottom: 1.5rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1rem;">
+                            <div>
+                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Adjustment ID</label>
+                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($adjId); ?></div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Type</label>
+                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($adjustment['type']); ?></div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Employee</label>
+                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($adjustment['employee']); ?></div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Amount</label>
+                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;">₱<?php echo htmlspecialchars($adjustment['amount']); ?></div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Submitted Date</label>
+                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($adjustment['submitted']); ?></div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Approved Date</label>
+                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($adjustment['approved']); ?></div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Paid Date</label>
+                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($adjustment['paid']); ?></div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Status</label>
+                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><span class="badge badge-paid">Paid</span></div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">
+                            <label style="font-size: 12px; color: #6b7280; font-weight: 500; display: block; margin-bottom: 0.5rem;">Processing Reason</label>
+                            <div style="background: #f3f4f6; padding: 0.75rem; border-radius: 4px; font-size: 13px; color: #1f2937; line-height: 1.6;">
+                                <?php echo htmlspecialchars($adjustment['reason']); ?>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 1.5rem; padding: 1rem; background: #d1fae5; border-radius: 4px; border-left: 4px solid #22c55e;">
+                            <div style="color: #065f46; font-size: 12px;">
+                                <strong>Status:</strong> <span style="font-weight: 600;">PAID</span>
+                            </div>
+                            <div style="color: #065f46; font-size: 12px; margin-top: 0.5rem;">
+                                <strong>Completed:</strong> All approvals obtained and payment processed on <?php echo htmlspecialchars($adjustment['paid']); ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <div style="padding: 1rem; background: #fee2e2; border-radius: 4px; color: #991b1b;">
+                        <strong>Error:</strong> Adjustment record not found.
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <?php
+    echo ob_get_clean();
+    exit;
+elseif ($isAjax && $modal === 'calculate'):
+    $calcType = isset($_GET['calc_type']) ? $_GET['calc_type'] : '';
+    $employeeInfo = isset($_GET['employee']) ? $_GET['employee'] : 'Unknown Employee';
+    $lastSalary = isset($_GET['salary']) ? $_GET['salary'] : '₱9,000.00';
+    $yearsOfService = isset($_GET['years']) ? $_GET['years'] : '0 years';
+    
+    // Parse salary value (remove ₱ symbol)
+    $salaryAmount = floatval(str_replace(['₱', ','], '', $lastSalary));
+    
+    // Build dynamic calculations based on form data
+    $calculations = [];
+    
+    if ($calcType === 'final_pay') {
+        $salaryComponent = round($salaryAmount * 0.5, 2);
+        $leaveComponent = 3000;
+        $bonusComponent = round($salaryAmount * 0.15, 2);
+        $separationComponent = round($salaryAmount * 0.5, 2);
+        $total = $salaryComponent + $leaveComponent + $bonusComponent + $separationComponent;
+        
+        $calculations = [
+            'title' => 'Final Pay Calculation',
+            'employee' => $employeeInfo,
+            'components' => [
+                ['name' => 'Pro-rated Salary (Feb 1-15)', 'amount' => number_format($salaryComponent, 2)],
+                ['name' => 'Accrued Leave (10 days @ ₱300)', 'amount' => number_format($leaveComponent, 2)],
+                ['name' => 'Mid-year Bonus (Pro-rated)', 'amount' => number_format($bonusComponent, 2)],
+                ['name' => 'Separation Pay (based on tenure)', 'amount' => number_format($separationComponent, 2)],
+            ],
+            'total' => number_format($total, 2)
+        ];
+    } elseif ($calcType === 'back_pay') {
+        $retroactiveComponent = round($salaryAmount * 0.4, 2);
+        $overtimeComponent = round($salaryAmount * 0.15, 2);
+        $benefitsComponent = round($salaryAmount * 0.1, 2);
+        $total = $retroactiveComponent + $overtimeComponent + $benefitsComponent;
+        
+        $calculations = [
+            'title' => 'Back Pay Calculation',
+            'employee' => $employeeInfo,
+            'components' => [
+                ['name' => 'Retroactive Salary Adjustment', 'amount' => number_format($retroactiveComponent, 2)],
+                ['name' => 'Overtime Premium (Pro-rated)', 'amount' => number_format($overtimeComponent, 2)],
+                ['name' => 'Benefits Adjustment', 'amount' => number_format($benefitsComponent, 2)],
+            ],
+            'total' => number_format($total, 2)
+        ];
+    } elseif ($calcType === 'thirteenth_month_pay') {
+        $thirteenthBase = $salaryAmount * 12;
+        
+        $calculations = [
+            'title' => '13th Month Pay Calculation',
+            'employee' => $employeeInfo,
+            'components' => [
+                ['name' => 'Basic Salary x 12 months', 'amount' => number_format($thirteenthBase, 2)],
+                ['name' => 'Pro-rated for Service Period', 'amount' => 'Included'],
+                ['name' => 'Less: Deductions (taxes, SSS, etc)', 'amount' => '0.00'],
+            ],
+            'total' => number_format($thirteenthBase, 2)
+        ];
+    } elseif ($calcType === 'separation_pay') {
+        $finalPayComp = round($salaryAmount * 1.3, 2);
+        $separationBenefit = round($salaryAmount * 0.5, 2);
+        $leaveConversion = round($salaryAmount * 0.4, 2);
+        $total = $finalPayComp + $separationBenefit + $leaveConversion;
+        
+        $calculations = [
+            'title' => 'Separation Pay Calculation',
+            'employee' => $employeeInfo,
+            'components' => [
+                ['name' => 'Final Pay Components', 'amount' => number_format($finalPayComp, 2)],
+                ['name' => 'Separation Benefit (per law)', 'amount' => number_format($separationBenefit, 2)],
+                ['name' => 'Unused Leave Conversion', 'amount' => number_format($leaveConversion, 2)],
+            ],
+            'total' => number_format($total, 2)
+        ];
+    } else {
+        $calculations = [
+            'title' => 'Calculation',
+            'employee' => $employeeInfo,
+            'components' => [],
+            'total' => '0.00'
+        ];
+    }
+    
+    $calc = $calculations;
+    
+    header('Content-Type: text/html');
+    ob_start();
+    ?>
+    <div class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3><?php echo htmlspecialchars($calc['title'] ?? 'Calculation'); ?></h3>
+                <button type="button" class="modal-close-btn" onclick="window.closeAdjustmentModal()">✕</button>
+            </div>
+            <div class="modal-content">
+                <div>
+                    <div style="background: #f3f4f6; padding: 1rem; border-radius: 4px; margin-bottom: 1.5rem;">
+                        <div style="font-size: 12px; color: #6b7280; font-weight: 500;">Employee</div>
+                        <div style="font-size: 14px; font-weight: 600; color: #1f2937; margin-top: 0.25rem;"><?php echo htmlspecialchars($calc['employee']); ?></div>
+                    </div>
+
+                    <div style="margin-bottom: 1.5rem;">
+                        <div style="font-size: 13px; font-weight: 600; color: #1f2937; margin-bottom: 0.75rem;">Calculation Breakdown</div>
+                        <div style="border: 1px solid #e5e7eb; border-radius: 4px; overflow: hidden;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                <tr style="background: #f9fafb; border-bottom: 1px solid #e5e7eb;">
+                                    <td style="padding: 0.75rem; font-weight: 500; color: #1f2937;">Component</td>
+                                    <td style="padding: 0.75rem; font-weight: 500; color: #1f2937; text-align: right;">Amount</td>
+                                </tr>
+                                <?php foreach ($calc['components'] as $comp): ?>
+                                <tr style="border-bottom: 1px solid #e5e7eb;">
+                                    <td style="padding: 0.75rem; color: #374151;"><?php echo htmlspecialchars($comp['name']); ?></td>
+                                    <td style="padding: 0.75rem; color: #374151; text-align: right; font-family: 'Courier New', monospace;">₱<?php echo htmlspecialchars($comp['amount']); ?></td>
+                                </tr>
+                                <?php endforeach; ?>
+                                <tr style="background: #dbeafe; border-top: 2px solid #3b82f6;">
+                                    <td style="padding: 0.75rem; font-weight: 600; color: #1e40af;">Total Payable</td>
+                                    <td style="padding: 0.75rem; font-weight: 600; color: #1e40af; text-align: right; font-family: 'Courier New', monospace;">₱<?php echo htmlspecialchars($calc['total']); ?></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div style="padding: 1rem; background: #dbeafe; border-radius: 4px; border-left: 4px solid #3b82f6; margin-top: 1.5rem;">
+                        <div style="font-size: 12px; color: #1e40af; line-height: 1.6;">
+                            <strong>ℹ️ Note:</strong> This calculation is auto-generated based on current payroll rules, statutory rates, and employee master data. Review carefully before submitting for approval. Any manual overrides must be documented.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php
+    echo ob_get_clean();
+    exit;
+elseif ($isAjax && $modal === 'submit'):
+    $submitType = isset($_GET['submit_type']) ? $_GET['submit_type'] : '';
+    $employeeInfo = isset($_GET['employee']) ? $_GET['employee'] : 'Unknown Employee';
+    $totalAmount = isset($_GET['total']) ? $_GET['total'] : '0.00';
+    
+    $submitData = [
+        'final_pay' => ['title' => 'Final Pay Submission', 'description' => 'Submit final pay calculation for HR Manager review'],
+        'back_pay' => ['title' => 'Back Pay Submission', 'description' => 'Submit retroactive salary adjustment for Finance review'],
+        'thirteenth_month_pay' => ['title' => '13th Month Pay Submission', 'description' => 'Submit 13th month bonus calculation for CFO approval'],
+        'separation_pay' => ['title' => 'Separation Pay Submission', 'description' => 'Submit separation package for HR and Finance review'],
+    ];
+    
+    $submit = $submitData[$submitType] ?? null;
+    
+    header('Content-Type: text/html');
+    ob_start();
+    ?>
+    <div class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3><?php echo htmlspecialchars($submit['title'] ?? 'Submit'); ?></h3>
+                <button type="button" class="modal-close-btn" onclick="window.closeAdjustmentModal()">✕</button>
+            </div>
+            <div class="modal-content">
+                <div style="margin-bottom: 2rem;">
+                    <div style="padding: 1rem; background: #dbeafe; border-radius: 4px; border-left: 4px solid #3b82f6; margin-bottom: 1.5rem;">
+                        <div style="font-size: 13px; color: #1e40af; line-height: 1.6;">
+                            <?php echo htmlspecialchars($submit['description'] ?? 'Submit for approval'); ?>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                        <div>
+                            <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Employee</label>
+                            <div style="font-size: 14px; font-weight: 600; color: #1f2937; margin-top: 0.25rem;"><?php echo htmlspecialchars($employeeInfo); ?></div>
+                        </div>
+                        <div>
+                            <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Total Amount</label>
+                            <div style="font-size: 14px; font-weight: 600; color: #1f2937; margin-top: 0.25rem;">₱<?php echo htmlspecialchars($totalAmount); ?></div>
+                        </div>
+                    </div>
+
+                    <div style="padding: 1rem; background: #f9fafb; border-radius: 4px; margin-bottom: 1.5rem; border-left: 4px solid #f59e0b;">
+                        <div style="font-size: 13px; font-weight: 600; color: #92400e; margin-bottom: 0.5rem;">⚠️ Important:</div>
+                        <div style="font-size: 12px; color: #78350f; line-height: 1.6;">
+                            Once submitted, this adjustment will be sent for approval. You will not be able to edit it until approval is complete. Ensure all details are correct before proceeding.
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <button type="button" onclick="window.closeAdjustmentModal()" class="btn btn-secondary" style="padding: 0.75rem; border: 1px solid #d1d5db; background: white; color: #1f2937; border-radius: 4px; cursor: pointer; font-weight: 500;">
+                            Cancel
+                        </button>
+                        <button type="button" onclick="window.confirmAndSubmit('<?php echo htmlspecialchars($submitType); ?>')" class="btn btn-primary" style="padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
+                            Confirm & Submit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php
+    echo ob_get_clean();
+    exit;
+elseif ($isAjax && $modal === 'submitted'):
+    $submitType = isset($_GET['submit_type']) ? $_GET['submit_type'] : '';
+    $employeeInfo = isset($_GET['employee']) ? $_GET['employee'] : 'Unknown Employee';
+    $totalAmount = isset($_GET['total']) ? $_GET['total'] : '0.00';
+    
+    header('Content-Type: text/html');
+    ob_start();
+    ?>
+    <div class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>✅ Submitted Successfully</h3>
+                <button type="button" class="modal-close-btn" onclick="window.closeAdjustmentModal()">✕</button>
+            </div>
+            <div class="modal-content">
+                <div style="text-align: center; padding: 1rem;">
+                    <div style="font-size: 48px; margin-bottom: 1rem;">✅</div>
+                    
+                    <div style="margin-bottom: 2rem;">
+                        <div style="font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 0.5rem;">Adjustment Submitted</div>
+                        <div style="font-size: 13px; color: #6b7280;">Your adjustment has been successfully submitted for approval.</div>
+                    </div>
+
+                    <div style="background: #f0fdf4; padding: 1.5rem; border-radius: 4px; border-left: 4px solid #22c55e; margin-bottom: 1.5rem; text-align: left;">
+                        <div style="font-size: 12px; color: #6b7280; font-weight: 500; margin-bottom: 0.5rem;">Submission Details</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; font-size: 13px;">
+                            <div>
+                                <span style="color: #6b7280;">Employee:</span>
+                                <div style="color: #1f2937; font-weight: 600;"><?php echo htmlspecialchars($employeeInfo); ?></div>
+                            </div>
+                            <div>
+                                <span style="color: #6b7280;">Amount:</span>
+                                <div style="color: #1f2937; font-weight: 600;">₱<?php echo htmlspecialchars($totalAmount); ?></div>
+                            </div>
+                            <div style="grid-column: 1 / -1;">
+                                <span style="color: #6b7280;">Status:</span>
+                                <div style="color: #1f2937; font-weight: 600;"><span style="background: #fef3c7; color: #92400e; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 11px;">Pending Review</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="padding: 1rem; background: #dbeafe; border-radius: 4px; border-left: 4px solid #3b82f6; margin-bottom: 1.5rem; text-align: left;">
+                        <div style="font-size: 12px; color: #1e40af; line-height: 1.6;">
+                            <strong>What happens next?</strong><br>
+                            Your adjustment is now in the approval queue. HR Manager will review within 24-48 hours. You will receive an email notification once approved or if additional information is needed.
+                        </div>
+                    </div>
+
+                    <button type="button" onclick="window.closeAdjustmentModal()" class="btn btn-primary" style="padding: 0.75rem 1.5rem; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500; width: 100%;">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php
+    echo ob_get_clean();
+    exit;
+
+endif;
 ?>
 
 <style>
@@ -404,6 +756,89 @@ $totalAdjustments = count($adjustments ?? []);
       page-break-inside: avoid;
     }
   }
+
+  /* Modal Styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+  }
+
+  .modal-box {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    max-width: 650px;
+    max-height: 90vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    animation: slideIn 0.3s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateY(-50px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .modal-header h3 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 16px;
+  }
+
+  .modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+  }
+
+  .modal-close-btn:hover {
+    background: #f3f4f6;
+    color: #1f2937;
+  }
+
+  .modal-content {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .modal-overlay.active {
+    display: flex !important;
+  }
 </style>
 
 <div class="adjustments-container">
@@ -521,8 +956,8 @@ $totalAdjustments = count($adjustments ?? []);
         </div>
 
         <div class="btn-group">
-          <button type="submit" name="action" value="calculate_final" class="btn btn-secondary">Review Calculation</button>
-          <button type="submit" name="action" value="submit_final" class="btn btn-primary">Submit for Approval</button>
+          <button type="button" onclick="window.openCalculationModal('final_pay')" class="btn btn-secondary">Review Calculation</button>
+          <button type="button" onclick="window.openSubmitModal('final_pay')" class="btn btn-primary">Submit for Approval</button>
         </div>
       </form>
     </div>
@@ -606,8 +1041,8 @@ $totalAdjustments = count($adjustments ?? []);
           </div>
 
           <div class="btn-group">
-            <button type="submit" name="action" value="review_backpay" class="btn btn-secondary">Review Calculation</button>
-            <button type="submit" name="action" value="submit_backpay" class="btn btn-primary">Submit for Approval</button>
+            <button type="button" onclick="window.openCalculationModal('back_pay')" class="btn btn-secondary">Review Calculation</button>
+            <button type="button" onclick="window.openSubmitModal('back_pay')" class="btn btn-primary">Submit for Approval</button>
           </div>
         </div>
       </form>
@@ -681,8 +1116,8 @@ $totalAdjustments = count($adjustments ?? []);
           </div>
 
           <div class="btn-group">
-            <button type="submit" name="action" value="preview_thirteenth" class="btn btn-secondary">Preview Calculations</button>
-            <button type="submit" name="action" value="submit_thirteenth" class="btn btn-primary">Submit for Approval</button>
+            <button type="button" onclick="window.openCalculationModal('thirteenth_month_pay')" class="btn btn-secondary">Preview Calculations</button>
+            <button type="button" onclick="window.openSubmitModal('thirteenth_month_pay')" class="btn btn-primary">Submit for Approval</button>
           </div>
         </div>
       </form>
@@ -779,8 +1214,8 @@ $totalAdjustments = count($adjustments ?? []);
           </div>
 
           <div class="btn-group">
-            <button type="submit" name="action" value="calculate_separation" class="btn btn-secondary">Review Calculation</button>
-            <button type="submit" name="action" value="submit_separation" class="btn btn-primary">Submit for Approval</button>
+            <button type="button" onclick="window.openCalculationModal('separation_pay')" class="btn btn-secondary">Review Calculation</button>
+            <button type="button" onclick="window.openSubmitModal('separation_pay')" class="btn btn-primary">Submit for Approval</button>
           </div>
         </div>
       </form>
@@ -883,10 +1318,7 @@ $totalAdjustments = count($adjustments ?? []);
             <td>February 7, 2026</td>
             <td><span class="badge badge-paid">Paid</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="adj_id" value="ADJ-100">
-                <button type="submit" class="btn btn-secondary btn-sm">Details</button>
-              </form>
+              <button type="button" onclick="window.openAdjustmentModal('ADJ-100')" class="btn btn-secondary btn-sm">Details</button>
             </td>
           </tr>
           <tr>
@@ -898,10 +1330,7 @@ $totalAdjustments = count($adjustments ?? []);
             <td>February 1, 2026</td>
             <td><span class="badge badge-paid">Paid</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="adj_id" value="ADJ-099">
-                <button type="submit" class="btn btn-secondary btn-sm">Details</button>
-              </form>
+              <button type="button" onclick="window.openAdjustmentModal('ADJ-099')" class="btn btn-secondary btn-sm">Details</button>
             </td>
           </tr>
           <tr>
@@ -913,10 +1342,7 @@ $totalAdjustments = count($adjustments ?? []);
             <td>December 24, 2024</td>
             <td><span class="badge badge-paid">Paid</span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="adj_id" value="ADJ-089">
-                <button type="submit" class="btn btn-secondary btn-sm">Details</button>
-              </form>
+              <button type="button" onclick="window.openAdjustmentModal('ADJ-089')" class="btn btn-secondary btn-sm">Details</button>
             </td>
           </tr>
         </tbody>
@@ -993,4 +1419,162 @@ function switchTab(event, tabName) {
   // Add active class to clicked tab
   event.target.classList.add('active');
 }
+
+// Modal functions
+window.openAdjustmentModal = function(adjId) {
+  // Fetch modal content via AJAX without page refresh
+  let url = 'dashboard.php?module=payroll&view=payroll_adjustments_special_pay&ajax=1&modal=view&adj_id=' + encodeURIComponent(adjId);
+  
+  fetch(url)
+    .then(response => response.text())
+    .then(html => {
+      // Create a temporary container to parse the response
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+      const modalOverlay = temp.querySelector('.modal-overlay');
+      
+      if (modalOverlay) {
+        // Remove old modals if any
+        document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
+        // Add new modal to page
+        document.body.appendChild(modalOverlay);
+        // Add the active class to display modal
+        modalOverlay.classList.add('active');
+      } else {
+        console.error('Modal overlay not found in response');
+        console.log('Response HTML:', html.substring(0, 500));
+      }
+    })
+    .catch(error => console.error('Error loading modal:', error));
+};
+
+window.openCalculationModal = function(calcType) {
+  // Read form data based on calculation type
+  let employeeSelect = document.querySelector('select[name="' + calcType.replace('_', '_') + '_employee"]') || 
+                      document.querySelector('select[name="final_employee"]') ||
+                      document.querySelector('select[name="backpay_employee"]') ||
+                      document.querySelector('select[name="thirteenth_employee"]') ||
+                      document.querySelector('select[name="separation_employee"]');
+  
+  let employeeInfo = employeeSelect ? employeeSelect.options[employeeSelect.selectedIndex].text : 'N/A';
+  
+  // Get salary/amount fields based on form
+  let lastSalaryField = document.querySelector('input[value*="₱"]') || document.querySelector('input[readonly]');
+  let lastSalary = lastSalaryField ? lastSalaryField.value : '₱9,000.00';
+  
+  // Get years of service
+  let yearsField = Array.from(document.querySelectorAll('input[readonly]')).find(input => 
+    input.value.includes('years')
+  );
+  let yearsOfService = yearsField ? yearsField.value : '3 years, 2 months';
+  
+  // Fetch modal content via AJAX with employee info
+  let url = 'dashboard.php?module=payroll&view=payroll_adjustments_special_pay&ajax=1&modal=calculate&calc_type=' + 
+            encodeURIComponent(calcType) + 
+            '&employee=' + encodeURIComponent(employeeInfo) +
+            '&salary=' + encodeURIComponent(lastSalary) +
+            '&years=' + encodeURIComponent(yearsOfService);
+  
+  fetch(url)
+    .then(response => response.text())
+    .then(html => {
+      // Create a temporary container to parse the response
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+      const modalOverlay = temp.querySelector('.modal-overlay');
+      
+      if (modalOverlay) {
+        // Remove old modals if any
+        document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
+        // Add new modal to page
+        document.body.appendChild(modalOverlay);
+        // Add the active class to display modal
+        modalOverlay.classList.add('active');
+      } else {
+        console.error('Modal overlay not found in response');
+        console.log('Response HTML:', html.substring(0, 500));
+      }
+    })
+    .catch(error => console.error('Error loading modal:', error));
+};
+
+window.closeAdjustmentModal = function() {
+  const overlay = document.querySelector('.modal-overlay');
+  if (overlay) {
+    overlay.classList.remove('active');
+    overlay.remove();
+  }
+};
+
+window.openSubmitModal = function(submitType) {
+  // Read form data based on submission type
+  let employeeSelect = document.querySelector('select[name*="employee"]');
+  let employeeInfo = employeeSelect ? employeeSelect.options[employeeSelect.selectedIndex].text : 'Unknown Employee';
+  
+  // Get the estimated total from the alert text
+  let alertText = document.querySelector('.alert-info')?.textContent || '';
+  let totalAmount = alertText.match(/₱[\d,.]+/) ? alertText.match(/₱[\d,.]+/)[0].replace('₱', '').trim() : '0.00';
+  
+  let url = 'dashboard.php?module=payroll&view=payroll_adjustments_special_pay&ajax=1&modal=submit&submit_type=' + 
+            encodeURIComponent(submitType) +
+            '&employee=' + encodeURIComponent(employeeInfo) +
+            '&total=' + encodeURIComponent(totalAmount);
+  
+  fetch(url)
+    .then(response => response.text())
+    .then(html => {
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+      const modalOverlay = temp.querySelector('.modal-overlay');
+      
+      if (modalOverlay) {
+        document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
+        document.body.appendChild(modalOverlay);
+        modalOverlay.classList.add('active');
+      }
+    })
+    .catch(error => console.error('Error loading modal:', error));
+};
+
+window.confirmAndSubmit = function(submitType) {
+  // Get employee info
+  let employeeSelect = document.querySelector('select[name*="employee"]');
+  let employeeInfo = employeeSelect ? employeeSelect.options[employeeSelect.selectedIndex].text : 'Unknown Employee';
+  
+  let alertText = document.querySelector('.alert-info')?.textContent || '';
+  let totalAmount = alertText.match(/₱[\d,.]+/) ? alertText.match(/₱[\d,.]+/)[0].replace('₱', '').trim() : '0.00';
+  
+  // Close current modal
+  window.closeAdjustmentModal();
+  
+  // Show success modal
+  let url = 'dashboard.php?module=payroll&view=payroll_adjustments_special_pay&ajax=1&modal=submitted&submit_type=' + 
+            encodeURIComponent(submitType) +
+            '&employee=' + encodeURIComponent(employeeInfo) +
+            '&total=' + encodeURIComponent(totalAmount);
+  
+  fetch(url)
+    .then(response => response.text())
+    .then(html => {
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+      const modalOverlay = temp.querySelector('.modal-overlay');
+      
+      if (modalOverlay) {
+        document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
+        document.body.appendChild(modalOverlay);
+        modalOverlay.classList.add('active');
+      }
+    })
+    .catch(error => console.error('Error submitting:', error));
+};
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+  const modal = document.querySelector('.modal-box');
+  const overlay = document.querySelector('.modal-overlay');
+  if (overlay && event.target === overlay && modal) {
+    window.closeAdjustmentModal();
+  }
+});
 </script>

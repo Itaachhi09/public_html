@@ -13,6 +13,10 @@ require_once __DIR__ . '/../models/PayrollRun.php';
 $disbursement = new Disbursement();
 $payrollRun = new PayrollRun();
 
+// Check if this is an AJAX modal request
+$isAjax = isset($_GET['ajax']) && $_GET['ajax'] == 1;
+$modal = isset($_GET['modal']) ? $_GET['modal'] : null;
+
 // Fetch disbursement data
 $allDisbursements = $disbursement->getAll();
 $transmitted = $disbursement->getByStatus('transmitted');
@@ -23,6 +27,94 @@ $statsTransmitted = count($transmitted ?? []);
 $statsConfirmed = count(array_filter($allDisbursements ?? [], fn($d) => $d['status'] === 'confirmed'));
 $statsPending = count(array_filter($allDisbursements ?? [], fn($d) => $d['status'] === 'pending'));
 $statsFailed = count($failed ?? []);
+
+// Handle AJAX modal request
+if ($isAjax && $modal === 'view'):
+    $batchRef = isset($_GET['batch_ref']) ? $_GET['batch_ref'] : '';
+    
+    // Sample batch data - in production, fetch from database
+    $batchData = [
+        'BATCH-2026-02-001' => ['period' => 'Feb 2026 Period 1', 'date' => 'February 8, 2026 10:30 AM', 'bank' => 'BDO Bank', 'format' => 'TXT', 'amount' => '58,355.00', 'records' => 8, 'status' => 'transmitted'],
+        'BATCH-2026-01-02' => ['period' => 'Jan 2026 Period 2', 'date' => 'February 1, 2026 09:15 AM', 'bank' => 'Metrobank', 'format' => 'CSV', 'amount' => '54,230.00', 'records' => 8, 'status' => 'confirmed'],
+        'BATCH-2026-01-01' => ['period' => 'Jan 2026 Period 1', 'date' => 'January 24, 2026 11:00 AM', 'bank' => 'BDO Bank', 'format' => 'TXT', 'amount' => '57,890.00', 'records' => 8, 'status' => 'confirmed'],
+    ];
+    
+    $batch = $batchData[$batchRef] ?? null;
+    
+    header('Content-Type: text/html');
+    ob_start();
+    ?>
+    <div class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h3>Bank File Details</h3>
+                <button type="button" class="modal-close-btn" onclick="window.closeDisbursementModal()">✕</button>
+            </div>
+            <div class="modal-content">
+                <?php if ($batch): ?>
+                    <div style="margin-bottom: 1.5rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1rem;">
+                            <div>
+                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Batch Reference</label>
+                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($batchRef); ?></div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Payroll Period</label>
+                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($batch['period']); ?></div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Bank</label>
+                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($batch['bank']); ?></div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Format</label>
+                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($batch['format']); ?></div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Total Amount</label>
+                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;">₱<?php echo htmlspecialchars($batch['amount']); ?></div>
+                            </div>
+                            <div>
+                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Records</label>
+                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($batch['records']); ?></div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">
+                            <label style="font-size: 12px; color: #6b7280; font-weight: 500; display: block; margin-bottom: 0.5rem;">File Preview</label>
+                            <pre style="background: #f3f4f6; padding: 0.75rem; border-radius: 4px; font-size: 11px; max-height: 200px; overflow-y: auto; color: #1f2937;">101,2026020100000058355.00,BDO,20260222,<?php echo htmlspecialchars($batchRef); ?>     ,,,,,,
+521,20260222,123456789,1234567890,JOHN DOE,,,7650.00,PAYROLL-FEB1,,,
+522,20260222,123456790,9876543210,JANE SMITH,,,7300.00,PAYROLL-FEB1,,,
+523,20260222,123456791,5555555555,MICHAEL JOHNSON,,,8050.00,PAYROLL-FEB1,,,
+524,20260222,123456792,4444444444,SARAH WILLIAMS,,,6400.00,PAYROLL-FEB1,,,
+525,20260222,123456793,3333333333,ROBERT BROWN,,,6250.00,PAYROLL-FEB1,,,
+526,20260222,123456794,2222222222,EMILY DAVIS,,,7425.00,PAYROLL-FEB1,,,
+527,20260222,123456795,1111111111,DAVID MARTINEZ,,,6470.00,PAYROLL-FEB1,,,
+528,20260222,123456796,0000000000,JESSICA WILSON,,,8810.00,PAYROLL-FEB1,,,
+900,8,58355.00,<?php echo htmlspecialchars($batchRef); ?>,20260222,,,,,,,</pre>
+                        </div>
+                        
+                        <div style="margin-top: 1.5rem; padding: 1rem; background: #dbeafe; border-radius: 4px; border-left: 4px solid #3b82f6;">
+                            <div style="color: #1e40af; font-size: 12px;">
+                                <strong>Status:</strong> <span style="text-transform: uppercase; font-weight: 600;"><?php echo htmlspecialchars($batch['status']); ?></span>
+                            </div>
+                            <div style="color: #1e40af; font-size: 12px; margin-top: 0.5rem;">
+                                <strong>Generated:</strong> <?php echo htmlspecialchars($batch['date']); ?>
+                            </div>
+                        </div>
+                    </div>
+                <?php else: ?>
+                    <div style="padding: 1rem; background: #fee2e2; border-radius: 4px; color: #991b1b;">
+                        <strong>Error:</strong> Batch file not found.
+                    </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+    <?php
+    echo ob_get_clean();
+    exit;
+endif;
 ?>
 
 <style>
@@ -426,6 +518,89 @@ $statsFailed = count($failed ?? []);
       page-break-inside: avoid;
     }
   }
+
+  /* Modal Styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+  }
+
+  .modal-box {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    max-width: 650px;
+    max-height: 90vh;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    animation: slideIn 0.3s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateY(-50px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .modal-header h3 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 16px;
+  }
+
+  .modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+  }
+
+  .modal-close-btn:hover {
+    background: #f3f4f6;
+    color: #1f2937;
+  }
+
+  .modal-content {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .modal-overlay.active {
+    display: flex !important;
+  }
 </style>
 
 <div class="disbursement-container">
@@ -596,10 +771,7 @@ $statsFailed = count($failed ?? []);
               <td style="text-align: center;">8</td>
               <td><span class="badge badge-transmitted">Transmitted</span></td>
               <td>
-                <form method="GET" style="display: inline;">
-                  <input type="hidden" name="batch_ref" value="BATCH-2026-02-001">
-                  <button type="submit" class="btn btn-secondary btn-sm">View</button>
-                </form>
+                <button type="button" onclick="window.openDisbursementModal('BATCH-2026-02-001')" class="btn btn-secondary btn-sm">View</button>
               </td>
             </tr>
             <tr>
@@ -612,10 +784,7 @@ $statsFailed = count($failed ?? []);
               <td style="text-align: center;">8</td>
               <td><span class="badge badge-confirmed">Confirmed</span></td>
               <td>
-                <form method="GET" style="display: inline;">
-                  <input type="hidden" name="batch_ref" value="BATCH-2026-01-02">
-                  <button type="submit" class="btn btn-secondary btn-sm">View</button>
-                </form>
+                <button type="button" onclick="window.openDisbursementModal('BATCH-2026-01-02')" class="btn btn-secondary btn-sm">View</button>
               </td>
             </tr>
             <tr>
@@ -628,10 +797,7 @@ $statsFailed = count($failed ?? []);
               <td style="text-align: center;">8</td>
               <td><span class="badge badge-confirmed">Confirmed</span></td>
               <td>
-                <form method="GET" style="display: inline;">
-                  <input type="hidden" name="batch_ref" value="BATCH-2026-01-01">
-                  <button type="submit" class="btn btn-secondary btn-sm">View</button>
-                </form>
+                <button type="button" onclick="window.openDisbursementModal('BATCH-2026-01-01')" class="btn btn-secondary btn-sm">View</button>
               </td>
             </tr>
             <tr style="background: #fee2e2;">
@@ -644,10 +810,7 @@ $statsFailed = count($failed ?? []);
               <td style="text-align: center;">8</td>
               <td><span class="badge badge-failed">Failed</span></td>
               <td>
-                <form method="GET" style="display: inline;">
-                  <input type="hidden" name="batch_ref" value="BATCH-2025-12-02">
-                  <button type="submit" class="btn btn-secondary btn-sm">View</button>
-                </form>
+                <button type="button" onclick="window.openDisbursementModal('BATCH-2025-12-02')" class="btn btn-secondary btn-sm">View</button>
               </td>
             </tr>
             <tr>
@@ -660,10 +823,7 @@ $statsFailed = count($failed ?? []);
               <td style="text-align: center;">8</td>
               <td><span class="badge badge-confirmed">Confirmed</span></td>
               <td>
-                <form method="GET" style="display: inline;">
-                  <input type="hidden" name="batch_ref" value="BATCH-2025-12-01">
-                  <button type="submit" class="btn btn-secondary btn-sm">View</button>
-                </form>
+                <button type="button" onclick="window.openDisbursementModal('BATCH-2025-12-01')" class="btn btn-secondary btn-sm">View</button>
               </td>
             </tr>
             <tr>
@@ -676,10 +836,7 @@ $statsFailed = count($failed ?? []);
               <td style="text-align: center;">8</td>
               <td><span class="badge badge-confirmed">Confirmed</span></td>
               <td>
-                <form method="GET" style="display: inline;">
-                  <input type="hidden" name="batch_ref" value="BATCH-2025-11-02">
-                  <button type="submit" class="btn btn-secondary btn-sm">View</button>
-                </form>
+                <button type="button" onclick="window.openDisbursementModal('BATCH-2025-11-02')" class="btn btn-secondary btn-sm">View</button>
               </td>
             </tr>
             <tr>
@@ -692,9 +849,7 @@ $statsFailed = count($failed ?? []);
               <td style="text-align: center;">8</td>
               <td><span class="badge badge-confirmed">Confirmed</span></td>
               <td>
-                <form method="GET" style="display: inline;">
-                  <input type="hidden" name="batch_ref" value="BATCH-2025-11-01">
-                  <button type="submit" class="btn btn-secondary btn-sm">View</button>
+                <button type="button" onclick="window.openDisbursementModal('BATCH-2025-11-01')" class="btn btn-secondary btn-sm">View</button>
                 </form>
               </td>
             </tr>
@@ -1133,4 +1288,49 @@ function switchTab(event, tabName) {
   // Add active class to clicked tab
   event.target.classList.add('active');
 }
+
+// Modal functions
+window.openDisbursementModal = function(batchRef) {
+  // Fetch modal content via AJAX without page refresh
+  let url = 'dashboard.php?module=payroll&view=disbursement_bank_files&ajax=1&modal=view&batch_ref=' + encodeURIComponent(batchRef);
+  
+  fetch(url)
+    .then(response => response.text())
+    .then(html => {
+      // Create a temporary container to parse the response
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+      const modalOverlay = temp.querySelector('.modal-overlay');
+      
+      if (modalOverlay) {
+        // Remove old modals if any
+        document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
+        // Add new modal to page
+        document.body.appendChild(modalOverlay);
+        // Add the active class to display modal
+        modalOverlay.classList.add('active');
+      } else {
+        console.error('Modal overlay not found in response');
+        console.log('Response HTML:', html.substring(0, 500));
+      }
+    })
+    .catch(error => console.error('Error loading modal:', error));
+};
+
+window.closeDisbursementModal = function() {
+  const overlay = document.querySelector('.modal-overlay');
+  if (overlay) {
+    overlay.classList.remove('active');
+    overlay.remove();
+  }
+};
+
+// Close modal when clicking outside
+document.addEventListener('click', function(event) {
+  const modal = document.querySelector('.modal-box');
+  const overlay = document.querySelector('.modal-overlay');
+  if (overlay && event.target === overlay && modal) {
+    window.closeDisbursementModal();
+  }
+});
 </script>

@@ -690,9 +690,9 @@ class HMOController extends BaseController {
     public function approveBillingReconciliation($reconciliation_id) {
         try {
             $query = "UPDATE hmo_billing_reconciliation 
-                      SET status = 'approved', 
+                      SET reconciliation_status = 'approved', 
                           reviewed_by = ?,
-                          reviewed_date = NOW()
+                          review_date = NOW()
                       WHERE id = ?";
             
             $stmt = $this->db->prepare($query);
@@ -1006,7 +1006,7 @@ class HMOController extends BaseController {
         try {
             $query = "SELECT hp.*, COUNT(ehe.id) as enrollment_count
                       FROM hmo_plans hp
-                      LEFT JOIN employee_hmo_enrollments ehe ON hp.id = ehe.plan_id AND ehe.status = 'Active'
+                      LEFT JOIN employee_hmo_enrollments ehe ON hp.id = ehe.plan_id AND ehe.enrollment_status = 'active'
                       WHERE hp.provider_id = ? AND hp.is_active = 1
                       GROUP BY hp.id
                       ORDER BY hp.plan_name ASC";
@@ -1033,15 +1033,15 @@ class HMOController extends BaseController {
             }
 
             $query = "INSERT INTO employee_hmo_enrollments 
-                      (employee_id, plan_id, effective_date, status, created_at) 
+                      (employee_id, plan_id, effective_date, enrollment_status, created_at) 
                       VALUES (?, ?, ?, ?, NOW())";
             $stmt = $this->db->prepare($query);
-            $status = $data['status'] ?? 'Pending';
+            $enrollment_status = $data['enrollment_status'] ?? 'Pending';
             $stmt->execute([
                 $data['employee_id'],
                 $data['plan_id'],
                 $data['effective_date'],
-                $status
+                $enrollment_status
             ]);
 
             $enrollment_id = $this->db->lastInsertId();
@@ -1063,7 +1063,7 @@ class HMOController extends BaseController {
             $fields = [];
             $values = [];
             foreach ($data as $key => $value) {
-                if (in_array($key, ['status', 'plan_id', 'effective_date', 'termination_date'])) {
+                if (in_array($key, ['enrollment_status', 'plan_id', 'effective_date', 'termination_date'])) {
                     $fields[] = "$key = ?";
                     $values[] = $value;
                 }
@@ -1094,15 +1094,58 @@ class HMOController extends BaseController {
             }
 
             $termination_date = $data['termination_date'] ?? date('Y-m-d');
+
+            $query = "UPDATE employee_hmo_enrollments 
+                      SET enrollment_status = 'Terminated', termination_date = ?, updated_at = NOW() 
+                      WHERE id = ?";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$termination_date, $enrollment_id]);
+
+            return ['success' => true, 'message' => 'Enrollment terminated successfully'];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Suspend enrollment
+     */
+    public function suspendEnrollment($enrollment_id, $data = []) {
+        try {
+            if (empty($enrollment_id)) {
+                return ['success' => false, 'error' => 'Enrollment ID required'];
+            }
+
             $reason = $data['reason'] ?? null;
 
             $query = "UPDATE employee_hmo_enrollments 
-                      SET status = 'Terminated', termination_date = ?, termination_reason = ?, updated_at = NOW() 
+                      SET enrollment_status = 'Suspended', suspension_reason = ?, updated_at = NOW() 
                       WHERE id = ?";
             $stmt = $this->db->prepare($query);
-            $stmt->execute([$termination_date, $reason, $enrollment_id]);
+            $stmt->execute([$reason, $enrollment_id]);
 
-            return ['success' => true, 'message' => 'Enrollment terminated successfully'];
+            return ['success' => true, 'message' => 'Enrollment suspended successfully'];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Unsuspend enrollment (restore to active)
+     */
+    public function unsuspendEnrollment($enrollment_id, $data = []) {
+        try {
+            if (empty($enrollment_id)) {
+                return ['success' => false, 'error' => 'Enrollment ID required'];
+            }
+
+            $query = "UPDATE employee_hmo_enrollments 
+                      SET enrollment_status = 'active', suspension_reason = NULL, updated_at = NOW() 
+                      WHERE id = ?";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$enrollment_id]);
+
+            return ['success' => true, 'message' => 'Enrollment restored successfully'];
         } catch (Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];
         }
@@ -1113,7 +1156,13 @@ class HMOController extends BaseController {
      */
     public function getClaimDetail($claim_id) {
         try {
-            $query = "SELECT * FROM hmo_claims WHERE id = ?";
+            $query = "SELECT c.*, emp.employee_code, CONCAT(emp.first_name, ' ', emp.last_name) as employee_name,
+                             hp.plan_name, hpr.provider_name
+                      FROM hmo_claims c
+                      LEFT JOIN employees emp ON c.employee_id = emp.employee_id
+                      LEFT JOIN hmo_plans hp ON c.plan_id = hp.id
+                      LEFT JOIN hmo_providers hpr ON c.provider_id = hpr.id
+                      WHERE c.id = ?";
             $stmt = $this->db->prepare($query);
             $stmt->execute([$claim_id]);
             $claim = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -1193,8 +1242,8 @@ class HMOController extends BaseController {
                 }
             }
 
-            $query = "INSERT INTO billing_reconciliations 
-                      (provider_id, billing_month, claims_count, total_amount, status, created_at) 
+            $query = "INSERT INTO hmo_billing_reconciliation 
+                      (provider_id, billing_month, claims_count, total_amount, reconciliation_status, created_at) 
                       VALUES (?, ?, ?, ?, ?, NOW())";
             $stmt = $this->db->prepare($query);
             $billing_month = $data['year'] . '-' . str_pad($data['month'], 2, '0', STR_PAD_LEFT) . '-01';
@@ -1203,7 +1252,7 @@ class HMOController extends BaseController {
                 $billing_month,
                 $data['claims_count'],
                 $data['total_amount'],
-                'Pending'
+                'pending'
             ]);
 
             $id = $this->db->lastInsertId();
@@ -1221,7 +1270,7 @@ class HMOController extends BaseController {
             $fields = [];
             $values = [];
             foreach ($data as $key => $value) {
-                if (in_array($key, ['status', 'total_amount', 'notes'])) {
+                if (in_array($key, ['reconciliation_status', 'total_amount', 'notes'])) {
                     $fields[] = "$key = ?";
                     $values[] = $value;
                 }
@@ -1232,7 +1281,7 @@ class HMOController extends BaseController {
                 return ['success' => false, 'error' => 'No valid fields to update'];
             }
 
-            $query = "UPDATE billing_reconciliations SET " . implode(', ', $fields) . ", updated_at = NOW() WHERE id = ?";
+            $query = "UPDATE hmo_billing_reconciliation SET " . implode(', ', $fields) . ", updated_at = NOW() WHERE id = ?";
             $stmt = $this->db->prepare($query);
             $stmt->execute($values);
 
@@ -1249,7 +1298,7 @@ class HMOController extends BaseController {
         try {
             $billing_month = $year . '-' . str_pad($month, 2, '0', STR_PAD_LEFT);
             $query = "SELECT br.*, hpr.provider_name 
-                      FROM billing_reconciliations br
+                      FROM hmo_billing_reconciliation br
                       LEFT JOIN hmo_providers hpr ON br.provider_id = hpr.id
                       WHERE DATE_FORMAT(br.billing_month, '%Y-%m') = ? 
                       ORDER BY br.created_at DESC";
@@ -1268,7 +1317,7 @@ class HMOController extends BaseController {
      */
     public function getBillingReconciliationsByProvider($provider_id) {
         try {
-            $query = "SELECT * FROM billing_reconciliations 
+            $query = "SELECT * FROM hmo_billing_reconciliation 
                       WHERE provider_id = ? 
                       ORDER BY billing_month DESC, created_at DESC";
             $stmt = $this->db->prepare($query);
@@ -1299,6 +1348,478 @@ class HMOController extends BaseController {
             return ['success' => true, 'message' => 'Billing discrepancy resolved successfully'];
         } catch (Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Create provider
+     */
+    public function createProvider($data) {
+        try {
+            $query = "INSERT INTO hmo_providers 
+                      (provider_code, provider_name, description, head_office_address, 
+                       contact_phone, contact_email, primary_contact_person, 
+                       primary_contact_title, website, accreditation_number, 
+                       established_year, provider_status, provider_type, 
+                       contract_start_date, contract_end_date, payment_terms_days, 
+                       employer_premium_contribution_rate, employee_premium_contribution_rate, 
+                       is_active, created_at, updated_at)
+                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW(), NOW())";
+            
+            $stmt = $this->db->prepare($query);
+            $result = $stmt->execute([
+                $data['provider_code'] ?? '',
+                $data['provider_name'] ?? '',
+                $data['description'] ?? null,
+                $data['head_office_address'] ?? null,
+                $data['contact_phone'] ?? null,
+                $data['contact_email'] ?? null,
+                $data['primary_contact_person'] ?? null,
+                $data['primary_contact_title'] ?? null,
+                $data['website'] ?? null,
+                $data['accreditation_number'] ?? null,
+                $data['established_year'] ?? null,
+                $data['provider_status'] ?? 'Active',
+                $data['provider_type'] ?? 'Corporate',
+                $data['contract_start_date'] ?? null,
+                $data['contract_end_date'] ?? null,
+                $data['payment_terms_days'] ?? 30,
+                $data['employer_premium_contribution_rate'] ?? 75,
+                $data['employee_premium_contribution_rate'] ?? 25
+            ]);
+
+            if ($result) {
+                $id = $this->db->lastInsertId();
+                $provider = $this->getProviderById($id);
+                return ['success' => true, 'data' => $provider, 'message' => 'Provider created successfully'];
+            } else {
+                return ['success' => false, 'error' => 'Failed to create provider'];
+            }
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Update provider
+     */
+    public function updateProvider($id, $data) {
+        try {
+            $id = intval($id);
+            
+            $updates = [];
+            $params = [];
+
+            if (isset($data['provider_name'])) {
+                $updates[] = "provider_name = ?";
+                $params[] = $data['provider_name'];
+            }
+            if (isset($data['description'])) {
+                $updates[] = "description = ?";
+                $params[] = $data['description'];
+            }
+            if (isset($data['head_office_address'])) {
+                $updates[] = "head_office_address = ?";
+                $params[] = $data['head_office_address'];
+            }
+            if (isset($data['contact_phone'])) {
+                $updates[] = "contact_phone = ?";
+                $params[] = $data['contact_phone'];
+            }
+            if (isset($data['contact_email'])) {
+                $updates[] = "contact_email = ?";
+                $params[] = $data['contact_email'];
+            }
+            if (isset($data['primary_contact_person'])) {
+                $updates[] = "primary_contact_person = ?";
+                $params[] = $data['primary_contact_person'];
+            }
+            if (isset($data['primary_contact_title'])) {
+                $updates[] = "primary_contact_title = ?";
+                $params[] = $data['primary_contact_title'];
+            }
+            if (isset($data['website'])) {
+                $updates[] = "website = ?";
+                $params[] = $data['website'];
+            }
+            if (isset($data['accreditation_number'])) {
+                $updates[] = "accreditation_number = ?";
+                $params[] = $data['accreditation_number'];
+            }
+            if (isset($data['established_year'])) {
+                $updates[] = "established_year = ?";
+                $params[] = $data['established_year'];
+            }
+            if (isset($data['provider_status'])) {
+                $updates[] = "provider_status = ?";
+                $params[] = $data['provider_status'];
+            }
+            if (isset($data['provider_type'])) {
+                $updates[] = "provider_type = ?";
+                $params[] = $data['provider_type'];
+            }
+            if (isset($data['contract_start_date'])) {
+                $updates[] = "contract_start_date = ?";
+                $params[] = $data['contract_start_date'];
+            }
+            if (isset($data['contract_end_date'])) {
+                $updates[] = "contract_end_date = ?";
+                $params[] = $data['contract_end_date'];
+            }
+            if (isset($data['payment_terms_days'])) {
+                $updates[] = "payment_terms_days = ?";
+                $params[] = $data['payment_terms_days'];
+            }
+            if (isset($data['is_active'])) {
+                $updates[] = "is_active = ?";
+                $params[] = $data['is_active'];
+            }
+
+            if (empty($updates)) {
+                return ['success' => false, 'error' => 'No fields to update'];
+            }
+
+            $updates[] = "updated_at = NOW()";
+            $params[] = $id;
+
+            $query = "UPDATE hmo_providers SET " . implode(", ", $updates) . " WHERE id = ?";
+            $stmt = $this->db->prepare($query);
+            
+            if ($stmt->execute($params)) {
+                $provider = $this->getProviderById($id);
+                return ['success' => true, 'data' => $provider, 'message' => 'Provider updated successfully'];
+            } else {
+                return ['success' => false, 'error' => 'Failed to update provider'];
+            }
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Delete provider
+     */
+    public function deleteProvider($id) {
+        try {
+            $id = intval($id);
+            $query = "DELETE FROM hmo_providers WHERE id = ?";
+            $stmt = $this->db->prepare($query);
+            
+            if ($stmt->execute([$id])) {
+                return ['success' => true, 'message' => 'Provider deleted successfully'];
+            } else {
+                return ['success' => false, 'error' => 'Failed to delete provider'];
+            }
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get provider by ID
+     */
+    private function getProviderById($id) {
+        try {
+            $query = "SELECT * FROM hmo_providers WHERE id = ?";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$id]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Create new HMO plan
+     */
+    public function createPlan($data) {
+        try {
+            $query = "INSERT INTO hmo_plans (
+                plan_name, plan_code, provider_id, plan_type,
+                description, annual_premium_per_employee, annual_premium_per_dependent,
+                monthly_premium, out_of_pocket_limit, deductible_amount,
+                copay_percentage, coverage_details, in_network_doctors,
+                in_network_hospitals, is_active, plan_launch_date
+            ) VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+            )";
+
+            $stmt = $this->db->prepare($query);
+            $result = $stmt->execute([
+                $data['plan_name'] ?? null,
+                $data['plan_code'] ?? null,
+                $data['provider_id'] ?? null,
+                $data['plan_type'] ?? 'Standard',
+                $data['description'] ?? null,
+                $data['annual_premium_per_employee'] ?? 0,
+                $data['annual_premium_per_dependent'] ?? 0,
+                $data['monthly_premium'] ?? 0,
+                $data['out_of_pocket_limit'] ?? 0,
+                $data['deductible_amount'] ?? 0,
+                $data['copay_percentage'] ?? 20,
+                $data['coverage_details'] ?? null,
+                $data['in_network_doctors'] ?? 0,
+                $data['in_network_hospitals'] ?? 0,
+                1,
+                $data['plan_launch_date'] ?? date('Y-m-d')
+            ]);
+
+            if ($result) {
+                $plan_id = $this->db->lastInsertId();
+                return [
+                    'success' => true,
+                    'data' => $this->getPlanById($plan_id),
+                    'message' => 'Plan created successfully'
+                ];
+            }
+            return ['success' => false, 'error' => 'Failed to create plan'];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Update HMO plan
+     */
+    public function updatePlan($id, $data) {
+        try {
+            $updates = [];
+            $params = [];
+
+            $allowed_fields = [
+                'plan_name', 'plan_code', 'provider_id', 'plan_type',
+                'description', 'annual_premium_per_employee', 'annual_premium_per_dependent',
+                'monthly_premium', 'out_of_pocket_limit', 'deductible_amount',
+                'copay_percentage', 'coverage_details', 'in_network_doctors',
+                'in_network_hospitals', 'is_active', 'plan_launch_date'
+            ];
+
+            foreach ($allowed_fields as $field) {
+                if (isset($data[$field])) {
+                    $updates[] = "$field = ?";
+                    $params[] = $data[$field];
+                }
+            }
+
+            if (empty($updates)) {
+                return ['success' => false, 'error' => 'No fields to update'];
+            }
+
+            $params[] = $id;
+            $query = "UPDATE hmo_plans SET " . implode(', ', $updates) . " WHERE id = ?";
+            $stmt = $this->db->prepare($query);
+            $result = $stmt->execute($params);
+
+            if ($result) {
+                return [
+                    'success' => true,
+                    'data' => $this->getPlanById($id),
+                    'message' => 'Plan updated successfully'
+                ];
+            }
+            return ['success' => false, 'error' => 'Failed to update plan'];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Delete HMO plan
+     */
+    public function deletePlan($id) {
+        try {
+            $query = "DELETE FROM hmo_plans WHERE id = ?";
+            $stmt = $this->db->prepare($query);
+            $result = $stmt->execute([$id]);
+
+            if ($result) {
+                return [
+                    'success' => true,
+                    'message' => 'Plan deleted successfully'
+                ];
+            }
+            return ['success' => false, 'error' => 'Failed to delete plan'];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get premium details for a plan
+     */
+    public function getPremiumDetails($plan_id) {
+        try {
+            $query = "SELECT hp.*, hpr.provider_name,
+                      (SELECT COUNT(*) FROM employee_hmo_enrollments WHERE plan_id = hp.id AND enrollment_status = 'active') as total_enrollments
+                      FROM hmo_plans hp
+                      LEFT JOIN hmo_providers hpr ON hp.provider_id = hpr.id
+                      WHERE hp.id = ?";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$plan_id]);
+            $plan = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$plan) {
+                return ['success' => false, 'error' => 'Plan not found'];
+            }
+
+            // Calculate premium details
+            $plan['total_premium'] = $plan['annual_premium_per_employee'];
+            $plan['employer_share'] = round($plan['annual_premium_per_employee'] * 0.70, 2); // 70% employer
+            $plan['employee_share'] = round($plan['annual_premium_per_employee'] * 0.30, 2); // 30% employee
+            $plan['is_percentage'] = false;
+            $plan['employee_only_rate'] = 100;
+            $plan['with_dependents_rate'] = 80;
+            $plan['dependent_rate'] = 50;
+            $plan['payroll_code'] = 'HMO-' . $plan['plan_code'];
+            $plan['deduction_frequency'] = 'Monthly';
+            $plan['active_deductions'] = $plan['total_enrollments'] ?? 0;
+
+            return ['success' => true, 'data' => $plan];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get payroll deductions
+     */
+    public function getPayrollDeductions() {
+        try {
+            $query = "SELECT 
+                      ee.id as deduction_id,
+                      CONCAT(e.first_name, ' ', e.last_name) as employee_name,
+                      hp.plan_name,
+                      ee.employee_premium_amount as deduction_amount,
+                      'Monthly' as frequency,
+                      ee.enrollment_status,
+                      DATE_FORMAT(ee.enrollment_date, '%Y-%m-%d') as deduction_start_date
+                      FROM employee_hmo_enrollments ee
+                      LEFT JOIN hmo_plans hp ON ee.plan_id = hp.id
+                      LEFT JOIN employees e ON ee.employee_id = e.employee_id
+                      WHERE ee.enrollment_status IN ('active', 'waiting_period')
+                      ORDER BY e.first_name ASC";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute();
+            
+            return [
+                'success' => true,
+                'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)
+            ];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get premium adjustments
+     */
+    public function getPremiumAdjustments() {
+        try {
+            $query = "SELECT 
+                      hp.id,
+                      hp.plan_name,
+                      hp.annual_premium_per_employee as current_premium,
+                      hp.updated_at as last_adjusted,
+                      (SELECT COUNT(*) FROM employee_hmo_enrollments WHERE plan_id = hp.id AND enrollment_status = 'active') as affected_employees,
+                      hp.is_active
+                      FROM hmo_plans hp
+                      ORDER BY hp.updated_at DESC
+                      LIMIT 20";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute();
+            
+            return [
+                'success' => true,
+                'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)
+            ];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Update premium for a plan
+     */
+    public function updatePremium($plan_id, $data) {
+        try {
+            if (empty($plan_id)) {
+                return ['success' => false, 'error' => 'Plan ID required'];
+            }
+
+            $allowed_fields = ['annual_premium_per_employee', 'annual_premium_per_dependent', 'monthly_premium'];
+            $updates = [];
+            $values = [];
+
+            foreach ($data as $key => $value) {
+                if (in_array($key, $allowed_fields)) {
+                    $updates[] = "$key = ?";
+                    $values[] = $value;
+                }
+            }
+            $values[] = $plan_id;
+
+            if (!$updates) {
+                return ['success' => false, 'error' => 'No valid fields to update'];
+            }
+
+            $query = "UPDATE hmo_plans SET " . implode(', ', $updates) . ", updated_at = NOW() WHERE id = ?";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute($values);
+
+            return ['success' => true, 'message' => 'Premium updated successfully'];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Toggle premium active status
+     */
+    public function togglePremium($plan_id) {
+        try {
+            if (empty($plan_id)) {
+                return ['success' => false, 'error' => 'Plan ID required'];
+            }
+
+            // Get current status
+            $query = "SELECT is_active FROM hmo_plans WHERE id = ?";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$plan_id]);
+            $plan = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$plan) {
+                return ['success' => false, 'error' => 'Plan not found'];
+            }
+
+            $new_status = $plan['is_active'] ? 0 : 1;
+            $query = "UPDATE hmo_plans SET is_active = ?, updated_at = NOW() WHERE id = ?";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$new_status, $plan_id]);
+
+            return [
+                'success' => true,
+                'message' => $new_status ? 'Premium activated' : 'Premium deactivated',
+                'is_active' => $new_status
+            ];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get plan by ID
+     */
+    private function getPlanById($id) {
+        try {
+            $query = "SELECT hp.*, hpr.provider_name 
+                      FROM hmo_plans hp 
+                      LEFT JOIN hmo_providers hpr ON hp.provider_id = hpr.id 
+                      WHERE hp.id = ?";
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$id]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            return null;
         }
     }
 }

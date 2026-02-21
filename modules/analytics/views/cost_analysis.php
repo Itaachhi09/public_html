@@ -8,7 +8,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-if (empty($_SESSION['token'])) {
+// Check for AJAX requests - don't redirect for XMLHttpRequest
+if (empty($_SESSION['token']) && (!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || $_SERVER['HTTP_X_REQUESTED_WITH'] !== 'XMLHttpRequest')) {
     header('Location: ../../../index.php');
     exit;
 }
@@ -204,11 +205,12 @@ if (empty($_SESSION['token'])) {
     </div>
 
     <script>
-        let charts = {};
+        // Use global charts cache to avoid redeclaration conflicts when injected into dashboard
+        window.chartsCost = window.chartsCost || {};
 
         async function loadData() {
             try {
-                const response = await fetch('../api.php?action=getCostAnalysis');
+                const response = await fetch('/public_html/modules/analytics/api.php?action=getCostAnalysis');
                 const result = await response.json();
 
                 if (result.success) {
@@ -237,10 +239,10 @@ if (empty($_SESSION['token'])) {
             const trends = data.cost_trends || [];
 
             // Cost Breakdown Chart
-            if (charts.breakdown) charts.breakdown.destroy();
+            if (window.chartsCost.breakdown) window.chartsCost.breakdown.destroy();
             
             const ctx1 = document.getElementById('costBreakdownChart').getContext('2d');
-            charts.breakdown = new Chart(ctx1, {
+            window.chartsCost.breakdown = new Chart(ctx1, {
                 type: 'doughnut',
                 data: {
                     labels: ['Payroll', 'HMO', 'Compliance', 'Recruitment'],
@@ -261,10 +263,10 @@ if (empty($_SESSION['token'])) {
             });
 
             // Cost Trend Chart
-            if (charts.trend) charts.trend.destroy();
+            if (window.chartsCost.trend) window.chartsCost.trend.destroy();
             
             const ctx2 = document.getElementById('costTrendChart').getContext('2d');
-            charts.trend = new Chart(ctx2, {
+            window.chartsCost.trend = new Chart(ctx2, {
                 type: 'line',
                 data: {
                     labels: ['Month 1', 'Month 2', 'Month 3', 'Month 4', 'Month 5', 'Month 6'],
@@ -290,7 +292,10 @@ if (empty($_SESSION['token'])) {
                 const result = await response.json();
                 
                 if (result.success) {
-                    window.location.href = result.downloadUrl;
+                    const a = document.createElement('a');
+                    a.href = result.downloadUrl;
+                    a.download = 'report.csv';
+                    a.click();
                 }
             } catch (error) {
                 alert('Error exporting report: ' + error.message);

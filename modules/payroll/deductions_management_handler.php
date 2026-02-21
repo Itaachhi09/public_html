@@ -11,6 +11,7 @@ if (empty($_SESSION['token'])) {
 }
 
 require_once __DIR__ . '/../../config/Database.php';
+require_once __DIR__ . '/../../config/BaseConfig.php';
 require_once __DIR__ . '/models/PayrollComponent.php';
 
 $component = new PayrollComponent();
@@ -58,5 +59,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $params = ['ref' => 'payroll', 'page' => 'deductions_management'];
 if ($msg) $params['msg'] = urlencode($msg);
 if ($err) $params['err'] = urlencode($err);
-header('Location: ../../dashboard.php?' . http_build_query($params));
+header('Location: /public_html/dashboard.php?' . http_build_query($params));
 exit;

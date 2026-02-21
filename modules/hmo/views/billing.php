@@ -39,33 +39,65 @@
       padding: 1.5rem;
     }
 
-    /* Stats Grid */
+    /* Statistics */
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 1.5rem;
       margin-bottom: 2rem;
     }
 
-    .stat-box {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 1.5rem;
+    .stat-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-left: 4px solid #999;
       border-radius: 8px;
+      padding: 1.25rem;
       text-align: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      transition: all 0.2s ease;
     }
 
-    .stat-box h3 {
-      margin: 0;
-      font-size: 14px;
-      font-weight: 500;
-      opacity: 0.9;
+    .stat-card.accent-reconciliations {
+      border-left-color: #3b82f6;
     }
 
-    .stat-box .value {
+    .stat-card.accent-approved {
+      border-left-color: #10b981;
+    }
+
+    .stat-card.accent-pending {
+      border-left-color: #f59e0b;
+    }
+
+    .stat-card.accent-variance {
+      border-left-color: #ef4444;
+    }
+
+    .stat-card:hover {
+      border-color: #d1d5db;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .stat-icon {
+      font-size: 24px;
+      margin-bottom: 0.5rem;
+      opacity: 0.7;
+    }
+
+    .stat-value {
       font-size: 28px;
       font-weight: 700;
-      margin-top: 0.5rem;
+      color: #111827;
+      margin: 0.25rem 0 0.5rem 0;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     /* Table Styles */
@@ -75,43 +107,65 @@
       border: 1px solid #e5e7eb;
     }
 
-    table {
+    .billing-table {
       width: 100%;
       border-collapse: collapse;
-      background: white;
+      margin-top: 1rem;
     }
 
-    th {
+    .billing-table thead {
       background: #f9fafb;
-      padding: 1rem;
-      text-align: left;
-      font-size: 12px;
-      font-weight: 600;
-      color: #374151;
       border-bottom: 2px solid #e5e7eb;
     }
 
-    td {
+    .billing-table th {
       padding: 1rem;
-      border-bottom: 1px solid #e5e7eb;
-      font-size: 14px;
-      color: #4b5563;
+      text-align: left;
+      font-weight: 600;
+      color: #374151;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
-    tr:hover {
-      background: #f9fafb;
+    .billing-table tbody tr {
+      border-bottom: 1px solid #e5e7eb;
+      transition: background 0.15s ease;
+      cursor: pointer;
+    }
+
+    .billing-table tbody tr:hover {
+      background: #f0f9ff;
+    }
+
+    .billing-table td {
+      padding: 1.25rem 1rem;
+      color: #374151;
+      font-size: 14px;
+    }
+
+    .billing-table td:last-child {
+      text-align: center;
     }
 
     /* Badge Styles */
     .badge {
-      display: inline-block;
-      padding: 0.35rem 0.75rem;
-      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      padding: 0.35rem 0.85rem;
+      border-radius: 12px;
       font-size: 12px;
       font-weight: 600;
+      white-space: nowrap;
+      gap: 0.5rem;
     }
 
-    .badge-success {
+    .badge-pending {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge-approved {
       background: #dcfce7;
       color: #166534;
     }
@@ -129,6 +183,11 @@
     .badge-info {
       background: #dbeafe;
       color: #1e40af;
+    }
+
+    .badge-success {
+      background: #dcfce7;
+      color: #166534;
     }
 
     /* Loading indicator */
@@ -170,67 +229,94 @@
       justify-content: center;
     }
 
-    .modal {
+    /* Side Modal Styles */
+    .side-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      right: 0;
+      width: 450px;
+      height: 100vh;
       background: white;
-      border-radius: 8px;
-      padding: 2rem;
-      max-width: 600px;
-      width: 90%;
-      max-height: 90vh;
+      box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
+      z-index: 1001;
+      transform: translateX(500px);
+      transition: transform 0.3s ease;
       overflow-y: auto;
     }
 
+    .side-modal.active {
+      display: block;
+      transform: translateX(0);
+    }
+
+    .modal-content {
+      position: relative;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
     .modal-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid #e5e7eb;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 1.5rem;
-      border-bottom: 1px solid #e5e7eb;
-      padding-bottom: 1rem;
+      flex-shrink: 0;
     }
 
     .modal-title {
+      margin: 0;
       font-size: 18px;
       font-weight: 600;
-      color: #1f2937;
-      margin: 0;
+      color: #111827;
     }
 
     .close-btn {
       background: none;
       border: none;
-      font-size: 24px;
+      font-size: 20px;
+      color: #6b7280;
       cursor: pointer;
-      color: #9ca3af;
+      padding: 0.5rem;
+      transition: color 0.2s ease;
     }
 
     .close-btn:hover {
-      color: #1f2937;
+      color: #111827;
+    }
+
+    .modal-body {
+      padding: 1.5rem;
+      overflow-y: auto;
+      flex-grow: 1;
     }
 
     /* Button Styles */
     .btn {
       padding: 0.5rem 1rem;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 500;
-      transition: all 0.2s;
+      transition: all 0.2s ease;
+      white-space: nowrap;
     }
 
     .btn-primary {
-      background: #667eea;
+      background: #3b82f6;
       color: white;
     }
 
     .btn-primary:hover {
-      background: #5568d3;
+      background: #2563eb;
     }
 
     .btn-secondary {
       background: #e5e7eb;
-      color: #1f2937;
+      color: #374151;
     }
 
     .btn-secondary:hover {
@@ -244,6 +330,18 @@
 
     .btn-danger:hover {
       background: #dc2626;
+    }
+
+    .btn-small {
+      padding: 0.35rem 0.75rem;
+      font-size: 12px;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+      align-items: center;
     }
 
     /* Form Styles */
@@ -261,6 +359,8 @@
 
     input[type="text"],
     input[type="date"],
+    input[type="month"],
+    input[type="number"],
     input[type="email"],
     select,
     textarea {
@@ -322,21 +422,25 @@
 
   <!-- Stats -->
   <div class="stats-grid">
-    <div class="stat-box">
-      <h3>Total Reconciliations</h3>
-      <div class="value" id="stat-total">0</div>
+    <div class="stat-card accent-reconciliations">
+      <div class="stat-icon">📋</div>
+      <div class="stat-value" id="stat-total">0</div>
+      <div class="stat-label">Total Reconciliations</div>
     </div>
-    <div class="stat-box">
-      <h3>Pending Review</h3>
-      <div class="value" id="stat-pending">0</div>
+    <div class="stat-card accent-pending">
+      <div class="stat-icon">⏳</div>
+      <div class="stat-value" id="stat-pending">0</div>
+      <div class="stat-label">Pending Review</div>
     </div>
-    <div class="stat-box">
-      <h3>Total Variance</h3>
-      <div class="value" id="stat-variance">$0</div>
+    <div class="stat-card accent-variance">
+      <div class="stat-icon">💰</div>
+      <div class="stat-value" id="stat-variance">$0</div>
+      <div class="stat-label">Total Variance</div>
     </div>
-    <div class="stat-box">
-      <h3>Approved</h3>
-      <div class="value" id="stat-approved">0</div>
+    <div class="stat-card accent-approved">
+      <div class="stat-icon">✓</div>
+      <div class="stat-value" id="stat-approved">0</div>
+      <div class="stat-label">Approved</div>
     </div>
   </div>
 
@@ -356,35 +460,39 @@
   </div>
 
   <!-- Modal for reconciliation details -->
-  <div class="modal-overlay" id="modal-overlay" onclick="closeSideModal()"></div>
-  <div class="modal" id="reconciliation-modal" style="display: none;">
-    <div class="modal-header">
-      <h2 class="modal-title" id="modal-title">Reconciliation Details</h2>
-      <button class="close-btn" onclick="closeReconciliationModal()">×</button>
-    </div>
-    <div id="modal-body" class="modal-body">
-      <!-- Content injected here -->
+  <div class="modal-overlay" id="modal-overlay"></div>
+  <div class="side-modal" id="reconciliation-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title" id="modal-title">Reconciliation Details</h2>
+        <button class="close-btn" onclick="closeReconciliationModal()">✕</button>
+      </div>
+      <div id="modal-body" class="modal-body">
+        <!-- Content injected here -->
+      </div>
     </div>
   </div>
 </div>
 
 <script>
   // Global State
-  if (typeof allReconciliations === 'undefined') { var allReconciliations = []; }
-  allReconciliations = [];
-  if (typeof currentTab === 'undefined') { var currentTab = 'all'; }
-  currentTab = 'all';
+  var allReconciliations = [];
+  var currentReconciliationId = null;
 
   // ============================================
   // Initialize on page load (runs immediately for dynamic loading)
   loadReconciliations();
   updateCounts();
 
-  document.getElementById('modal-overlay').addEventListener('click', closeSideModal);
+  // Modal event listeners
+  window.modalOverlay = document.getElementById('modal-overlay');
+  if (window.modalOverlay) {
+    window.modalOverlay.addEventListener('click', closeReconciliationModal);
+  }
 
   window.onclick = function(event) {
-    if (event.target.id === 'modal-overlay') {
-      closeSideModal();
+    if (event.target && event.target.id === 'modal-overlay') {
+      closeReconciliationModal();
     }
   };
 
@@ -429,7 +537,7 @@
     }
 
     let html = `
-      <table>
+      <table class="billing-table">
         <thead>
           <tr>
             <th>Billing Month</th>
@@ -438,7 +546,7 @@
             <th>Variance</th>
             <th>Status</th>
             <th>Discrepancies</th>
-            <th>Action</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -447,19 +555,19 @@
     allReconciliations.forEach(reconciliation => {
       const variance = parseFloat(reconciliation.variance_amount || 0);
       const varianceClass = variance > 0 ? 'badge-warning' : variance < 0 ? 'badge-danger' : 'badge-success';
-      const statusBadge = reconciliation.status === 'approved' ? 'badge-success' : 
-                         reconciliation.status === 'pending' ? 'badge-warning' : 'badge-info';
+      const statusBadge = reconciliation.reconciliation_status === 'approved' ? 'badge-approved' : 
+                         reconciliation.reconciliation_status === 'pending' ? 'badge-pending' : 'badge-info';
 
       html += `
         <tr>
-          <td>${reconciliation.billing_month || 'N/A'}</td>
-          <td>$${parseFloat(reconciliation.claims_total || 0).toFixed(2)}</td>
-          <td>$${parseFloat(reconciliation.payment_total || 0).toFixed(2)}</td>
-          <td class="badge ${varianceClass}">$${variance.toFixed(2)}</td>
-          <td><span class="badge ${statusBadge}">${reconciliation.status || 'pending'}</span></td>
-          <td>${reconciliation.discrepancy_count || 0}</td>
-          <td>
-            <button class="btn btn-primary" onclick="viewReconciliationDetails(${reconciliation.id})">View</button>
+          <td><strong>${reconciliation.billing_month || 'N/A'}</strong></td>
+          <td>PHP ${parseFloat(reconciliation.total_claims_submitted || 0).toFixed(2)}</td>
+          <td>PHP ${parseFloat(reconciliation.total_payments_made || 0).toFixed(2)}</td>
+          <td><span class="badge ${varianceClass}">PHP ${variance.toFixed(2)}</span></td>
+          <td><span class="badge ${statusBadge}">${(reconciliation.reconciliation_status || 'pending').toUpperCase()}</span></td>
+          <td><span class="badge badge-warning">${reconciliation.discrepancy_count || 0}</span></td>
+          <td style="text-align: center;">
+            <button class="btn btn-primary btn-small" onclick="viewReconciliationDetails(${reconciliation.id})">👁️ View</button>
           </td>
         </tr>
       `;
@@ -482,6 +590,11 @@
     const overlay = document.getElementById('modal-overlay');
     const title = document.getElementById('modal-title');
     const body = document.getElementById('modal-body');
+
+    if (!modal || !overlay || !title || !body) {
+      console.error('Modal elements not found');
+      return;
+    }
 
     title.textContent = 'New Reconciliation';
     body.innerHTML = `
@@ -510,17 +623,25 @@
     `;
 
     overlay.classList.add('active');
-    modal.style.display = 'block';
+    modal.classList.add('active');
   }
 
   function viewReconciliationDetails(reconciliationId) {
     const reconciliation = allReconciliations.find(r => r.id === reconciliationId);
-    if (!reconciliation) return;
+    if (!reconciliation) {
+      console.error('Reconciliation not found:', reconciliationId);
+      return;
+    }
 
     const modal = document.getElementById('reconciliation-modal');
     const overlay = document.getElementById('modal-overlay');
     const title = document.getElementById('modal-title');
     const body = document.getElementById('modal-body');
+
+    if (!modal || !overlay || !title || !body) {
+      console.error('Modal elements not found');
+      return;
+    }
 
     title.textContent = `Reconciliation - ${reconciliation.billing_month}`;
     body.innerHTML = `
@@ -530,38 +651,47 @@
       </div>
       <div class="form-group">
         <label>Claims Total</label>
-        <input type="text" value="$${parseFloat(reconciliation.claims_total || 0).toFixed(2)}" readonly>
+        <input type="text" value="PHP ${parseFloat(reconciliation.total_claims_submitted || 0).toFixed(2)}" readonly>
       </div>
       <div class="form-group">
         <label>Payment Total</label>
-        <input type="text" value="$${parseFloat(reconciliation.payment_total || 0).toFixed(2)}" readonly>
+        <input type="text" value="PHP ${parseFloat(reconciliation.total_payments_made || 0).toFixed(2)}" readonly>
       </div>
       <div class="form-group">
         <label>Variance</label>
-        <input type="text" value="$${parseFloat(reconciliation.variance_amount || 0).toFixed(2)}" readonly>
+        <input type="text" value="PHP ${parseFloat(reconciliation.variance_amount || 0).toFixed(2)}" readonly>
       </div>
       <div class="form-group">
         <label>Status</label>
-        <input type="text" value="${reconciliation.status || 'pending'}" readonly>
+        <input type="text" value="${(reconciliation.reconciliation_status || 'pending').toUpperCase()}" readonly>
       </div>
       <div class="form-group">
         <label>Discrepancies Found</label>
         <input type="text" value="${reconciliation.discrepancy_count || 0}" readonly>
       </div>
-      <div style="display: flex; gap: 1rem;">
-        <button class="btn btn-primary" onclick="approveBillingReconciliation(${reconciliationId})">Approve</button>
-        <button class="btn btn-secondary" onclick="closeReconciliationModal()">Close</button>
+      ${reconciliation.reconciliation_status && reconciliation.reconciliation_status.toLowerCase() === 'pending' ? `
+      <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+        <button class="btn btn-primary" style="flex: 1;" onclick="approveBillingReconciliation(${reconciliation.id}, event)">Approve</button>
+        <button class="btn btn-secondary" style="flex: 1;" onclick="closeReconciliationModal()">Close</button>
       </div>
+      ` : `
+      <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+        <button class="btn btn-secondary" style="flex: 1;" onclick="closeReconciliationModal()">Close</button>
+      </div>
+      `}
     `;
 
     overlay.classList.add('active');
-    modal.style.display = 'block';
+    modal.classList.add('active');
   }
 
   function closeReconciliationModal() {
     const modal = document.getElementById('reconciliation-modal');
     const overlay = document.getElementById('modal-overlay');
-    modal.style.display = 'none';
+
+    if (!modal || !overlay) return;
+
+    modal.classList.remove('active');
     overlay.classList.remove('active');
   }
 
@@ -573,13 +703,15 @@
   // Action Functions
   // ============================================
 
-  function approveBillingReconciliation(reconciliationId) {
-    if (!confirm('Approve this reconciliation?')) return;
+  function approveBillingReconciliation(reconciliationId, event) {
+    if (event) event.stopPropagation();
+    
+    if (!confirm('Are you sure you want to approve this reconciliation?')) return;
 
-    fetch('modules/hmo/api.php?action=approveBillingReconciliation', {
+    fetch(`modules/hmo/api.php?action=approveBillingReconciliation&id=${reconciliationId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: reconciliationId })
+      body: JSON.stringify({})
     })
       .then(response => response.json())
       .then(data => {
@@ -591,7 +723,10 @@
           alert('Error: ' + (data.error || 'Unknown error'));
         }
       })
-      .catch(error => console.error('Error:', error));
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Error approving reconciliation');
+      });
   }
 
   function createReconciliation(event) {
@@ -605,13 +740,13 @@
 
   function updateCounts() {
     const total = allReconciliations.length;
-    const pending = allReconciliations.filter(r => r.status === 'pending').length;
-    const approved = allReconciliations.filter(r => r.status === 'approved').length;
+    const pending = allReconciliations.filter(r => r.reconciliation_status === 'pending').length;
+    const approved = allReconciliations.filter(r => r.reconciliation_status === 'approved').length;
     const variances = allReconciliations.reduce((sum, r) => sum + parseFloat(r.variance_amount || 0), 0);
 
     document.getElementById('stat-total').textContent = total;
     document.getElementById('stat-pending').textContent = pending;
     document.getElementById('stat-approved').textContent = approved;
-    document.getElementById('stat-variance').textContent = '$' + variances.toFixed(2);
+    document.getElementById('stat-variance').textContent = 'PHP ' + variances.toFixed(2);
   }
 </script>

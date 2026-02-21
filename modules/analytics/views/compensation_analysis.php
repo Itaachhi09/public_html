@@ -8,7 +8,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-if (empty($_SESSION['token'])) {
+// Check for AJAX requests - don't redirect for XMLHttpRequest
+if (empty($_SESSION['token']) && (!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || $_SERVER['HTTP_X_REQUESTED_WITH'] !== 'XMLHttpRequest')) {
     header('Location: ../../../index.php');
     exit;
 }
@@ -273,11 +274,12 @@ if (empty($_SESSION['token'])) {
     </div>
 
     <script>
-        let charts = {};
+        // Use global charts cache to avoid redeclaration conflicts when injected into dashboard
+        window.chartsCompensation = window.chartsCompensation || {};
 
         async function loadData() {
             try {
-                const response = await fetch('../api.php?action=getCompensationAnalysis');
+                const response = await fetch('/public_html/modules/analytics/api.php?action=getCompensationAnalysis');
                 const result = await response.json();
 
                 if (result.success) {
@@ -305,10 +307,10 @@ if (empty($_SESSION['token'])) {
             const costByDept = data.cost_by_department || [];
 
             // Cost by Department Chart
-            if (charts.costByDept) charts.costByDept.destroy();
+            if (window.chartsCompensation.costByDept) window.chartsCompensation.costByDept.destroy();
             
             const ctx1 = document.getElementById('costByDeptChart').getContext('2d');
-            charts.costByDept = new Chart(ctx1, {
+            window.chartsCompensation.costByDept = new Chart(ctx1, {
                 type: 'bar',
                 data: {
                     labels: costByDept.map(d => d.department_name || 'N/A'),
@@ -326,10 +328,10 @@ if (empty($_SESSION['token'])) {
             });
 
             // Headcount by Department Chart
-            if (charts.headcountByDept) charts.headcountByDept.destroy();
+            if (window.chartsCompensation.headcountByDept) window.chartsCompensation.headcountByDept.destroy();
             
             const ctx2 = document.getElementById('headcountByDeptChart').getContext('2d');
-            charts.headcountByDept = new Chart(ctx2, {
+            window.chartsCompensation.headcountByDept = new Chart(ctx2, {
                 type: 'bar',
                 data: {
                     labels: costByDept.map(d => d.department_name || 'N/A'),
@@ -375,7 +377,10 @@ if (empty($_SESSION['token'])) {
                 const result = await response.json();
                 
                 if (result.success) {
-                    window.location.href = result.downloadUrl;
+                    const a = document.createElement('a');
+                    a.href = result.downloadUrl;
+                    a.download = 'report.csv';
+                    a.click();
                 }
             } catch (error) {
                 alert('Error exporting report: ' + error.message);

@@ -40,6 +40,7 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
 
 ob_end_clean();
 
+require_once(__DIR__ . '/../../config/BaseConfig.php');
 require_once(__DIR__ . '/../../config/Auth.php');
 require_once(__DIR__ . '/controllers/HMOController.php');
 
@@ -67,6 +68,28 @@ try {
 $action = $_GET['action'] ?? '';
 $controller = null;
 $response = ['success' => false, 'error' => 'Invalid action'];
+
+// ===== ROLE-BASED ACCESS CONTROL =====
+// Define restricted actions for each submodule
+$restrictedActions = [
+    'billing' => [
+        'getBillingReconciliations', 'getBillingDiscrepancies', 'getBillingAdjustments', 'getBillingDetail',
+        'uploadBillingFile', 'runBillingReconciliation', 'approveBillingReconciliation', 
+        'approveDiscrepancy', 'approveAdjustment', 'exportBillingReport'
+    ]
+];
+
+// Check if action is restricted
+foreach ($restrictedActions as $submodule => $actions) {
+    if (in_array($action, $actions)) {
+        if (!canAccessMenuItem('hmo', $submodule)) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Access denied: ' . $submodule]);
+            exit;
+        }
+        break;
+    }
+}
 
 try {
     $controller = new HMOController();
@@ -110,6 +133,42 @@ try {
             }
             break;
 
+        case 'createProvider':
+            $request = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+            $required = ['provider_name', 'provider_code'];
+            $missing = array_filter($required, fn($field) => empty($request[$field]));
+            
+            if ($missing) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Missing required fields: ' . implode(', ', $missing)];
+            } else {
+                $response = $controller->createProvider($request);
+            }
+            break;
+
+        case 'updateProvider':
+            $request = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+            $provider_id = $_GET['id'] ?? $request['id'] ?? null;
+            
+            if (!$provider_id) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Provider ID required'];
+            } else {
+                $response = $controller->updateProvider($provider_id, $request);
+            }
+            break;
+
+        case 'deleteProvider':
+            $provider_id = $_GET['id'] ?? null;
+            
+            if (!$provider_id) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Provider ID required'];
+            } else {
+                $response = $controller->deleteProvider($provider_id);
+            }
+            break;
+
         // Plan endpoints
         case 'getPlans':
             $response = $controller->getPlans();
@@ -132,6 +191,41 @@ try {
                 $response = ['success' => false, 'error' => 'Provider ID required'];
             } else {
                 $response = $controller->getPlansByProvider($provider_id);
+            }
+            break;
+
+        case 'createPlan':
+            $request = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+            $required = ['plan_name', 'plan_code', 'provider_id'];
+            $missing = array_filter($required, fn($field) => empty($request[$field]));
+            
+            if ($missing) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Missing required fields: ' . implode(', ', $missing)];
+            } else {
+                $response = $controller->createPlan($request);
+            }
+            break;
+
+        case 'updatePlan':
+            $request = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+            $plan_id = $_GET['id'] ?? $request['id'] ?? null;
+            
+            if (!$plan_id) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Plan ID required'];
+            } else {
+                $response = $controller->updatePlan($plan_id, $request);
+            }
+            break;
+
+        case 'deletePlan':
+            $plan_id = $_GET['id'] ?? null;
+            if (!$plan_id) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Plan ID required'];
+            } else {
+                $response = $controller->deletePlan($plan_id);
             }
             break;
 
@@ -213,6 +307,30 @@ try {
             }
             break;
 
+        case 'suspendEnrollment':
+            $enrollment_id = $_GET['id'] ?? null;
+            $request = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+            
+            if (!$enrollment_id) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Enrollment ID required'];
+            } else {
+                $response = $controller->suspendEnrollment($enrollment_id, $request);
+            }
+            break;
+
+        case 'unsuspendEnrollment':
+            $enrollment_id = $_GET['id'] ?? null;
+            $request = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+            
+            if (!$enrollment_id) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Enrollment ID required'];
+            } else {
+                $response = $controller->unsuspendEnrollment($enrollment_id, $request);
+            }
+            break;
+
         // Claims endpoints
         case 'getAllClaims':
             $response = $controller->getAllClaims();
@@ -258,8 +376,7 @@ try {
             break;
         
         case 'approveClaim':
-            $request = json_decode(file_get_contents('php://input'), true) ?? $_POST;
-            $claim_id = $request['id'] ?? null;
+            $claim_id = $_GET['id'] ?? null;
             if (!$claim_id) {
                 http_response_code(400);
                 $response = ['success' => false, 'error' => 'Claim ID required'];
@@ -269,8 +386,8 @@ try {
             break;
         
         case 'rejectClaim':
+            $claim_id = $_GET['id'] ?? null;
             $request = json_decode(file_get_contents('php://input'), true) ?? $_POST;
-            $claim_id = $request['id'] ?? null;
             $reason = $request['reason'] ?? null;
             if (!$claim_id || !$reason) {
                 http_response_code(400);
@@ -335,8 +452,7 @@ try {
             break;
 
         case 'approveBillingReconciliation':
-            $request = json_decode(file_get_contents('php://input'), true);
-            $reconciliation_id = $request['id'] ?? null;
+            $reconciliation_id = $_GET['id'] ?? null;
             if (!$reconciliation_id) {
                 http_response_code(400);
                 $response = ['success' => false, 'error' => 'Reconciliation ID required'];
@@ -444,6 +560,48 @@ try {
                 } else {
                     $response = $docResult;
                 }
+            }
+            break;
+
+        // Premium endpoints
+        case 'getPremiumDetails':
+            $plan_id = $_GET['id'] ?? null;
+            if (!$plan_id) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Plan ID required'];
+            } else {
+                $response = $controller->getPremiumDetails($plan_id);
+            }
+            break;
+
+        case 'getPayrollDeductions':
+            $response = $controller->getPayrollDeductions();
+            break;
+
+        case 'getPremiumAdjustments':
+            $response = $controller->getPremiumAdjustments();
+            break;
+
+        case 'updatePremium':
+            $plan_id = $_GET['id'] ?? null;
+            $request = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+            
+            if (!$plan_id) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Plan ID required'];
+            } else {
+                $response = $controller->updatePremium($plan_id, $request);
+            }
+            break;
+
+        case 'togglePremium':
+            $plan_id = $_GET['id'] ?? null;
+            
+            if (!$plan_id) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Plan ID required'];
+            } else {
+                $response = $controller->togglePremium($plan_id);
             }
             break;
         

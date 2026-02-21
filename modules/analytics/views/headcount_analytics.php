@@ -8,7 +8,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-if (empty($_SESSION['token'])) {
+// Check for AJAX requests - don't redirect for XMLHttpRequest
+if (empty($_SESSION['token']) && (!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || $_SERVER['HTTP_X_REQUESTED_WITH'] !== 'XMLHttpRequest')) {
     header('Location: ../../../index.php');
     exit;
 }
@@ -286,11 +287,12 @@ if (empty($_SESSION['token'])) {
     </div>
 
     <script>
-        let charts = {};
+        // Use global charts cache to avoid redeclaration conflicts when injected into dashboard
+        window.chartsHeadcount = window.chartsHeadcount || {};
 
         async function loadData() {
             try {
-                const response = await fetch('../api.php?action=getHeadcountAnalytics');
+                const response = await fetch('/public_html/modules/analytics/api.php?action=getHeadcountAnalytics');
                 const result = await response.json();
 
                 if (result.success) {
@@ -321,10 +323,10 @@ if (empty($_SESSION['token'])) {
             const locData = data.by_location || [];
 
             // Department Chart
-            if (charts.deptChart) charts.deptChart.destroy();
+            if (window.chartsHeadcount.deptChart) window.chartsHeadcount.deptChart.destroy();
             
             const ctx1 = document.getElementById('headcountDeptChart').getContext('2d');
-            charts.deptChart = new Chart(ctx1, {
+            window.chartsHeadcount.deptChart = new Chart(ctx1, {
                 type: 'doughnut',
                 data: {
                     labels: deptData.map(d => d.department_name || 'N/A'),
@@ -340,10 +342,10 @@ if (empty($_SESSION['token'])) {
             });
 
             // Employment Type Chart
-            if (charts.typeChart) charts.typeChart.destroy();
+            if (window.chartsHeadcount.typeChart) window.chartsHeadcount.typeChart.destroy();
             
             const ctx2 = document.getElementById('employmentTypeChart').getContext('2d');
-            charts.typeChart = new Chart(ctx2, {
+            window.chartsHeadcount.typeChart = new Chart(ctx2, {
                 type: 'bar',
                 data: {
                     labels: typeData.map(t => t.type_name || 'N/A'),
@@ -361,10 +363,10 @@ if (empty($_SESSION['token'])) {
             });
 
             // Location Chart
-            if (charts.locChart) charts.locChart.destroy();
+            if (window.chartsHeadcount.locChart) window.chartsHeadcount.locChart.destroy();
             
             const ctx3 = document.getElementById('locationChart').getContext('2d');
-            charts.locChart = new Chart(ctx3, {
+            window.chartsHeadcount.locChart = new Chart(ctx3, {
                 type: 'bar',
                 data: {
                     labels: locData.map(l => l.location_name || 'N/A'),
@@ -418,7 +420,10 @@ if (empty($_SESSION['token'])) {
                 const result = await response.json();
                 
                 if (result.success) {
-                    window.location.href = result.downloadUrl;
+                    const a = document.createElement('a');
+                    a.href = result.downloadUrl;
+                    a.download = 'report.csv';
+                    a.click();
                 }
             } catch (error) {
                 alert('Error exporting report: ' + error.message);

@@ -11,6 +11,16 @@ if (empty($_SESSION['token'])) {
 }
 
 require_once __DIR__ . '/../../config/Database.php';
+require_once __DIR__ . '/../../config/BaseConfig.php';
+
+// Role-based access control
+if (!canAccessMenuItem('payroll', 'disbursement_bank_files')) {
+    http_response_code(403);
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Access denied: disbursement_bank_files']);
+    exit;
+}
+
 require_once __DIR__ . '/models/Disbursement.php';
 require_once __DIR__ . '/models/PayrollRun.php';
 
@@ -48,5 +58,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $params = ['ref' => 'payroll', 'page' => 'disbursement_bank_files'];
 if ($msg) $params['msg'] = urlencode($msg);
 if ($err) $params['err'] = urlencode($err);
-header('Location: ../../dashboard.php?' . http_build_query($params));
+header('Location: /public_html/dashboard.php?' . http_build_query($params));
 exit;

@@ -8,7 +8,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-if (empty($_SESSION['token'])) {
+// Check for AJAX requests - don't redirect for XMLHttpRequest
+if (empty($_SESSION['token']) && (!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || $_SERVER['HTTP_X_REQUESTED_WITH'] !== 'XMLHttpRequest')) {
     header('Location: ../../../index.php');
     exit;
 }
@@ -302,7 +303,7 @@ if (empty($_SESSION['token'])) {
     <script>
         async function loadData() {
             try {
-                const response = await fetch('../api.php?action=getComplianceTracking');
+                const response = await fetch('/public_html/modules/analytics/api.php?action=getComplianceTracking');
                 const result = await response.json();
 
                 if (result.success) {

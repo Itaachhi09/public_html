@@ -2,51 +2,45 @@
 /**
  * Earnings Management Module
  * Build gross earnings from approved Compensation records
+ * 
+ * SECURITY: This view must only be accessed through dashboard.php
+ * Direct access via URL is blocked by SYSTEM_INIT check below
  */
+
+// Enforce single-entry routing: this file should only be loaded through dashboard.php
+if (!defined('SYSTEM_INIT')) {
+    http_response_code(403);
+    die('No direct access allowed. Please use dashboard.php');
+}
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 require_once __DIR__ . '/../../../config/Database.php';
-require_once __DIR__ . '/../models/EmployeeSalary.php';
-require_once __DIR__ . '/../models/PayrollComponent.php';
+require_once __DIR__ . '/../../../config/BaseConfig.php';
+require_once __DIR__ . '/../models/PayrollModel.php';
 
-$employeeSalary = new EmployeeSalary();
-$payrollComponent = new PayrollComponent();
+// Load controller data
+require_once __DIR__ . '/../controllers/PayrollController.php';
 
-// Fetch employee earnings data
-$search = $_GET['search'] ?? '';
-$department = $_GET['department'] ?? '';
-$compensation_status = $_GET['compensation_status'] ?? '';
+// Check for modal request from query string
+$modal = $_GET['modal'] ?? null;
+$employee_id = isset($_GET['employee_id']) ? (int)$_GET['employee_id'] : 0;
+$isAjax = isset($_GET['ajax']) && $_GET['ajax'] === '1';
 
-$query = "SELECT es.*, e.first_name, e.last_name, e.employee_code, e.department_id 
-          FROM employee_salaries es 
-          JOIN employees e ON es.employee_id = e.employee_id 
-          WHERE es.payroll_eligible = 1";
+// Get data from controller or use defaults if not available
+$earnings = $controllerData['earnings'] ?? [];
+$totalEmployees = $controllerData['totalEmployees'] ?? 0;
+$totalGross = $controllerData['totalGross'] ?? 0;
+$departments = $controllerData['departments'] ?? [];
+$pendingCompensation = $controllerData['pendingCompensation'] ?? 0;
+$filters = $controllerData['filters'] ?? [];
 
-if ($search) {
-    $query .= " AND (e.employee_code LIKE ? OR e.first_name LIKE ? OR e.last_name LIKE ?)";
-}
-if ($department) {
-    $query .= " AND e.department_id = ?";
-}
-
-$query .= " ORDER BY e.employee_code ASC";
-
-$params = [];
-if ($search) {
-    $search_term = '%' . $search . '%';
-    $params = [$search_term, $search_term, $search_term];
-}
-if ($department) {
-    $params[] = $department;
-}
-
-$earnings = !empty($params) ? $employeeSalary->query($query, $params) : $employeeSalary->query($query);
-$totalEmployees = count($earnings ?? []);
-$totalGross = 0;
-
-foreach ($earnings ?? [] as $e) {
-    $totalGross += (float) $e['basic_rate'];
+// For modal view, get employee details from database
+$employeeEarnings = null;
+if ($modal === 'view' && $employee_id) {
+    $payrollModel = new PayrollModel();
+    $employeeEarnings = $payrollModel->calculateGrossEarnings($employee_id);
 }
 ?>
 
@@ -327,7 +321,227 @@ foreach ($earnings ?? [] as $e) {
     font-size: 13px;
     margin-bottom: 1rem;
   }
+
+  /* Modal Styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    padding: 2rem;
+  }
+
+  .modal-overlay.active {
+    display: flex;
+  }
+
+  .modal-box {
+    background: white;
+    width: 100%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    position: relative;
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e5e7eb;
+  }
+
+  .modal-header h3 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 18px;
+    font-weight: 600;
+  }
+
+  .modal-close-btn {
+    background: #e5e7eb;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 20px;
+    font-weight: bold;
+    color: #6b7280;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: all 0.3s ease;
+  }
+
+  .modal-close-btn:hover {
+    background: #d1d5db;
+    color: #1f2937;
+  }
+
+  .modal-content {
+    color: #374151;
+  }
+
+  .modal-section {
+    margin-bottom: 1.5rem;
+  }
+
+  .modal-section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .modal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .modal-field {
+    display: flex;
+    justify-content: space-between;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .modal-field-label {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .modal-field-value {
+    color: #1f2937;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: right;
+    min-width: 120px;
+  }
+
+  .modal-gross-section {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin: 1.5rem 0;
+  }
+
+  .modal-gross-section .modal-field {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .modal-gross-section .modal-field-label {
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .modal-gross-section .modal-field-value {
+    color: white;
+    font-size: 24px;
+    font-weight: 700;
+  }
+
+  .modal-formula {
+    background: #f3f4f6;
+    padding: 1rem;
+    border-radius: 6px;
+    margin-top: 1rem;
+  }
+
+  .modal-formula-title {
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.75rem;
+  }
+
+  .modal-formula-text {
+    color: #6b7280;
+    font-size: 12px;
+    font-family: 'Courier New', monospace;
+    line-height: 1.6;
+  }
+
+  .modal-status {
+    background: #dbeafe;
+    border: 1px solid #bfdbfe;
+    color: #1e40af;
+    padding: 0.75rem;
+    border-radius: 4px;
+    font-size: 13px;
+    margin-bottom: 1rem;
+  }
+
+  .modal-footer {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+    text-align: center;
+  }
+
+  .modal-footer a {
+    text-decoration: none;
+    color: #3b82f6;
+    font-weight: 500;
+    font-size: 13px;
+  }
+
+  .modal-footer a:hover {
+    text-decoration: underline;
+  }
 </style>
+
+<script>
+  window.openEarningsModal = function(employeeId) {
+    // Fetch modal content via AJAX without page refresh
+    const url = 'dashboard.php?module=payroll&view=earnings_management&modal=view&employee_id=' + employeeId;
+    
+    fetch(url)
+      .then(response => response.text())
+      .then(html => {
+        // Create a temporary container to parse the response
+        const temp = document.createElement('div');
+        temp.innerHTML = html;
+        const modalOverlay = temp.querySelector('.modal-overlay');
+        
+        if (modalOverlay) {
+          // Remove old modals if any
+          document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
+          // Add new modal to page
+          document.body.appendChild(modalOverlay);
+          // Add the active class to display modal
+          modalOverlay.classList.add('active');
+        }
+      })
+      .catch(error => console.error('Error loading modal:', error));
+  };
+
+  window.closeEarningsModal = function() {
+    // Remove all modal overlays
+    document.querySelectorAll('.modal-overlay').forEach(m => {
+      m.classList.remove('active');
+      setTimeout(() => m.remove(), 300);
+    });
+    // Reset URL back to main dashboard
+    window.history.replaceState({}, '', 'dashboard.php');
+  };
+</script>
 
 <div class="earnings-container">
   <!-- Page Header -->
@@ -341,28 +555,29 @@ foreach ($earnings ?? [] as $e) {
 
   <!-- Filters -->
   <div class="section">
-    <form method="GET" action="">
+    <form method="GET" action="<?= BASE_URL ?>dashboard.php">
       <div class="filter-section">
         <div class="form-group">
           <label>Search Employee</label>
-          <input type="text" name="search" placeholder="Employee ID or Name..." value="">
+          <input type="text" name="search" placeholder="Employee ID or Name..." value="<?php echo htmlspecialchars($filters['search'] ?? ''); ?>">
         </div>
         <div class="form-group">
           <label>Department</label>
           <select name="department">
             <option value="">-- All Departments --</option>
-            <option value="hr">Human Resources</option>
-            <option value="it">Information Technology</option>
-            <option value="ops">Operations</option>
-            <option value="finance">Finance</option>
+            <?php foreach ($departments as $dept): ?>
+            <option value="<?php echo (int) $dept['department_id']; ?>" <?php echo ($filters['department'] == $dept['department_id']) ? 'selected' : ''; ?>>
+              <?php echo htmlspecialchars($dept['department_name']); ?>
+            </option>
+            <?php endforeach; ?>
           </select>
         </div>
         <div class="form-group">
           <label>Compensation Status</label>
           <select name="compensation_status">
             <option value="">-- All Statuses --</option>
-            <option value="approved">Approved</option>
-            <option value="pending">Pending</option>
+            <option value="approved" <?php echo ($filters['compensation_status'] == 'approved') ? 'selected' : ''; ?>>Approved</option>
+            <option value="pending" <?php echo ($filters['compensation_status'] == 'pending') ? 'selected' : ''; ?>>Pending</option>
           </select>
         </div>
         <div style="display: flex; align-items: flex-end;">
@@ -415,142 +630,24 @@ foreach ($earnings ?? [] as $e) {
           <tr>
             <td><?php echo htmlspecialchars($emp['employee_code']); ?></td>
             <td><?php echo htmlspecialchars($emp['first_name'] . ' ' . $emp['last_name']); ?></td>
-            <td><?php echo htmlspecialchars($emp['department_id'] ?? '—'); ?></td>
+            <td><?php echo htmlspecialchars($emp['department_name'] ?? '—'); ?></td>
             <td class="amount"><?php echo number_format((float) $emp['basic_rate'], 2); ?></td>
-            <td class="amount">0.00</td>
-            <td class="amount">0.00</td>
-            <td class="amount">0.00</td>
-            <td class="amount amount-gross"><?php echo number_format((float) $emp['basic_rate'], 2); ?></td>
-            <td><span class="badge badge-approved">Approved</span></td>
+            <td class="amount"><?php echo number_format((float) ($emp['incentives'] ?? 0), 2); ?></td>
+            <td class="amount"><?php echo number_format((float) ($emp['double_pay'] ?? 0), 2); ?></td>
+            <td class="amount"><?php echo number_format((float) ($emp['hazard_pay'] ?? 0), 2); ?></td>
+            <td class="amount amount-gross"><?php echo number_format((float) $emp['gross_earnings'], 2); ?></td>
+            <td><span class="badge badge-approved"><?php echo htmlspecialchars($emp['compensation_status']); ?></span></td>
             <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="view">
-                <input type="hidden" name="employee_id" value="<?php echo (int) $emp['employee_id']; ?>">
-                <button type="submit" class="btn btn-secondary btn-sm">View Details</button>
-              </form>
+              <button type="button" onclick="window.openEarningsModal(<?php echo (int) $emp['employee_id']; ?>)" class="btn btn-secondary btn-sm">View Details</button>
             </td>
           </tr>
           <?php endforeach; endif; ?>
-            <td>Human Resources</td>
-            <td class="amount">5,800.00</td>
-            <td class="amount">1,200.00</td>
-            <td class="amount">2,000.00</td>
-            <td class="amount">0.00</td>
-            <td class="amount amount-gross">9,000.00</td>
-            <td><span class="badge badge-approved">Approved</span></td>
-            <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="view">
-                <input type="hidden" name="employee_id" value="EMP-005">
-                <button type="submit" class="btn btn-secondary btn-sm">View Details</button>
-              </form>
-            </td>
-          </tr>
-          <tr>
-            <td>EMP-006</td>
-            <td>Emily Davis</td>
-            <td>Information Technology</td>
-            <td class="amount">8,000.00</td>
-            <td class="amount">2,000.00</td>
-            <td class="amount">0.00</td>
-            <td class="amount">1,000.00</td>
-            <td class="amount amount-gross">11,000.00</td>
-            <td><span class="badge badge-approved">Approved</span></td>
-            <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="view">
-                <input type="hidden" name="employee_id" value="EMP-006">
-                <button type="submit" class="btn btn-secondary btn-sm">View Details</button>
-              </form>
-            </td>
-          </tr>
-          <tr>
-            <td>EMP-007</td>
-            <td>David Martinez</td>
-            <td>Operations</td>
-            <td class="amount">5,200.00</td>
-            <td class="amount">1,000.00</td>
-            <td class="amount">2,500.00</td>
-            <td class="amount">1,000.00</td>
-            <td class="amount amount-gross">9,700.00</td>
-            <td><span class="badge badge-approved">Approved</span></td>
-            <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="view">
-                <input type="hidden" name="employee_id" value="EMP-007">
-                <button type="submit" class="btn btn-secondary btn-sm">View Details</button>
-              </form>
-            </td>
-          </tr>
-          <tr>
-            <td>EMP-008</td>
-            <td>Jessica Wilson</td>
-            <td>Finance</td>
-            <td class="amount">7,000.00</td>
-            <td class="amount">1,800.00</td>
-            <td class="amount">0.00</td>
-            <td class="amount">0.00</td>
-            <td class="amount amount-gross">8,800.00</td>
-            <td><span class="badge badge-pending">Pending Review</span></td>
-            <td>
-              <form method="GET" style="display: inline;">
-                <input type="hidden" name="action" value="view">
-                <input type="hidden" name="employee_id" value="EMP-008">
-                <button type="submit" class="btn btn-secondary btn-sm">View Details</button>
-              </form>
-            </td>
-          </tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- Earnings Detail Section -->
-  <div class="detail-section">
-    <h4>📊 Earning Calculation Example</h4>
-    
-    <div class="compensation-status">
-      <strong>Compensation Record Status:</strong> Approved
-    </div>
 
-    <div class="detail-row">
-      <div class="detail-item">
-        <label>Base Pay</label>
-        <value>₱ 6,000.00</value>
-      </div>
-      <div class="detail-item">
-        <label>Incentives</label>
-        <value>₱ 2,000.00</value>
-      </div>
-    </div>
-
-    <div class="detail-row">
-      <div class="detail-item">
-        <label>Double Pay Applied</label>
-        <value><span class="badge badge-yes">YES</span> ₱ 3,000.00</value>
-      </div>
-      <div class="detail-item">
-        <label>Hazard Pay Applied</label>
-        <value><span class="badge badge-no">NO</span></value>
-      </div>
-    </div>
-
-    <div style="background: white; padding: 1rem; border-radius: 4px; margin-top: 1rem; border: 2px solid #3b82f6;">
-      <div style="display: flex; justify-content: space-between; font-weight: 600; color: #1e40af;">
-        <span>GROSS EARNINGS</span>
-        <span style="font-size: 18px;">₱ 11,000.00</span>
-      </div>
-    </div>
-
-    <div style="margin-top: 1.5rem; padding: 1rem; background: #f3f4f6; border-radius: 4px;">
-      <strong style="color: #1f2937;">📝 Calculation Formula:</strong>
-      <div style="margin-top: 0.5rem; color: #6b7280; font-size: 13px; font-family: 'Courier New', monospace;">
-        Gross Earnings = Base Pay + Incentives + Double Pay + Hazard Pay<br>
-        Gross Earnings = ₱6,000 + ₱2,000 + ₱3,000 + ₱0<br>
-        <strong style="color: #1f2937;">= ₱11,000.00</strong>
-      </div>
-    </div>
-  </div>
 
   <!-- Important Notes -->
   <div class="section">
@@ -574,3 +671,98 @@ foreach ($earnings ?? [] as $e) {
   </div>
 
 </div>
+
+<!-- View Details Modal Popup -->
+<?php if ($modal === 'view' && $employee_id && $employeeEarnings): ?>
+<div class="modal-overlay">
+  <div class="modal-box">
+    <!-- Modal Header -->
+    <div class="modal-header">
+      <h3>📊 Earnings Calculation</h3>
+      <button type="button" onclick="window.closeEarningsModal()" class="modal-close-btn">×</button>
+    </div>
+
+    <!-- Modal Content -->
+    <div class="modal-content">
+      <!-- Employee Info Section -->
+      <div class="modal-section">
+        <div class="modal-section-title">Employee Information</div>
+        <div class="modal-grid">
+          <div class="modal-field">
+            <span class="modal-field-label">Employee Name</span>
+            <span class="modal-field-value"><?php echo htmlspecialchars($employeeEarnings['employee_name']); ?></span>
+          </div>
+          <div class="modal-field">
+            <span class="modal-field-label">Employee ID</span>
+            <span class="modal-field-value"><?php echo htmlspecialchars($employeeEarnings['employee_code']); ?></span>
+          </div>
+        </div>
+        <div class="modal-status">
+          <strong>Compensation Status:</strong> <?php echo htmlspecialchars($employeeEarnings['compensation_status']); ?>
+        </div>
+      </div>
+
+      <!-- Earnings Components Section -->
+      <div class="modal-section">
+        <div class="modal-section-title">Earnings Components</div>
+        <div class="modal-grid">
+          <div class="modal-field">
+            <span class="modal-field-label">Base Pay</span>
+            <span class="modal-field-value">₱ <?php echo number_format($employeeEarnings['base_pay'], 2); ?></span>
+          </div>
+          <div class="modal-field">
+            <span class="modal-field-label">Incentives</span>
+            <span class="modal-field-value">₱ <?php echo number_format($employeeEarnings['incentives'], 2); ?></span>
+          </div>
+          <div class="modal-field">
+            <span class="modal-field-label">Double Pay</span>
+            <span class="modal-field-value">
+              <?php if ($employeeEarnings['double_pay'] > 0): ?>
+              <span class="badge badge-yes">YES</span> ₱ <?php echo number_format($employeeEarnings['double_pay'], 2); ?>
+              <?php else: ?>
+              <span class="badge badge-no">NO</span>
+              <?php endif; ?>
+            </span>
+          </div>
+          <div class="modal-field">
+            <span class="modal-field-label">Hazard Pay</span>
+            <span class="modal-field-value">
+              <?php if ($employeeEarnings['hazard_pay'] > 0): ?>
+              <span class="badge badge-yes">YES</span> ₱ <?php echo number_format($employeeEarnings['hazard_pay'], 2); ?>
+              <?php else: ?>
+              <span class="badge badge-no">NO</span>
+              <?php endif; ?>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gross Earnings Highlight -->
+      <div class="modal-gross-section">
+        <div class="modal-field">
+          <span class="modal-field-label">GROSS EARNINGS</span>
+          <span class="modal-field-value">₱ <?php echo number_format($employeeEarnings['gross_earnings'], 2); ?></span>
+        </div>
+      </div>
+
+      <!-- Calculation Formula -->
+      <div class="modal-formula">
+        <div class="modal-formula-title">📝 Calculation Formula</div>
+        <div class="modal-formula-text">
+          Gross Earnings = Base Pay + Incentives + Double Pay + Hazard Pay<br><br>
+          ₱<?php echo number_format($employeeEarnings['base_pay'], 2); ?> + 
+          ₱<?php echo number_format($employeeEarnings['incentives'], 2); ?> + 
+          ₱<?php echo number_format($employeeEarnings['double_pay'], 2); ?> + 
+          ₱<?php echo number_format($employeeEarnings['hazard_pay'], 2); ?><br><br>
+          <strong>= ₱<?php echo number_format($employeeEarnings['gross_earnings'], 2); ?></strong>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer">
+        <button type="button" onclick="window.closeEarningsModal()" style="background: none; border: none; color: #3b82f6; cursor: pointer; text-decoration: none; padding: 0; font: inherit;">← Back to Earnings List</button>
+      </div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>

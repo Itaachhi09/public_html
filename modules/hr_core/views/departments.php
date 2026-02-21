@@ -153,14 +153,13 @@
       </div>
     </aside>
   </div>
-</main>
 
-<!-- Department Modal -->
-<div id="departmentModal" class="modal">
+  <!-- Department Modal -->
+  <div id="departmentModal" class="modal" style="position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.4); display: none;">
   <div class="modal-content" style="max-width: 600px;">
     <div class="modal-header">
       <h2 class="modal-title">Add Department</h2>
-      <button class="modal-close" onclick="closeDepartmentModal()">&times;</button>
+      <button class="modal-close" onclick="window.closeDepartmentModal()">&times;</button>
     </div>
     <form id="departmentForm">
       <div class="form-group">
@@ -182,12 +181,13 @@
         </select>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline" onclick="closeDepartmentModal()">Cancel</button>
+        <button type="button" class="btn btn-outline" onclick="window.closeDepartmentModal()">Cancel</button>
         <button type="submit" class="btn btn-primary">Save</button>
       </div>
     </form>
   </div>
 </div>
+</main>
 
 <script>
   (function() {
@@ -296,9 +296,9 @@
             </td>
             <td style="padding: 1rem; text-align: center;">
               <div style="display: flex; gap: 0.5rem; justify-content: center;">
-                <button onclick="window.editDepartment(${dept.id})" title="Edit" style="padding: 0.5rem; background: rgba(30, 64, 175, 0.1); border: none; border-radius: 4px; cursor: pointer; font-size: 14px; color: var(--primary); transition: all 0.2s ease;">✏</button>
                 <button onclick="window.viewDepartment(${dept.id})" title="View" style="padding: 0.5rem; background: rgba(30, 64, 175, 0.1); border: none; border-radius: 4px; cursor: pointer; font-size: 14px; color: var(--primary); transition: all 0.2s ease;">👁</button>
-                <button onclick="alert('More options')" title="More" style="padding: 0.5rem; background: rgba(30, 64, 175, 0.1); border: none; border-radius: 4px; cursor: pointer; font-size: 14px; color: var(--primary); transition: all 0.2s ease;">⋯</button>
+                <button onclick="window.editDepartment(${dept.id})" title="Edit" style="padding: 0.5rem; background: rgba(30, 64, 175, 0.1); border: none; border-radius: 4px; cursor: pointer; font-size: 14px; color: var(--primary); transition: all 0.2s ease;">✏</button>
+                <button onclick="window.deleteDepartment(${dept.id})" title="Delete" style="padding: 0.5rem; background: rgba(239, 68, 68, 0.1); border: none; border-radius: 4px; cursor: pointer; font-size: 14px; color: var(--danger); transition: all 0.2s ease;">🗑</button>
               </div>
             </td>
           </tr>
@@ -308,15 +308,21 @@
     };
 
     window.openDepartmentModal = function() {
-      document.getElementById('departmentForm').reset();
-      delete document.getElementById('departmentForm').dataset.id;
-      document.querySelector('#departmentModal .modal-title').textContent = 'Add Department';
-      document.getElementById('departmentModal').classList.add('active');
+      const form = document.getElementById('departmentForm');
+      if (form) {
+        form.reset();
+        delete form.dataset.id;
+        const title = document.querySelector('#departmentModal .modal-title');
+        title.textContent = 'Add Department';
+        
+        const modal = document.getElementById('departmentModal');
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+      }
     };
 
-    window.closeDepartmentModal = function() {
-      document.getElementById('departmentModal').classList.remove('active');
-    };
+    // Note: closeDepartmentModal is already defined below in deleteDepartment section
 
     window.toggleManagerFilter = function(filter) {
       const chip = document.querySelector(`.filter-chip[data-filter="${filter}"]`);
@@ -338,17 +344,27 @@
             const dept = data.data;
             const form = document.getElementById('departmentForm');
             if (form) {
+              form.reset();
+              form.dataset.id = id;
               form.querySelector('input[name="name"]').value = dept.name || '';
               form.querySelector('input[name="code"]').value = dept.code || '';
               form.querySelector('textarea[name="description"]').value = dept.description || '';
               form.querySelector('select[name="manager_id"]').value = dept.manager_id || '';
-              form.dataset.id = id;
-              document.querySelector('#departmentModal .modal-title').textContent = 'Edit Department';
-              window.openDepartmentModal();
+              
+              const modal = document.getElementById('departmentModal');
+              const title = modal.querySelector('.modal-title');
+              title.textContent = 'Edit Department';
+              
+              modal.style.display = 'flex';
+              modal.style.alignItems = 'center';
+              modal.style.justifyContent = 'center';
             }
           }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error loading department');
+        });
     };
 
     window.viewDepartment = function(id) {
@@ -357,10 +373,84 @@
         .then(data => {
           if (data.success) {
             const dept = data.data;
-            alert(`Department: ${dept.name}\nCode: ${dept.code}\nType: ${dept.type || 'Admin'}\nManager: ${dept.head_name || 'Not assigned'}\nDescription: ${dept.description || 'None'}`);
+            const viewContent = `
+              <div class="modal-header">
+                <h2 class="modal-title">View Department</h2>
+                <button class="modal-close" onclick="window.closeDepartmentModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">&times;</button>
+              </div>
+              <div style="padding: 1.5rem;">
+                <div style="margin-bottom: 1.5rem;">
+                  <p style="font-size: 12px; color: var(--text-light); margin: 0; text-transform: uppercase; font-weight: 600;">Name</p>
+                  <p style="font-size: 18px; color: var(--text-dark); font-weight: 600; margin: 0.5rem 0 0 0;">${dept.name || 'N/A'}</p>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem;">
+                  <div>
+                    <p style="font-size: 12px; color: var(--text-light); margin: 0; text-transform: uppercase; font-weight: 600;">Code</p>
+                    <p style="font-size: 16px; color: var(--text-dark); font-weight: 600; margin: 0.5rem 0 0 0;">${dept.code || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p style="font-size: 12px; color: var(--text-light); margin: 0; text-transform: uppercase; font-weight: 600;">Status</p>
+                    <p style="font-size: 16px; color: #22c55e; font-weight: 600; margin: 0.5rem 0 0 0;">${dept.status || 'Active'}</p>
+                  </div>
+                </div>
+
+                ${dept.head_name ? `<div style="background: var(--bg-light); padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+                  <p style="font-size: 12px; color: var(--text-light); margin: 0; text-transform: uppercase; font-weight: 600;">Manager</p>
+                  <p style="font-size: 16px; font-weight: 600; margin: 0.5rem 0 0 0; color: var(--text-dark);">${dept.head_name}</p>
+                </div>` : ''}
+
+                ${dept.description ? `<div style="text-align: left; background: #f9fafb; padding: 1rem; border-radius: 6px; margin-bottom: 1.5rem;">
+                  <p style="font-size: 12px; color: var(--text-light); margin: 0; font-weight: 600;">Description</p>
+                  <p style="margin: 0.5rem 0 0 0; font-size: 14px; color: var(--text-dark);">${dept.description}</p>
+                </div>` : ''}
+
+                <div style="display: flex; gap: 1rem; justify-content: center;">
+                  <button class="btn btn-outline" onclick="window.closeDepartmentModal()">Close</button>
+                  <button class="btn btn-primary" onclick="window.editDepartment(${id})">Edit</button>
+                </div>
+              </div>
+            `;
+            const modalContent = document.querySelector('#departmentModal .modal-content');
+            if (modalContent) {
+              modalContent.innerHTML = viewContent;
+              const modal = document.getElementById('departmentModal');
+              modal.style.display = 'flex';
+              modal.style.alignItems = 'center';
+              modal.style.justifyContent = 'center';
+            }
           }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error loading department');
+        });
+    };
+
+    window.deleteDepartment = function(id) {
+      if (confirm('Delete this department?')) {
+        fetch(`modules/hr_core/api.php?action=deleteDepartment&id=${id}`, {method: 'POST'})
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              alert('✓ Department deleted successfully');
+              window.loadDepartments();
+            } else {
+              alert('Error: ' + (data.message || 'Failed to delete'));
+            }
+          })
+          .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting department');
+          });
+      }
+    };
+
+    window.closeDepartmentModal = function() {
+      const modal = document.getElementById('departmentModal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
     };
 
     window.loadNoManagerDepartments = function(depts) {
@@ -416,6 +506,20 @@
       if (searchInput) {
         searchInput.addEventListener('keyup', () => window.loadDepartments());
       }
+
+      // Load employees for manager dropdown
+      fetch('modules/hr_core/api.php?action=getAllEmployees')
+        .then(res => res.json())
+        .then(data => {
+          const managerSelect = document.querySelector('select[name="manager_id"]');
+          if (managerSelect && data.success && data.data.employees) {
+            managerSelect.innerHTML = '<option value="">Select manager...</option>';
+            data.data.employees.forEach(emp => {
+              managerSelect.innerHTML += `<option value="${emp.employee_id}">${emp.first_name} ${emp.last_name} (${emp.employee_code})</option>`;
+            });
+          }
+        })
+        .catch(error => console.error('Error loading employees:', error));
 
       const form = document.getElementById('departmentForm');
       if (form) {

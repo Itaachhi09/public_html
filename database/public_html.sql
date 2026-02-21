@@ -1,9 +1,9 @@
--- phpMyAdmin SQL Dump
+ -- phpMyAdmin SQL Dump
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Feb 10, 2026 at 07:07 PM
+-- Generation Time: Feb 12, 2026 at 02:31 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -65,6 +65,36 @@ CREATE TABLE `benefit_definitions` (
 
 INSERT INTO `benefit_definitions` (`id`, `code`, `name`, `description`, `taxable`, `eligible_roles`, `effective_from`, `effective_to`, `attach_to`, `is_active`, `created_at`, `updated_at`) VALUES
 (1, 'FREE_MEALS_TID', 'Free Meals TID', 'Free meals three times daily on duty', 0, 'ER Staff,Nurse,Doctor', '2026-02-08', NULL, 'duty', 1, '2026-02-08 15:11:57', '2026-02-08 15:11:57');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `bir_tax_brackets`
+--
+
+CREATE TABLE `bir_tax_brackets` (
+  `id` int(11) NOT NULL,
+  `annual_salary_from` decimal(12,2) NOT NULL,
+  `annual_salary_to` decimal(12,2) NOT NULL,
+  `tax_rate` decimal(5,2) NOT NULL,
+  `deductible_amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `effective_year` int(4) NOT NULL DEFAULT year(curdate()),
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `bir_tax_brackets`
+--
+
+INSERT INTO `bir_tax_brackets` (`id`, `annual_salary_from`, `annual_salary_to`, `tax_rate`, `deductible_amount`, `effective_year`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 0.00, 250000.00, 0.00, 0.00, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(2, 250000.01, 400000.00, 5.00, 0.00, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(3, 400000.01, 800000.00, 10.00, 0.00, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(4, 800000.01, 2000000.00, 15.00, 0.00, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(5, 2000000.01, 8000000.00, 20.00, 0.00, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(6, 8000000.01, 999999999.00, 30.00, 0.00, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37');
 
 -- --------------------------------------------------------
 
@@ -401,9 +431,18 @@ CREATE TABLE `employee_payroll_profiles` (
   `payroll_frequency` enum('Weekly','Semi-Monthly','Monthly') DEFAULT 'Monthly',
   `pay_schedule_day_1` int(11) DEFAULT 7,
   `pay_schedule_day_2` int(11) DEFAULT 22,
+  `pay_type` enum('Per Duty','Per Shift','Hourly','Daily','Monthly') DEFAULT 'Monthly',
+  `payroll_status` varchar(50) DEFAULT 'Active',
+  `tax_status` varchar(50) DEFAULT NULL,
+  `sss_status` varchar(50) DEFAULT NULL,
+  `philhealth_status` varchar(50) DEFAULT NULL,
+  `pagibig_status` varchar(50) DEFAULT NULL,
   `bank_account_holder` varchar(255) DEFAULT NULL,
   `bank_account_number` varchar(50) DEFAULT NULL,
   `bank_code` varchar(10) DEFAULT NULL,
+  `bank_name` varchar(100) DEFAULT NULL,
+  `account_type` varchar(50) DEFAULT NULL,
+  `account_status` varchar(50) DEFAULT 'Active',
   `tax_identification_number` varchar(50) DEFAULT NULL,
   `sss_number` varchar(50) DEFAULT NULL,
   `philhealth_number` varchar(50) DEFAULT NULL,
@@ -1081,7 +1120,126 @@ INSERT INTO `login_otp` (`id`, `user_id`, `otp_hash`, `expires_at`, `attempts`, 
 (9, 1, '$2y$10$f.476C7uulO/khrLmbiJMuVhJDdZdoY31NzYTUgwmDoxc0l9UVh9u', '2026-02-10 00:43:07', 0, 1, '2026-02-09 16:33:07'),
 (10, 1, '$2y$10$1ZMaKLZrPLOrZ5b/R0mlUuaw4tebwyEvy..moMgwoH0nvtxSqsDGW', '2026-02-10 00:43:11', 0, 1, '2026-02-09 16:33:11'),
 (11, 1, '$2y$10$CQU2cZQ7FF3RxVpWbgKbj.E2Qt2ZuoghI9FNXrTZqnjjt5evEI2nm', '2026-02-10 00:43:53', 1, 1, '2026-02-09 16:33:53'),
-(12, 1, '$2y$10$/n9Gy/53vsMP0MkuAvPnlODcWOmbJa6jmDPgLLO/SdH5MCy6QocoW', '2026-02-11 00:27:10', 1, 1, '2026-02-10 16:17:10');
+(12, 1, '$2y$10$/n9Gy/53vsMP0MkuAvPnlODcWOmbJa6jmDPgLLO/SdH5MCy6QocoW', '2026-02-11 00:27:10', 1, 1, '2026-02-10 16:17:10'),
+(13, 1, '$2y$10$cvXIr9wXVj2aOHZ2gPro8OZkLKmAdlDPdo9ZZmyYqRrkJsJMbFo4.', '2026-02-12 05:31:16', 0, 1, '2026-02-11 21:21:16'),
+(14, 1, '$2y$10$IsZTVeetqZxGDwgGqCFQ6Os7Vr0HIcwQwG6StOSPpkQymT8sG0QFC', '2026-02-12 05:31:21', 0, 1, '2026-02-11 21:21:21'),
+(15, 1, '$2y$10$XF2.DVilah4GIV4gwxj58OKQYwLzDNOaWbbHJNtV1RW.d3E.iY9j2', '2026-02-12 05:31:24', 0, 1, '2026-02-11 21:21:24'),
+(16, 1, '$2y$10$oP.J9uM4xtNMwmJwRMzJCu1L/XLn93hX3il4tZUBaIy6pAYXD5Y4i', '2026-02-12 05:31:28', 0, 1, '2026-02-11 21:21:28'),
+(17, 1, '$2y$10$1pEB9NHQ7K0rgLYb6ugReegKX2mRdZV3PaPNA4PO3dmarTDjmZZNK', '2026-02-12 05:31:32', 0, 1, '2026-02-11 21:21:32'),
+(18, 1, '$2y$10$oy/xrktHc76pnGzFEMWDWuyQZk54f5RrhYrprtkv/uyZi4WReiD0C', '2026-02-12 05:31:36', 0, 1, '2026-02-11 21:21:36'),
+(19, 1, '$2y$10$sguWbcSZcYA.Vfyc3sw.GOErxomnkK1YOF/W80TGrfTsovgRtrPW6', '2026-02-12 05:31:39', 0, 1, '2026-02-11 21:21:39'),
+(20, 1, '$2y$10$Mk4J/Dtnr3ayoFvWyEUL8u6wLINBlZIbUlNXxeChDWiX1SQyDOCRq', '2026-02-12 05:31:43', 0, 1, '2026-02-11 21:21:43'),
+(21, 1, '$2y$10$RSmVTMX11C8HiJW15DtjSeKclUdbEvZaW0WcCvIfjC/slqEbsk0B.', '2026-02-12 05:31:47', 0, 1, '2026-02-11 21:21:47'),
+(22, 1, '$2y$10$YXJZGjnKXlGeJeCVKpDAe.M3z9SaUtp6KBciNztiPpn7J93b2DARq', '2026-02-12 05:31:51', 0, 1, '2026-02-11 21:21:51'),
+(23, 1, '$2y$10$m3ZwsnmrKJMFlrYuIEkcCuq7plZyI2QnC9T7hYh3AHuSryJUrohn6', '2026-02-12 05:31:56', 0, 1, '2026-02-11 21:21:56'),
+(24, 1, '$2y$10$N2qjVaOb4URpnmFjM.Lmu.CSpuyKT1gbqxLRExGZ4p.0rHXfpPkuW', '2026-02-12 05:32:00', 0, 1, '2026-02-11 21:22:00'),
+(25, 1, '$2y$10$Yrma6bmTuKmA2Hu1FyjmsuwWuEr7BuqXxDe726KSBB/OaeGH2PVFG', '2026-02-12 05:32:03', 0, 1, '2026-02-11 21:22:03'),
+(26, 1, '$2y$10$UeAche45g7Ich1QhLnWTxu5zD2iISENpI81WLWUgCsiel4Z21uh3O', '2026-02-12 05:32:08', 0, 1, '2026-02-11 21:22:08'),
+(27, 1, '$2y$10$JaAYgVWjBNDz6nMMrl/yIuugepZjrNolS1mshc5qBJu.V71UPDQWW', '2026-02-12 05:32:13', 0, 1, '2026-02-11 21:22:13'),
+(28, 1, '$2y$10$5TDMy91eSHWT1va8MconoOVsBSCmGoS.u3PE7uXaGaO2zlkodjn5K', '2026-02-12 05:32:17', 0, 1, '2026-02-11 21:22:17'),
+(29, 1, '$2y$10$Q6RABrGjJAzeOVfu13wKL./S4DUR9P1JtiQMBTldLuomt3yIkJMdC', '2026-02-12 05:32:21', 0, 1, '2026-02-11 21:22:21'),
+(30, 1, '$2y$10$4SJ/A9X/ie.kAc4o72M.U.VxZLd0jxVZRjDMSAksOBR28K12UY4Uu', '2026-02-12 05:32:26', 1, 1, '2026-02-11 21:22:26'),
+(31, 1, '$2y$10$FcQWnDpv6.2Pj.0lbpNzc.UTLDgS4o8JN3bfXtBcNOHGaKMzWtqRy', '2026-02-12 05:32:44', 1, 1, '2026-02-11 21:22:44'),
+(32, 1, '$2y$10$r7zWk8CrwTiyM1O6Qc5q4OUw6DRz.b.oU15nmGZwrf7urCnJ7yPwy', '2026-02-12 05:33:59', 0, 1, '2026-02-11 21:23:59'),
+(33, 1, '$2y$10$u42WfloBjJ4rHg863KXwnOCfienxtudMRnjdMtKqpkn2xGjEZcySa', '2026-02-12 06:26:00', 0, 1, '2026-02-11 22:16:00'),
+(34, 1, '$2y$10$un5LTmvunT8jtgyZeamnj.vRpKuNkPXyXAcBc2P1ajezYsu5KVCsa', '2026-02-12 06:26:04', 0, 1, '2026-02-11 22:16:04'),
+(35, 1, '$2y$10$T1Y5oFkvmJNL4f52UFyw9eTrMrgJuEEGHK9RbCEhGL9BmoJa92wBm', '2026-02-12 06:26:07', 0, 1, '2026-02-11 22:16:07'),
+(36, 1, '$2y$10$oT3JiGGG5kh4FYn8xAXB7uwIdqnZJccGnl1.gvwIpPQeJMpCepUfq', '2026-02-12 06:26:11', 0, 1, '2026-02-11 22:16:11'),
+(37, 1, '$2y$10$g3UvNCv9.QQzIwYgSb5F7uDnwOJRWVj9jmff16uQpKgq7jgc5bB.K', '2026-02-12 06:26:15', 0, 1, '2026-02-11 22:16:15'),
+(38, 1, '$2y$10$zAU8y9djklVm4ddmct2Gr.hNc6TcoO6o4QtYog/nLS2kjdQkQMTc.', '2026-02-12 06:26:19', 0, 1, '2026-02-11 22:16:19'),
+(39, 1, '$2y$10$Ekoa5/GO5rEyXZMEZqjQHu0aEgh9kpYhBunibfYKYEWrU6/bDcXT6', '2026-02-12 06:26:23', 0, 1, '2026-02-11 22:16:23'),
+(40, 1, '$2y$10$44jnZi6IsfKXF0YhlhjbjuRbJhkJINxXA7kxY5Hygu.n/EtAPYY1q', '2026-02-12 06:26:26', 0, 1, '2026-02-11 22:16:26'),
+(41, 1, '$2y$10$QsI..wGJKS2Dc3DDWYb2R.2MBJm8IUXUY7yS/02ewcKy8AaVqdbn6', '2026-02-12 06:26:30', 0, 1, '2026-02-11 22:16:30'),
+(42, 1, '$2y$10$GAoz4T7RAt4.cHG.BlIEIuC/UlF89Dc3mHSTUQlHgHdLUjm0aqGOW', '2026-02-12 10:44:26', 0, 1, '2026-02-12 02:34:26'),
+(43, 1, '$2y$10$X/Pb0Z4Ov79j1Bzu11wJo.PTiOVPq7ol2NhZtjtwq1GDpARrXr1GG', '2026-02-12 10:44:32', 0, 1, '2026-02-12 02:34:32'),
+(44, 1, '$2y$10$AuCmc0uFlLviEUfR3pIDuuSSIkOO32YnPVOSUYWucbApLrS6Nwkyq', '2026-02-12 10:44:36', 0, 1, '2026-02-12 02:34:36'),
+(45, 1, '$2y$10$D61ZaTOmnnyLHqZ.qBpEHO2LpQAdYLS.G1aUmSqJg2ipouDHwriqG', '2026-02-12 10:44:41', 0, 1, '2026-02-12 02:34:41'),
+(46, 1, '$2y$10$EZV1IqkrrghwHr0g.4.r.ui20Q5iUG9ns54eWJJZuumg6q3cl5Ii.', '2026-02-12 10:44:46', 0, 1, '2026-02-12 02:34:46'),
+(47, 1, '$2y$10$IVbpG1Zn96f0XYZdB.FsT.PrKGCel.tpfAZ4.4m14G.06tSCl2Y4q', '2026-02-12 10:44:51', 0, 1, '2026-02-12 02:34:51'),
+(48, 1, '$2y$10$rE3jmGMoK/ZZMFLnY3arV.7UUWu/IofctdyjcSfXzPg0HghKES2.G', '2026-02-12 10:44:55', 0, 1, '2026-02-12 02:34:55'),
+(49, 1, '$2y$10$EZUWuZTQSLvTDeUGa78KX.EsMjfe7NbEr71RPpstp4HnLApZpXEXK', '2026-02-12 10:45:00', 0, 1, '2026-02-12 02:35:00'),
+(50, 1, '$2y$10$q5Gp0VEPaqiYpAtvJ.EH4.zMlUWyCZziVZkKv.GpYKr.4vF7zj36m', '2026-02-12 10:45:04', 0, 1, '2026-02-12 02:35:04'),
+(51, 1, '$2y$10$QNsTFj/y9RtJ8XvdXtKqV.TdcvmzZOcNRWc1ZpEaiCH/Xlt.n5ytq', '2026-02-12 10:45:10', 0, 1, '2026-02-12 02:35:10'),
+(52, 1, '$2y$10$kq.rrACwvNmw3SDB8jqQwes/dnas.vWjZNmDHwkw7rMTJy5xJOk3.', '2026-02-12 10:45:15', 0, 1, '2026-02-12 02:35:15'),
+(53, 1, '$2y$10$NKzfLgBGz5fs.6vn3ZhYTur1tfOePhgTpmGJH6tyUzQQj.fgR8bcC', '2026-02-12 10:45:20', 0, 1, '2026-02-12 02:35:20'),
+(54, 1, '$2y$10$GAe/bBPtEemAUXdok59I2OhQsk5Amofekrq1kgy4nze8jxN8HzkEK', '2026-02-12 10:45:25', 0, 1, '2026-02-12 02:35:25'),
+(55, 1, '$2y$10$Jss6m0Jpq8okhhnZb9uEEuh/Vh7o5cU8TyRWqI4TSfSWA27yBpFVS', '2026-02-12 10:45:30', 0, 1, '2026-02-12 02:35:30'),
+(56, 1, '$2y$10$6CV1RdxjVjDCE73fHrIbGeuPfl834jaY5lLIhz3wuF/aNHnnwwzT.', '2026-02-12 10:45:35', 1, 1, '2026-02-12 02:35:35'),
+(57, 1, '$2y$10$SOvm9NjFQF9Sajv2nfprTOe0x0laI1wRq0BlIBtqM5aBBGk.SJQ.m', '2026-02-12 10:47:20', 1, 1, '2026-02-12 02:37:20'),
+(58, 1, '$2y$10$UyuO8OEZAZ/fXISEkM5g5OTurNQ/bsvnzeX4GqIn/zjha6FWnSddK', '2026-02-12 10:48:23', 0, 1, '2026-02-12 02:38:23'),
+(59, 1, '$2y$10$wAYudxTupaGkos/cVlwAVezuwaE.VnQ./ueSn1zPKgQOKxi2M48uS', '2026-02-12 10:52:13', 0, 1, '2026-02-12 02:42:13'),
+(60, 1, '$2y$10$uqgd3uVt/qT2VHL2sA8IYOUVnaazp8lgwk9ZC0S6kgD6oeJU4UT3.', '2026-02-12 10:53:28', 0, 1, '2026-02-12 02:43:28'),
+(61, 1, '$2y$10$745cnJQzOPCUQQKwf.ug0exM9qlHCUxHUkaLsB7pfD9241hq0zTP6', '2026-02-12 10:53:33', 0, 1, '2026-02-12 02:43:33'),
+(62, 1, '$2y$10$RwHxAi1qoRqvMNiA8CzISeaoMnl9jCOENdIzAiqASnBBi1/cEg26C', '2026-02-12 10:53:38', 1, 1, '2026-02-12 02:43:38'),
+(63, 1, '$2y$10$U4yfZeXLKIzQ/qA6H/rzvuEOoi9dHtOJp10k6xhCU1Rb8BPExS.FG', '2026-02-12 10:53:59', 2, 1, '2026-02-12 02:43:59'),
+(64, 1, '$2y$10$hce70XJOkfi9EX2lTFIaNO.8VHfDZTiQvt02MTMHgQQxzYASPIPYa', '2026-02-12 10:55:19', 1, 1, '2026-02-12 02:45:19'),
+(65, 1, '$2y$10$XQH15eSepo6kF6iHZscPuuvm0Ji3t.JmmoO5SwV7BDz9MQx1sVCVy', '2026-02-12 11:33:51', 0, 1, '2026-02-12 03:23:51'),
+(66, 1, '$2y$10$kUWhwFOPtlnLoQuEUi5VXOvP3TXbeejzmRgaqHGBtVizv0prbgtJy', '2026-02-12 11:33:52', 0, 1, '2026-02-12 03:23:52'),
+(67, 1, '$2y$10$qygLV.ObW1/KLb3wNFXMZeyGeWlelDys4YGaZUCTN2re/8ZddcOsi', '2026-02-12 11:33:53', 0, 1, '2026-02-12 03:23:53'),
+(68, 1, '$2y$10$GL2nJiRL2mFOR15S586ybu9phEInK76dR/w6tPc2ImYkEAAJmiJ/2', '2026-02-12 11:33:54', 0, 1, '2026-02-12 03:23:54'),
+(69, 1, '$2y$10$DEFtUX2/E30zeU3DJ26mmusvKJvYPq8.G2GIhgqWVquO2egYIH1eK', '2026-02-12 11:33:54', 0, 1, '2026-02-12 03:23:54'),
+(70, 1, '$2y$10$EO4xhGChdLUvgZ3.BODZCufVeZ4IUGqcVzaMJuXUbN2MQg2mAv/92', '2026-02-12 11:33:55', 0, 1, '2026-02-12 03:23:55'),
+(71, 1, '$2y$10$II.qhTvBzgEL4iSlI.vGCuKZbFVC8XvEZDCAo.j/WuUE.mLpCO6oq', '2026-02-12 11:33:56', 0, 1, '2026-02-12 03:23:56'),
+(72, 1, '$2y$10$xb2VMR8kw1aNLFSBLXL3Teljkg/U/vz.n1vmgMYiXznagdR8yag6q', '2026-02-12 11:33:58', 0, 1, '2026-02-12 03:23:58'),
+(73, 1, '$2y$10$FHcb/eDIbBt7wOtfVQRBCur3uqLXf1b1B4JzrT/3iVwvUatJ40ttC', '2026-02-12 11:33:58', 0, 1, '2026-02-12 03:23:58'),
+(74, 1, '$2y$10$MWD4tB4wNWUgoJ6UvCp1guSCzL5MBe3MVMceIlST9KAC8bMMSkdvu', '2026-02-12 11:33:59', 0, 1, '2026-02-12 03:23:59'),
+(75, 1, '$2y$10$WrMnX5ekDfXIOnUE3r9UYu4ArppNKOZHaZ8pUw7UL2Gz6xIaOwKdy', '2026-02-12 11:34:00', 0, 1, '2026-02-12 03:24:00'),
+(76, 1, '$2y$10$fT/HLYOW4RMN3vQ60jOcF.utr7o97Jez6h1h.ntzdOqzLfmJ0GGeS', '2026-02-12 11:34:00', 0, 1, '2026-02-12 03:24:00'),
+(77, 1, '$2y$10$mcQu3ddymUA6dRB3z3xT4e.nQlizTX0mHGjBKWkm.RL75LlCGPAzu', '2026-02-12 11:34:01', 0, 1, '2026-02-12 03:24:01'),
+(78, 1, '$2y$10$vheW5bHK1TY9kJOSSBxl9OQWQbnm3P5JfUMKZ5dC9z0PLiGVoNM.O', '2026-02-12 11:34:04', 0, 1, '2026-02-12 03:24:04'),
+(79, 1, '$2y$10$B7tkdy016DBdNCv/IwR44ORRoKUxhLGf1Ot2UNi1VcdpvXr5vNtH.', '2026-02-12 11:34:04', 0, 1, '2026-02-12 03:24:04'),
+(80, 1, '$2y$10$qsSooBFljiEbhVfmb2BUdupreBcYO1Dq8zzryzYx0aPlINYjbhvKK', '2026-02-12 11:34:05', 0, 1, '2026-02-12 03:24:05'),
+(81, 1, '$2y$10$pyelN26fVFRwgbSvurZ6K.fCRTugwR.fKorIfEF.YzlWAzgAMsWo.', '2026-02-12 11:34:05', 0, 1, '2026-02-12 03:24:05'),
+(82, 1, '$2y$10$jMWSaoUtIrT7YPf3Xv2a/eDS7JbMZsPXMqe.sYtsRdcgrelWUpqG.', '2026-02-12 11:34:06', 0, 1, '2026-02-12 03:24:06'),
+(83, 1, '$2y$10$y5h3mdepytKmcwmzQb.hY..TW7aQFX84KeSfx92402f6WuyIpZDta', '2026-02-12 11:34:06', 0, 1, '2026-02-12 03:24:06'),
+(84, 1, '$2y$10$WgEX0Mb3dY6pyZlTeUgIHukhCnsmEwMU0r33Ln4tUJreWm3uLJ3Ve', '2026-02-12 11:34:08', 0, 1, '2026-02-12 03:24:08'),
+(85, 1, '$2y$10$tpi3526W0.rR15BJ4s4i/eDRj3.IXnsscIYctlQw0xsCQ4uZkLfpe', '2026-02-12 11:34:09', 0, 1, '2026-02-12 03:24:09'),
+(86, 1, '$2y$10$TuUZ.HaYmNC5REAxatV.EO.VO6OMO1gALbQeiWp8oX3qkEIGn0tDG', '2026-02-12 11:34:10', 0, 1, '2026-02-12 03:24:10'),
+(87, 1, '$2y$10$c3rl5adc7i0q7DfPAJI2cO/W.xyMLix32/MIsW.3pk6kMW.RJT4Di', '2026-02-12 11:34:11', 0, 1, '2026-02-12 03:24:11'),
+(88, 1, '$2y$10$4tgB2foSj6AA6g3.kMEUTuqQK2im3jG8Im6JwwtPszEEUHNQMVV6.', '2026-02-12 11:34:12', 0, 1, '2026-02-12 03:24:12'),
+(89, 1, '$2y$10$seSzCxcZA4qpbLVln7iz.eQ30bBouuiB52OTiL2N23utwS0ZAhEcC', '2026-02-12 11:34:12', 0, 1, '2026-02-12 03:24:12'),
+(90, 1, '$2y$10$Nq1wVok8.Mqx0yW0k8lQeOD0IgxP2WbP0q6buG0PARKZyFzU4S8Oq', '2026-02-12 11:34:13', 0, 1, '2026-02-12 03:24:13'),
+(91, 1, '$2y$10$crt.grM/dOjH7T7DboCznuHnqKn6zIkNlIsQu1P4n6m9H3N9PNu7u', '2026-02-12 11:34:14', 0, 1, '2026-02-12 03:24:14'),
+(92, 1, '$2y$10$bnzmQ8BAZi/h15JVtLRO9uMq..VS5MinPl7.prifiw9GnATaKMJIi', '2026-02-12 11:34:14', 0, 1, '2026-02-12 03:24:14'),
+(93, 1, '$2y$10$pfmhh2OvLuDT7vc6OICu/.mCaGk6Rdhu8el.iOVD2qB55dXtuTQWG', '2026-02-12 11:34:16', 0, 1, '2026-02-12 03:24:16'),
+(94, 1, '$2y$10$vxurcEqaLuXZkR13o6plXuJlAkjGLMb5WaneNx0oMBZNobyc/muu2', '2026-02-12 11:34:17', 0, 1, '2026-02-12 03:24:17'),
+(95, 1, '$2y$10$4Bk4E7UnNljjV4PVbQ6OBeKW0wtxt.PtHBgBVvYDvEOHH9oLVU5Ry', '2026-02-12 11:34:17', 0, 1, '2026-02-12 03:24:17'),
+(96, 1, '$2y$10$U0CGLocOiK4PEPVAhJv5q.TvZenSr6xELGagLhccALzj/arkY7e2a', '2026-02-12 11:34:18', 0, 1, '2026-02-12 03:24:18'),
+(97, 1, '$2y$10$PMmWABb2zbpaPCUIOqbsqeBlmp7zF/SYXlrAgg0M/lOF6W3n.wCsq', '2026-02-12 11:34:19', 0, 1, '2026-02-12 03:24:19'),
+(98, 1, '$2y$10$bnLNcM7pr8xJFDT6uuS4/.dRwQt7qFwIIlWRb1A6r654szQIFTtaG', '2026-02-12 11:34:19', 0, 1, '2026-02-12 03:24:19'),
+(99, 1, '$2y$10$6L3KbvEzPPmKWni.hn3QoeHW1yr5/asyvOQ6lpATAvcs2VpAba43q', '2026-02-12 11:34:20', 0, 1, '2026-02-12 03:24:20'),
+(100, 1, '$2y$10$1qDXnnYZRu.oZZteA2aXBOEIDakuohjM7sXN1xKc50D0q8OZm1QL2', '2026-02-12 11:34:35', 0, 1, '2026-02-12 03:24:35'),
+(101, 1, '$2y$10$U4xmNyy8r.aw134/c91UbOGx9ds4ofXRGTo4htHiAGNbS4a34hbfe', '2026-02-12 11:34:35', 0, 1, '2026-02-12 03:24:35'),
+(102, 1, '$2y$10$Vwzsp3kbtOKZRMczoSjkyu0X87OpITXo/qmKCT6dJGPoNizrGnRD2', '2026-02-12 11:34:36', 0, 1, '2026-02-12 03:24:36'),
+(103, 1, '$2y$10$6Y66u7.rLqptuAxMollW.enZG0T789h6dwKo9kdzIdPfQoyAVWyRq', '2026-02-12 11:35:33', 0, 1, '2026-02-12 03:25:33'),
+(104, 1, '$2y$10$DGRA6QlOnBikugqjD3UxvOOFg987jJ7p45xIrvaovDaAlY8AgZTQy', '2026-02-12 11:35:41', 0, 1, '2026-02-12 03:25:41'),
+(105, 1, '$2y$10$EUEn/w79kElVoZRlMB8WpOutW.1yTKhOAmV2rKvSV30MX3wo6kPtW', '2026-02-12 11:35:46', 0, 1, '2026-02-12 03:25:46'),
+(106, 1, '$2y$10$yAaLdQbKT.xSYrzrRAS5luoL6jnTR3fy8/Rj3HktzEPF0TdbfSGEm', '2026-02-12 11:35:52', 0, 1, '2026-02-12 03:25:52'),
+(107, 1, '$2y$10$YieA8v7Cbxyc7Tn5UpTdi.0v6OfRQ1ZfGm7dZXV4LZyI4dHF9gTQ.', '2026-02-12 11:35:57', 0, 1, '2026-02-12 03:25:57'),
+(108, 1, '$2y$10$wYqDqJ036iOETayYgaWgeOcWDUdxSxMhszyBwkb8Js0zNSiQbDWYC', '2026-02-12 11:36:03', 0, 1, '2026-02-12 03:26:03'),
+(109, 1, '$2y$10$LlEH6Nayzy2ki2hUaUasJeHsBFFTTv3d7D932/KC0khSRpkuzrLjm', '2026-02-12 11:36:08', 0, 1, '2026-02-12 03:26:08'),
+(110, 1, '$2y$10$cGNFkGiJLJzDkZf88InZx.nQJG746pDADwoxOcDaZeevER8xO9L.m', '2026-02-12 11:36:12', 0, 1, '2026-02-12 03:26:12'),
+(111, 1, '$2y$10$EFDXPuz1fbPp7rk1cNEOu.EEzKTYXG3XR2gVpIRBUWHSyWeZzRorW', '2026-02-12 11:36:17', 0, 1, '2026-02-12 03:26:17'),
+(112, 1, '$2y$10$19iquB9wYA0erXR4IBQrxeApPfr/COxZd8aMST9XiYZ9jpVr5PoQq', '2026-02-12 11:36:23', 0, 1, '2026-02-12 03:26:23'),
+(113, 1, '$2y$10$PKEYk4oEu/dD2y/0nACwUuYRX9toMWZdeRiA6cnRZrMMtsBjrGgJm', '2026-02-12 11:36:28', 0, 1, '2026-02-12 03:26:28'),
+(114, 1, '$2y$10$TI9BA3u1Af.trF7wcIpMM.dbDiMkcXwELlP0TDAkClFCxy4p.7/Ui', '2026-02-12 11:36:41', 1, 1, '2026-02-12 03:26:41'),
+(115, 1, '$2y$10$c7IFnuSv.iqZ/aednioYZ.C5rkwzUJBes4KqIQWfL3VAFwx5/KaiW', '2026-02-12 11:37:16', 1, 1, '2026-02-12 03:27:16'),
+(116, 1, '$2y$10$2twZvfuRVJQUFWLwSQct2e.xu2Ih5N5fhxiQ0g2lIMNGay0Eovvmm', '2026-02-12 11:37:54', 1, 1, '2026-02-12 03:27:54'),
+(117, 1, '$2y$10$U.t4ZCjIv1sKvWW3KeMc9eIn.1XDCrGmHMP0j23b4b/.YTkhQ32Oq', '2026-02-12 12:36:35', 0, 1, '2026-02-12 04:26:35'),
+(118, 1, '$2y$10$HUSylIrJy2EZHo6CXOzAsOcOuLm3k20C8sN.8.4Xym7DLgpFZiKGS', '2026-02-12 12:36:40', 0, 1, '2026-02-12 04:26:40'),
+(119, 1, '$2y$10$xjy7OM0twj/YzjFUo157Auz/9U1cikSRlxtGPHHuB3dE2t.3lZc0a', '2026-02-12 12:36:45', 0, 1, '2026-02-12 04:26:45'),
+(120, 1, '$2y$10$YujTHHQrG9cMLcSCJHkbgOAyhjwURI/oUD2XDVi/yn8pSw6sgcPSa', '2026-02-12 12:36:50', 0, 1, '2026-02-12 04:26:50'),
+(121, 1, '$2y$10$SZpfAcVp3euhc3vU7Q9CluYc25BdAwWUCj/hBR/jCXyPRuXI4v9FG', '2026-02-12 12:36:55', 0, 1, '2026-02-12 04:26:55'),
+(122, 1, '$2y$10$sA.ZYry/.Fd0du6HONzIZeo/bCfDK/gy64.I0BE6WPKewR6zGrHpm', '2026-02-12 12:37:00', 0, 1, '2026-02-12 04:27:00'),
+(123, 1, '$2y$10$nJHHrYRRCjn69PvXAw9LeuAHDnmfmPExdn0jA0CNJ8gzarJlf/BsG', '2026-02-12 12:37:05', 0, 1, '2026-02-12 04:27:05'),
+(124, 1, '$2y$10$8QdkzMhXosJD1J6TXcQ36e2ntcD812bcCSSmok5l4JOaHiUZ8v6Aq', '2026-02-12 12:37:09', 0, 1, '2026-02-12 04:27:09'),
+(125, 1, '$2y$10$P7FWIKNSwzIU6Mgrz0u.WuWuO2fX/c/E/16vKvkHIuVwzLhhwNg2G', '2026-02-12 12:37:13', 1, 1, '2026-02-12 04:27:13'),
+(126, 1, '$2y$10$4OMiROMqb77mFGDkBckJv.2HZrpLqoS7kzVQhClgk18BKDS/oSqL2', '2026-02-12 12:37:56', 0, 1, '2026-02-12 04:27:56'),
+(127, 1, '$2y$10$xB2oEuwN0pAnxeYm55tplunew4Jg.uTXWP8iS0rrSEZ.7Ev/a3zGe', '2026-02-12 18:11:29', 0, 1, '2026-02-12 10:01:29'),
+(128, 1, '$2y$10$TIeRp1if0lyLwddtlT4VJOV4ZkERZoygxuwbtHXPu6N3NVY6bHX42', '2026-02-12 18:11:34', 0, 1, '2026-02-12 10:01:34'),
+(129, 1, '$2y$10$Xy/AoRGK.RqK1mcZs26l7eHA03mnGCr801HXqOG6SUntPZ4Dl2T2a', '2026-02-12 18:11:40', 0, 1, '2026-02-12 10:01:40'),
+(130, 1, '$2y$10$3ESzwhb1peE1pFkYtaiKRuzEfH7IFSn68uPpDH7r5M3NBZ7LMNxyG', '2026-02-12 18:11:44', 0, 1, '2026-02-12 10:01:44'),
+(131, 1, '$2y$10$5ISi3YaOg9ZgMbhE4q8bb.Xup9GutbQ92cotBYgdr0ifhrzEm0qnG', '2026-02-12 18:11:47', 0, 1, '2026-02-12 10:01:47');
 
 -- --------------------------------------------------------
 
@@ -1149,7 +1307,143 @@ INSERT INTO `otp_attempt_logs` (`id`, `user_id`, `ip_address`, `attempt_type`, `
 (15, 1, '::1', 'otp_verification', 'success', 'OTP verified successfully', '2026-02-09 16:34:46'),
 (16, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-10 16:17:10'),
 (17, 1, '::1', 'otp_verification', 'failed', 'Incorrect OTP', '2026-02-10 16:17:34'),
-(18, 1, '::1', 'otp_verification', 'success', 'OTP verified successfully', '2026-02-10 16:17:46');
+(18, 1, '::1', 'otp_verification', 'success', 'OTP verified successfully', '2026-02-10 16:17:46'),
+(19, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:21:16'),
+(20, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:21:21'),
+(21, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:21:24'),
+(22, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:21:28'),
+(23, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:21:32'),
+(24, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:21:36'),
+(25, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:21:39'),
+(26, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:21:43'),
+(27, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:21:47'),
+(28, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:21:52'),
+(29, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:21:56'),
+(30, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:22:00'),
+(31, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:22:03'),
+(32, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:22:09'),
+(33, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:22:13'),
+(34, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:22:17'),
+(35, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:22:21'),
+(36, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:22:26'),
+(37, 1, '::1', 'otp_verification', 'failed', 'Incorrect OTP', '2026-02-11 21:22:39'),
+(38, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:22:44'),
+(39, 1, '::1', 'otp_verification', 'failed', 'Incorrect OTP', '2026-02-11 21:23:50'),
+(40, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 21:23:59'),
+(41, 1, '::1', 'otp_verification', 'success', 'OTP verified successfully', '2026-02-11 21:24:52'),
+(42, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 22:16:00'),
+(43, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 22:16:04'),
+(44, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 22:16:07'),
+(45, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 22:16:11'),
+(46, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 22:16:15'),
+(47, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 22:16:19'),
+(48, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 22:16:23'),
+(49, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 22:16:26'),
+(50, 1, '::1', 'otp_generated', 'success', 'johnpaulaustria321@gmail.com', '2026-02-11 22:16:30'),
+(51, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:34:26'),
+(52, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:34:32'),
+(53, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:34:36'),
+(54, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:34:41'),
+(55, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:34:46'),
+(56, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:34:51'),
+(57, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:34:55'),
+(58, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:35:00'),
+(59, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:35:04'),
+(60, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:35:10'),
+(61, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:35:15'),
+(62, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:35:20'),
+(63, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:35:25'),
+(64, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:35:30'),
+(65, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:35:35'),
+(66, 1, '::1', 'otp_verification', 'failed', 'Incorrect OTP', '2026-02-12 02:37:16'),
+(67, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:37:20'),
+(68, 1, '::1', 'otp_verification', 'failed', 'Incorrect OTP', '2026-02-12 02:38:19'),
+(69, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:38:23'),
+(70, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:42:13'),
+(71, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:43:28'),
+(72, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:43:33'),
+(73, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:43:38'),
+(74, 1, '::1', 'otp_verification', 'failed', 'Incorrect OTP', '2026-02-12 02:43:55'),
+(75, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:43:59'),
+(76, 1, '::1', 'otp_verification', 'failed', 'Incorrect OTP', '2026-02-12 02:45:03'),
+(77, 1, '::1', 'otp_verification', 'failed', 'Incorrect OTP', '2026-02-12 02:45:12'),
+(78, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 02:45:19'),
+(79, 1, '::1', 'otp_verification', 'failed', 'Incorrect OTP', '2026-02-12 02:45:50'),
+(80, 1, '::1', 'otp_verification', 'success', 'OTP verified successfully', '2026-02-12 02:46:12'),
+(81, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:23:51'),
+(82, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:23:52'),
+(83, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:23:53'),
+(84, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:23:54'),
+(85, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:23:54'),
+(86, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:23:55'),
+(87, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:23:56'),
+(88, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:23:58'),
+(89, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:23:58'),
+(90, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:23:59'),
+(91, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:00'),
+(92, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:00'),
+(93, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:01'),
+(94, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:04'),
+(95, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:04'),
+(96, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:05'),
+(97, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:05'),
+(98, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:06'),
+(99, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:06'),
+(100, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:08'),
+(101, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:09'),
+(102, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:10'),
+(103, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:11'),
+(104, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:12'),
+(105, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:12'),
+(106, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:13'),
+(107, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:14'),
+(108, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:14'),
+(109, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:16'),
+(110, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:17'),
+(111, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:17'),
+(112, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:18'),
+(113, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:19'),
+(114, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:19'),
+(115, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:20'),
+(116, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:35'),
+(117, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:35'),
+(118, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:24:36'),
+(119, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:25:33'),
+(120, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:25:41'),
+(121, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:25:46'),
+(122, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:25:52'),
+(123, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:25:58'),
+(124, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:26:03'),
+(125, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:26:08'),
+(126, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:26:12'),
+(127, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:26:17'),
+(128, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:26:23'),
+(129, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:26:28'),
+(130, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:26:41'),
+(131, 1, '::1', 'otp_verification', 'failed', 'Incorrect OTP', '2026-02-12 03:27:07'),
+(132, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:27:16'),
+(133, 1, '::1', 'otp_verification', 'failed', 'Incorrect OTP', '2026-02-12 03:27:50'),
+(134, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 03:27:54'),
+(135, 1, '::1', 'otp_verification', 'failed', 'Incorrect OTP', '2026-02-12 03:28:13'),
+(136, 1, '::1', 'otp_verification', 'success', 'OTP verified successfully', '2026-02-12 03:28:36'),
+(137, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 04:26:35'),
+(138, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 04:26:40'),
+(139, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 04:26:45'),
+(140, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 04:26:50'),
+(141, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 04:26:55'),
+(142, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 04:27:00'),
+(143, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 04:27:05'),
+(144, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 04:27:09'),
+(145, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 04:27:13'),
+(146, 1, '::1', 'otp_verification', 'failed', 'Incorrect OTP', '2026-02-12 04:27:53'),
+(147, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 04:27:56'),
+(148, 1, '::1', 'otp_verification', 'success', 'OTP verified successfully', '2026-02-12 04:28:30'),
+(149, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 10:01:29'),
+(150, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 10:01:34'),
+(151, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 10:01:40'),
+(152, 1, '::1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 10:01:44'),
+(153, 1, '127.0.0.1', 'otp_generated', 'success', 'lipejuje@gmail.com', '2026-02-12 10:01:47'),
+(154, 1, '::1', 'otp_verification', 'success', 'OTP verified successfully', '2026-02-12 10:02:57');
 
 -- --------------------------------------------------------
 
@@ -1169,6 +1463,32 @@ CREATE TABLE `out_of_band_approvals` (
   `approved_at` timestamp NULL DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `pagibig_contribution_brackets`
+--
+
+CREATE TABLE `pagibig_contribution_brackets` (
+  `id` int(11) NOT NULL,
+  `salary_from` decimal(12,2) NOT NULL,
+  `salary_to` decimal(12,2) NOT NULL,
+  `monthly_contribution` decimal(10,2) NOT NULL,
+  `effective_year` int(4) NOT NULL DEFAULT year(curdate()),
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `pagibig_contribution_brackets`
+--
+
+INSERT INTO `pagibig_contribution_brackets` (`id`, `salary_from`, `salary_to`, `monthly_contribution`, `effective_year`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 0.00, 1500.00, 100.00, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(2, 1500.01, 4666.67, 150.00, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(3, 4666.68, 999999.99, 200.00, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37');
 
 -- --------------------------------------------------------
 
@@ -1239,6 +1559,34 @@ CREATE TABLE `payroll_audit_trail` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `payroll_calendar`
+--
+
+CREATE TABLE `payroll_calendar` (
+  `id` int(11) NOT NULL,
+  `payroll_year` int(4) NOT NULL,
+  `period_number` int(2) NOT NULL COMMENT '1=Period 1, 2=Period 2',
+  `cutoff_start` date NOT NULL COMMENT 'Period cutoff start date',
+  `cutoff_end` date NOT NULL COMMENT 'Period cutoff end date',
+  `pay_date` date NOT NULL COMMENT 'Employee payment date',
+  `frequency` varchar(50) NOT NULL DEFAULT 'Bi-weekly' COMMENT 'Pay frequency (Bi-weekly, Monthly, etc)',
+  `status` enum('Active','Inactive','Closed') NOT NULL DEFAULT 'Active',
+  `remarks` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `payroll_calendar`
+--
+
+INSERT INTO `payroll_calendar` (`id`, `payroll_year`, `period_number`, `cutoff_start`, `cutoff_end`, `pay_date`, `frequency`, `status`, `remarks`, `created_at`, `updated_at`) VALUES
+(7, 2026, 1, '2026-02-01', '2026-02-15', '2026-03-07', 'Bi-weekly', 'Active', NULL, '2026-02-12 10:14:14', '2026-02-12 10:14:14'),
+(8, 2026, 2, '2026-02-16', '2026-02-28', '2026-03-22', 'Bi-weekly', 'Active', NULL, '2026-02-12 10:14:14', '2026-02-12 10:14:14');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `payroll_components`
 --
 
@@ -1253,6 +1601,21 @@ CREATE TABLE `payroll_components` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `payroll_components`
+--
+
+INSERT INTO `payroll_components` (`id`, `code`, `name`, `description`, `component_type`, `category`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 'BASIC_PAY', 'Basic Pay', 'Base monthly salary for all employees', 'salary', 'Compensation', 1, '2026-02-12 02:46:47', '2026-02-12 02:46:47'),
+(2, 'INCENTIVES', 'Incentives', 'Performance-based bonus and incentives', 'salary', 'Incentives', 1, '2026-02-12 02:46:47', '2026-02-12 02:46:47'),
+(3, 'ALLOWANCES', 'Allowances', 'Housing, meal, transportation, and other allowances', 'salary', 'Allowance', 1, '2026-02-12 02:46:47', '2026-02-12 13:15:59'),
+(4, 'INCOME_TAX_BIR', 'Income Tax (BIR)', 'Monthly withholding tax based on BIR tables', 'deduction', 'Tax', 1, '2026-02-12 02:46:47', '2026-02-12 02:46:47'),
+(5, 'SSS_CONTRIB', 'SSS Contribution', 'Social Security System employee contribution', 'deduction', 'Contribution', 1, '2026-02-12 02:46:47', '2026-02-12 02:47:32'),
+(6, 'PHILHEALTH_PREM', 'PhilHealth Premium', 'Philippine Health Insurance Corporation premium', 'deduction', 'Insurance', 1, '2026-02-12 02:46:47', '2026-02-12 02:46:47'),
+(7, 'PAG_IBIG_CONTRIB', 'Pag-IBIG Contribution', 'Home Development Mutual Fund contribution', 'deduction', 'Contribution', 1, '2026-02-12 02:46:47', '2026-02-12 02:46:47'),
+(8, 'LOAN_DEDUCTION', 'Loan Deduction', 'Employee loan amortization and deductions', 'deduction', 'Loan', 1, '2026-02-12 02:46:47', '2026-02-12 02:46:47'),
+(9, 'HMO_PREMIUM', 'HMO Premium', 'Health Maintenance Organization premium deduction', 'deduction', 'Insurance', 1, '2026-02-12 02:46:47', '2026-02-12 02:46:47');
 
 -- --------------------------------------------------------
 
@@ -1375,6 +1738,35 @@ INSERT INTO `pay_grades` (`id`, `code`, `name`, `description`, `status`, `create
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `philhealth_premium_brackets`
+--
+
+CREATE TABLE `philhealth_premium_brackets` (
+  `id` int(11) NOT NULL,
+  `salary_from` decimal(12,2) NOT NULL,
+  `salary_to` decimal(12,2) NOT NULL,
+  `monthly_premium` decimal(10,2) NOT NULL,
+  `effective_year` int(4) NOT NULL DEFAULT year(curdate()),
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `philhealth_premium_brackets`
+--
+
+INSERT INTO `philhealth_premium_brackets` (`id`, `salary_from`, `salary_to`, `monthly_premium`, `effective_year`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 0.00, 8999.99, 500.00, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(2, 9000.00, 39999.99, 1437.50, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(3, 40000.00, 59999.99, 2437.50, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(4, 60000.00, 79999.99, 3437.50, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(5, 80000.00, 99999.99, 4437.50, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(6, 100000.00, 999999.99, 5037.50, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `roles`
 --
 
@@ -1460,7 +1852,7 @@ CREATE TABLE `salary_bands` (
   `status` varchar(50) DEFAULT 'Active',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `salary_bands`
@@ -1613,6 +2005,40 @@ CREATE TABLE `special_pay_dates` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `sss_contribution_brackets`
+--
+
+CREATE TABLE `sss_contribution_brackets` (
+  `id` int(11) NOT NULL,
+  `salary_from` decimal(12,2) NOT NULL,
+  `salary_to` decimal(12,2) NOT NULL,
+  `monthly_contribution` decimal(10,2) NOT NULL,
+  `effective_year` int(4) NOT NULL DEFAULT year(curdate()),
+  `is_active` tinyint(1) DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `sss_contribution_brackets`
+--
+
+INSERT INTO `sss_contribution_brackets` (`id`, `salary_from`, `salary_to`, `monthly_contribution`, `effective_year`, `is_active`, `created_at`, `updated_at`) VALUES
+(1, 0.00, 2250.00, 135.00, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(2, 2250.01, 2749.99, 157.50, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(3, 2750.00, 3249.99, 180.00, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(4, 3250.00, 3749.99, 202.50, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(5, 3750.00, 4249.99, 225.00, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(6, 4250.00, 4749.99, 247.50, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(7, 4750.00, 5249.99, 270.00, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(8, 5250.00, 5749.99, 292.50, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(9, 5750.00, 6249.99, 315.00, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(10, 6250.00, 6749.99, 337.50, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37'),
+(11, 6750.00, 7242.99, 360.00, 2026, 1, '2026-02-12 03:22:37', '2026-02-12 03:22:37');
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `tax_contributions`
 --
 
@@ -1652,7 +2078,7 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `username`, `email`, `password`, `first_name`, `last_name`, `name`, `role`, `status`, `created_at`, `updated_at`) VALUES
-(1, 'admin', 'johnpaulaustria321@gmail.com', '$2y$10$k1PqX1E56lpDb304jZwD.e9usMgVBUaL1dcUEkjcVZhKe7vY9OcKy', 'Admin', 'User', 'Administrator', 'admin', 'active', '2026-02-04 16:47:09', '2026-02-09 15:48:12'),
+(1, 'admin', 'lipejuje@gmail.com', '$2y$10$I2Bu8FqXMhYyYHgE3SfauOXwsqrzii39J9s3dpVDHTDA5HrgQZx2q', 'Admin', 'User', 'Administrator', 'admin', 'active', '2026-02-04 16:47:09', '2026-02-12 10:01:10'),
 (2, 'hrchief', 'itachiuchiha10012@gmail.com', '$2y$10$fAsfERT.6UQrsOsoKJQyZOxw2RYuLA7eyTSJol8DcQiC1PogIdBFa', 'HR', 'Chief', 'HR Chief', 'hr_chief', 'active', '2026-02-04 16:47:09', '2026-02-09 15:48:12');
 
 -- --------------------------------------------------------
@@ -1715,6 +2141,13 @@ ALTER TABLE `benefit_definitions`
   ADD KEY `idx_is_active` (`is_active`),
   ADD KEY `idx_effective` (`effective_from`,`effective_to`),
   ADD KEY `idx_attach_to` (`attach_to`);
+
+--
+-- Indexes for table `bir_tax_brackets`
+--
+ALTER TABLE `bir_tax_brackets`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_year_active` (`effective_year`,`is_active`);
 
 --
 -- Indexes for table `compensation_approval_requests`
@@ -2060,6 +2493,13 @@ ALTER TABLE `out_of_band_approvals`
   ADD KEY `idx_salary_band_id` (`salary_band_id`);
 
 --
+-- Indexes for table `pagibig_contribution_brackets`
+--
+ALTER TABLE `pagibig_contribution_brackets`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_year_active` (`effective_year`,`is_active`);
+
+--
 -- Indexes for table `payroll_adjustments`
 --
 ALTER TABLE `payroll_adjustments`
@@ -2086,6 +2526,16 @@ ALTER TABLE `payroll_audit_trail`
   ADD KEY `idx_payroll_run_id` (`payroll_run_id`),
   ADD KEY `idx_user_id` (`user_id`),
   ADD KEY `idx_created_date` (`created_date`);
+
+--
+-- Indexes for table `payroll_calendar`
+--
+ALTER TABLE `payroll_calendar`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `idx_year_period` (`payroll_year`,`period_number`),
+  ADD KEY `idx_payroll_year` (`payroll_year`),
+  ADD KEY `idx_status` (`status`),
+  ADD KEY `idx_dates` (`cutoff_start`,`cutoff_end`,`pay_date`);
 
 --
 -- Indexes for table `payroll_components`
@@ -2140,6 +2590,13 @@ ALTER TABLE `pay_grades`
   ADD UNIQUE KEY `code` (`code`),
   ADD KEY `idx_code` (`code`),
   ADD KEY `idx_status` (`status`);
+
+--
+-- Indexes for table `philhealth_premium_brackets`
+--
+ALTER TABLE `philhealth_premium_brackets`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_year_active` (`effective_year`,`is_active`);
 
 --
 -- Indexes for table `roles`
@@ -2218,6 +2675,13 @@ ALTER TABLE `special_pay_dates`
   ADD KEY `idx_date` (`date`);
 
 --
+-- Indexes for table `sss_contribution_brackets`
+--
+ALTER TABLE `sss_contribution_brackets`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_year_active` (`effective_year`,`is_active`);
+
+--
 -- Indexes for table `tax_contributions`
 --
 ALTER TABLE `tax_contributions`
@@ -2259,6 +2723,12 @@ ALTER TABLE `audit_logs`
 --
 ALTER TABLE `benefit_definitions`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `bir_tax_brackets`
+--
+ALTER TABLE `bir_tax_brackets`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `compensation_approval_requests`
@@ -2444,7 +2914,7 @@ ALTER TABLE `locations`
 -- AUTO_INCREMENT for table `login_otp`
 --
 ALTER TABLE `login_otp`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=132;
 
 --
 -- AUTO_INCREMENT for table `onboarding_checklists`
@@ -2456,13 +2926,19 @@ ALTER TABLE `onboarding_checklists`
 -- AUTO_INCREMENT for table `otp_attempt_logs`
 --
 ALTER TABLE `otp_attempt_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=155;
 
 --
 -- AUTO_INCREMENT for table `out_of_band_approvals`
 --
 ALTER TABLE `out_of_band_approvals`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `pagibig_contribution_brackets`
+--
+ALTER TABLE `pagibig_contribution_brackets`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `payroll_adjustments`
@@ -2483,10 +2959,16 @@ ALTER TABLE `payroll_audit_trail`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `payroll_calendar`
+--
+ALTER TABLE `payroll_calendar`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+
+--
 -- AUTO_INCREMENT for table `payroll_components`
 --
 ALTER TABLE `payroll_components`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `payroll_configurations`
@@ -2519,6 +3001,12 @@ ALTER TABLE `pay_grades`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
+-- AUTO_INCREMENT for table `philhealth_premium_brackets`
+--
+ALTER TABLE `philhealth_premium_brackets`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
 -- AUTO_INCREMENT for table `roles`
 --
 ALTER TABLE `roles`
@@ -2534,7 +3022,7 @@ ALTER TABLE `salary_adjustments`
 -- AUTO_INCREMENT for table `salary_bands`
 --
 ALTER TABLE `salary_bands`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `salary_component_definitions`
@@ -2565,6 +3053,12 @@ ALTER TABLE `shifts`
 --
 ALTER TABLE `special_pay_dates`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `sss_contribution_brackets`
+--
+ALTER TABLE `sss_contribution_brackets`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `tax_contributions`

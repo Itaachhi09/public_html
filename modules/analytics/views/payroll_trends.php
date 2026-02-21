@@ -8,7 +8,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-if (empty($_SESSION['token'])) {
+// Check for AJAX requests - don't redirect for XMLHttpRequest
+if (empty($_SESSION['token']) && (!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || $_SERVER['HTTP_X_REQUESTED_WITH'] !== 'XMLHttpRequest')) {
     header('Location: ../../../index.php');
     exit;
 }
@@ -359,17 +360,23 @@ if (empty($_SESSION['token'])) {
     </div>
 
     <script>
-        let charts = {};
+        // Global charts cache
+        window.chartsPayroll = window.chartsPayroll || {};
+        let charts = window.chartsPayroll;
 
         async function loadData() {
-            const department = document.getElementById('departmentFilter').value;
-            const dateRange = document.getElementById('dateRangeFilter').value;
-
+            const department = document.getElementById('departmentFilter')?.value || '';
+            const dateRange = document.getElementById('dateRangeFilter')?.value || '30';
+            
             try {
-                const response = await fetch(`../api.php?action=getPayrollTrends&department=${department}&dateRange=${dateRange}`);
+                const response = await fetch(`/public_html/modules/analytics/api.php?action=getPayrollTrends&department=${department}&dateRange=${dateRange}`, {
+                    credentials: 'same-origin',
+                    headers: {'X-Requested-With': 'XMLHttpRequest'}
+                });
+                
                 const result = await response.json();
 
-                if (result.success) {
+                if (result.success && result.data) {
                     updateKPIs(result.data);
                     updateCharts(result.data);
                     updateTopEarnersTable(result.data.top_earners);
@@ -383,86 +390,108 @@ if (empty($_SESSION['token'])) {
 
         function updateKPIs(data) {
             const breakdown = data.cost_breakdown;
-            document.getElementById('kpiGross').textContent = 
-                '₱' + (breakdown.basic_salary + breakdown.allowances || 0).toLocaleString();
-            document.getElementById('kpiDeductions').textContent = 
-                '₱' + (breakdown.deductions || 0).toLocaleString();
-            document.getElementById('kpiNet').textContent = 
-                '₱' + ((breakdown.basic_salary + breakdown.allowances - breakdown.deductions) || 0).toLocaleString();
-            document.getElementById('kpiEmployees').textContent = breakdown.employee_count || 0;
+            const basicSalary = parseFloat(breakdown.basic_salary) || 0;
+            const allowances = parseFloat(breakdown.allowances) || 0;
+            const deductions = parseFloat(breakdown.deductions) || 0;
+            const employeeCount = parseInt(breakdown.employee_count) || 0;
+            const grossPayroll = basicSalary + allowances;
+            const netPayroll = grossPayroll - deductions;
+            
+            document.getElementById('kpiGross').textContent = '₱' + grossPayroll.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('kpiDeductions').textContent = '₱' + deductions.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('kpiNet').textContent = '₱' + netPayroll.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('kpiEmployees').textContent = employeeCount;
         }
 
         function updateCharts(data) {
-            // Monthly Trends Chart
-            const monthlyData = data.monthly_gross || [];
-            if (charts.monthlyTrends) charts.monthlyTrends.destroy();
-            
-            const ctx1 = document.getElementById('monthlyTrendsChart').getContext('2d');
-            charts.monthlyTrends = new Chart(ctx1, {
-                type: 'line',
-                data: {
-                    labels: monthlyData.map(m => m.month || 'N/A'),
-                    datasets: [{
-                        label: 'Gross Payroll',
-                        data: monthlyData.map(m => m.gross_total || 0),
-                        borderColor: '#1e40af',
-                        backgroundColor: 'rgba(30, 64, 175, 0.1)',
-                        tension: 0.4,
-                        fill: true
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { display: true } }
+            try {
+                if (typeof Chart === 'undefined') {
+                    setTimeout(() => updateCharts(data), 300);
+                    return;
                 }
-            });
+                
+                const monthlyData = data.monthly_gross || [];
+                if (charts.monthlyTrends) charts.monthlyTrends.destroy();
+                
+                const ctx1 = document.getElementById('monthlyTrendsChart');
+                if (ctx1) {
+                    charts.monthlyTrends = new Chart(ctx1.getContext('2d'), {
+                        type: 'line',
+                        data: {
+                            labels: monthlyData.map(m => m.month || 'N/A'),
+                            datasets: [{
+                                label: 'Gross Payroll',
+                                data: monthlyData.map(m => parseFloat(m.gross_total) || 0),
+                                borderColor: '#1e40af',
+                                backgroundColor: 'rgba(30, 64, 175, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: true } }
+                        }
+                    });
+                }
 
-            // Cost Breakdown Chart
-            const breakdown = data.cost_breakdown;
-            if (charts.costBreakdown) charts.costBreakdown.destroy();
-            
-            const ctx2 = document.getElementById('costBreakdownChart').getContext('2d');
-            charts.costBreakdown = new Chart(ctx2, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Basic Salary', 'Allowances', 'Deductions'],
-                    datasets: [{
-                        data: [breakdown.basic_salary || 0, breakdown.allowances || 0, breakdown.deductions || 0],
-                        backgroundColor: ['#1e40af', '#f59e0b', '#ef4444']
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false
+                const breakdown = data.cost_breakdown;
+                if (charts.costBreakdown) charts.costBreakdown.destroy();
+                
+                const ctx2 = document.getElementById('costBreakdownChart');
+                if (ctx2) {
+                    charts.costBreakdown = new Chart(ctx2.getContext('2d'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Basic Salary', 'Allowances', 'Deductions'],
+                            datasets: [{
+                                data: [
+                                    parseFloat(breakdown.basic_salary) || 0,
+                                    parseFloat(breakdown.allowances) || 0,
+                                    parseFloat(breakdown.deductions) || 0
+                                ],
+                                backgroundColor: ['#1e40af', '#f59e0b', '#ef4444']
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false
+                        }
+                    });
                 }
-            });
 
-            // Salary Distribution Chart
-            const distribution = data.salary_distribution || [];
-            if (charts.salaryDistribution) charts.salaryDistribution.destroy();
-            
-            const ctx3 = document.getElementById('salaryDistributionChart').getContext('2d');
-            charts.salaryDistribution = new Chart(ctx3, {
-                type: 'bar',
-                data: {
-                    labels: distribution.map(d => d.salary_range || 'N/A'),
-                    datasets: [{
-                        label: 'Number of Employees',
-                        data: distribution.map(d => d.employee_count || 0),
-                        backgroundColor: '#22c55e'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    indexAxis: 'y'
+                const distribution = data.salary_distribution || [];
+                if (charts.salaryDistribution) charts.salaryDistribution.destroy();
+                
+                const ctx3 = document.getElementById('salaryDistributionChart');
+                if (ctx3) {
+                    charts.salaryDistribution = new Chart(ctx3.getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels: distribution.map(d => d.salary_range || 'N/A'),
+                            datasets: [{
+                                label: 'Number of Employees',
+                                data: distribution.map(d => parseInt(d.employee_count) || 0),
+                                backgroundColor: '#22c55e'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            indexAxis: 'y'
+                        }
+                    });
                 }
-            });
+            } catch (e) {
+                console.error('Error updating charts:', e);
+            }
         }
 
         function updateTopEarnersTable(topEarners) {
             const tbody = document.getElementById('topEarnersTable');
+            if (!tbody) return;
+            
             tbody.innerHTML = '';
 
             if (!topEarners || topEarners.length === 0) {
@@ -472,18 +501,20 @@ if (empty($_SESSION['token'])) {
 
             topEarners.forEach(earner => {
                 const row = tbody.insertRow();
+                const basicRate = parseFloat(earner.basic_rate) || 0;
+                const totalEarned = parseFloat(earner.total_earned) || 0;
                 row.innerHTML = `
                     <td>${earner.name || 'N/A'}</td>
                     <td>${earner.department_name || 'N/A'}</td>
-                    <td>₱${(earner.basic_rate || 0).toLocaleString()}</td>
-                    <td>₱${(earner.total_earned || 0).toLocaleString()}</td>
+                    <td>₱${basicRate.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                    <td>₱${totalEarned.toLocaleString('en-PH', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
                 `;
             });
         }
 
         async function loadDepartments() {
             try {
-                const response = await fetch('../api.php?action=getDashboardData');
+                const response = await fetch('/public_html/modules/analytics/api.php?action=getDashboardData');
                 const result = await response.json();
                 
                 if (result.success) {
@@ -502,11 +533,14 @@ if (empty($_SESSION['token'])) {
 
         async function exportReport(reportType, format) {
             try {
-                const response = await fetch(`../api.php?action=exportAnalytics&reportType=${reportType}&format=${format}`);
+                const response = await fetch(`/public_html/modules/analytics/api.php?action=exportAnalytics&reportType=${reportType}&format=${format}`);
                 const result = await response.json();
                 
                 if (result.success) {
-                    window.location.href = result.downloadUrl;
+                    const a = document.createElement('a');
+                    a.href = result.downloadUrl;
+                    a.download = 'report.csv';
+                    a.click();
                 } else {
                     alert('Export failed: ' + result.error);
                 }
@@ -516,8 +550,15 @@ if (empty($_SESSION['token'])) {
         }
 
         // Initialize
-        loadDepartments();
-        loadData();
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                loadDepartments();
+                loadData();
+            });
+        } else {
+            loadDepartments();
+            loadData();
+        }
     </script>
 </body>
 </html>
