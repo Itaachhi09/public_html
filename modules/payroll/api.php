@@ -55,7 +55,6 @@ require_once __DIR__ . '/models/Disbursement.php';
 require_once __DIR__ . '/models/GovernmentReport.php';
 require_once __DIR__ . '/models/PayrollConfiguration.php';
 require_once __DIR__ . '/models/PayrollApproval.php';
-require_once __DIR__ . '/models/PayrollAuditTrail.php';
 
 try {
     // Authentication
@@ -89,7 +88,7 @@ try {
     $govReport = new GovernmentReport();
     $configuration = new PayrollConfiguration();
     $approval = new PayrollApproval();
-    $auditTrail = new PayrollAuditTrail();
+    // AuditTrail removed as submodule
     
     $action = $_GET['action'] ?? $_POST['action'] ?? '';
     $response = ['success' => false, 'message' => 'Invalid action'];
@@ -112,9 +111,7 @@ try {
             'getGovernmentReports', 'getGovernmentReportDetail', 'createGovernmentReport', 
             'updateGovernmentReport', 'deleteGovernmentReport'
         ],
-        'security_audit_trail' => [
-            'getPayrollAuditTrails', 'getPayrollAuditTrailDetail'
-        ]
+        // security_audit_trail removed
     ];
     
     // Check if action is restricted
@@ -556,29 +553,7 @@ try {
             }
             break;
         
-        // ==================== AUDIT TRAILS ====================
-        case 'getPayrollAuditTrails':
-            $run_id = $_GET['payroll_run_id'] ?? null;
-            if ($run_id) {
-                $trails = $auditTrail->getByPayrollRun($run_id);
-            } else {
-                $trails = $auditTrail->getAll();
-            }
-            $response = ['success' => true, 'data' => $trails];
-            break;
-        
-        case 'getPayrollAuditTrailDetail':
-            $id = $_GET['id'] ?? null;
-            if (!$id) {
-                http_response_code(400);
-                $response = ['success' => false, 'error' => 'Audit trail ID required'];
-            } else {
-                $trail = $auditTrail->find($id);
-                $response = $trail ? 
-                    ['success' => true, 'data' => $trail] : 
-                    ['success' => false, 'error' => 'Audit trail not found', 'http_code' => 404];
-            }
-            break;
+        // Audit trail endpoints removed
         
         default:
             http_response_code(400);

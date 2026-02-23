@@ -1369,12 +1369,7 @@ $notifications = 3;
             <i class='bx bx-adjust'></i>
             <span>Adjustments & Special Pay</span>
           </a>
-          <?php if (canAccessMenuItem('payroll', 'security_audit_trail')): ?>
-          <a href="#" onclick="loadPayrollPage(event, 'security_audit_trail')" class="nav-subitem">
-            <i class='bx bx-lock'></i>
-            <span>Security & Audit Trail</span>
-          </a>
-          <?php endif; ?>
+          <!-- Security & Audit Trail removed -->
         </div>
       </div>
 
@@ -1724,7 +1719,7 @@ $notifications = 3;
         disbursement_bank_files: 'Disbursement & Bank Files',
         government_reports_compliance: 'Government Reports & Compliance',
         payroll_adjustments_special_pay: 'Adjustments & Special Pay',
-        security_audit_trail: 'Security & Audit Trail',
+        // security_audit_trail: 'Security & Audit Trail', (removed)
         // Compensation
         compensation_structure: 'Compensation Structure',
         salary_planning: 'Salary Planning',
@@ -1867,7 +1862,7 @@ $notifications = 3;
               disbursement_bank_files: () => window.loadDisbursement?.(),
               government_reports_compliance: () => window.loadGovernmentReports?.(),
               payroll_adjustments_special_pay: () => window.loadAdjustments?.(),
-              security_audit_trail: () => window.loadAuditTrail?.(),
+              // security_audit_trail: () => window.loadAuditTrail?.(), (removed)
               // Compensation
               compensation_structure: () => window.loadCompensationStructure?.(),
               salary_planning: () => window.loadSalaryPlanning?.(),

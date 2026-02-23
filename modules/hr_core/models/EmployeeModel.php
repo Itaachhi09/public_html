@@ -38,10 +38,10 @@ class EmployeeModel extends BaseModel {
      */
     public function getAllPaginated($limit = 10, $offset = 0) {
         $query = 'SELECT e.*, 
-                         d.department_name,
-                         jt.job_title_name,
-                         et.type_name,
-                         l.location_name
+                 d.department_name,
+                 jt.title AS job_title_name,
+                 et.type_name,
+                 l.location_name
                   FROM ' . $this->table . ' e
                   LEFT JOIN departments d ON e.department_id = d.department_id
                   LEFT JOIN job_titles jt ON e.job_title_id = jt.job_title_id
@@ -58,10 +58,10 @@ class EmployeeModel extends BaseModel {
      */
     public function findWithDetails($id) {
         $query = 'SELECT e.*, 
-                         d.department_name,
-                         jt.job_title_name,
-                         et.type_name,
-                         l.location_name
+                 d.department_name,
+                 jt.title AS job_title_name,
+                 et.type_name,
+                 l.location_name
                   FROM ' . $this->table . ' e
                   LEFT JOIN departments d ON e.department_id = d.department_id
                   LEFT JOIN job_titles jt ON e.job_title_id = jt.job_title_id
@@ -96,8 +96,8 @@ class EmployeeModel extends BaseModel {
     public function search($term) {
         $term = '%' . $term . '%';
         $query = 'SELECT e.*, 
-                         d.department_name,
-                         jt.job_title_name
+                 d.department_name,
+                 jt.title AS job_title_name
                   FROM ' . $this->table . ' e
                   LEFT JOIN departments d ON e.department_id = d.department_id
                   LEFT JOIN job_titles jt ON e.job_title_id = jt.job_title_id

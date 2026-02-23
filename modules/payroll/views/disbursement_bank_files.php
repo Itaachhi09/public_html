@@ -1212,58 +1212,6 @@ endif;
     </form>
   </div>
 
-  <!-- Rules & Compliance -->
-  <div class="section">
-    <h3 class="section-header">📋 Disbursement Rules & Compliance</h3>
-
-    <div class="alert alert-success">
-      <strong>✓ Single Bank File Per Payroll:</strong> Only one approved bank file can be generated per payroll run. Re-generation requires administrator approval.
-    </div>
-
-    <div class="alert alert-warning">
-      <strong>⚠️ Critical Compliance Rules:</strong>
-      <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
-        <li><strong>One file per payroll run:</strong> Cannot generate multiple files for same payroll period</li>
-        <li><strong>Bank file immutable after transmission:</strong> Cannot edit or regenerate without explicit approval</li>
-        <li><strong>Exception tracking:</strong> All cash/cheque payouts must be logged and reconciled</li>
-        <li><strong>Failed transfer resolution:</strong> Failures must be investigated and resolved within 5 business days</li>
-        <li><strong>Audit trail required:</strong> All file generations, transmissions, and re-generations are logged</li>
-        <li><strong>Security:</strong> Bank files contain sensitive employee banking information - handle with care</li>
-      </ul>
-    </div>
-
-    <div class="alert alert-info">
-      <strong>ℹ️ Supported Bank File Formats:</strong>
-      <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
-        <li><strong>TXT Format:</strong> Standard fixed-width text format compatible with most Philippine banks</li>
-        <li><strong>CSV Format:</strong> Comma-separated values, Excel-compatible for manual review</li>
-        <li><strong>XML Format:</strong> Structured XML for enterprise banking systems</li>
-      </ul>
-    </div>
-
-    <div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #3b82f6; margin-bottom: 0;">
-      <h4 style="margin: 0 0 1rem 0; color: #1f2937;">Disbursement Status Definitions</h4>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-        <div>
-          <p style="margin: 0 0 0.5rem 0; font-size: 12px; font-weight: 600; color: #1f2937;">Generated</p>
-          <p style="margin: 0; font-size: 12px; color: #6b7280;">File created and ready for transmission. Not yet sent to bank.</p>
-        </div>
-        <div>
-          <p style="margin: 0 0 0.5rem 0; font-size: 12px; font-weight: 600; color: #1f2937;">Transmitted</p>
-          <p style="margin: 0; font-size: 12px; color: #6b7280;">File sent to bank. Awaiting bank confirmation of processing.</p>
-        </div>
-        <div>
-          <p style="margin: 0 0 0.5rem 0; font-size: 12px; font-weight: 600; color: #1f2937;">Confirmed</p>
-          <p style="margin: 0; font-size: 12px; color: #6b7280;">Bank confirmed receipt and successfully processed all transfers.</p>
-        </div>
-        <div>
-          <p style="margin: 0 0 0.5rem 0; font-size: 12px; font-weight: 600; color: #1f2937;">Failed</p>
-          <p style="margin: 0; font-size: 12px; color: #6b7280;">Bank rejected file. Errors must be corrected before re-submission.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-
 </div>
 
 <script>

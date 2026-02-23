@@ -9,6 +9,10 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../../../config/Database.php';
 require_once __DIR__ . '/../models/PayrollAdjustment.php';
 require_once __DIR__ . '/../models/PayrollRun.php';
+require_once __DIR__ . '/../../hr_core/models/EmployeeModel.php';
+
+$employeeModel = new EmployeeModel();
+$employees = $employeeModel->getActive();
 
 $payrollAdjustment = new PayrollAdjustment();
 $payrollRun = new PayrollRun();
@@ -23,91 +27,96 @@ $totalAdjustments = count($adjustments ?? []);
 
 // Handle AJAX modal request
 if ($isAjax && $modal === 'view'):
-    $adjId = isset($_GET['adj_id']) ? $_GET['adj_id'] : '';
-    
-    // Sample adjustment data - in production, fetch from database
-    $adjustmentData = [
-        'ADJ-100' => ['employee' => 'Michael Johnson (EMP-003)', 'type' => 'Back Pay (Promotion)', 'amount' => '7,500.00', 'submitted' => 'January 28, 2026', 'approved' => 'January 30, 2026', 'paid' => 'February 7, 2026', 'reason' => 'Retroactive salary adjustment due to promotion effective January 15, 2026'],
-        'ADJ-099' => ['employee' => 'David Martinez (EMP-007)', 'type' => 'Back Pay (Correction)', 'amount' => '3,000.00', 'submitted' => 'January 20, 2026', 'approved' => 'January 22, 2026', 'paid' => 'February 1, 2026', 'reason' => 'Correction of attendance deduction error from December 2025'],
-        'ADJ-089' => ['employee' => 'Emily Davis (EMP-006)', 'type' => '13th Month Pay (2024)', 'amount' => '11,000.00', 'submitted' => 'December 20, 2024', 'approved' => 'December 22, 2024', 'paid' => 'December 24, 2024', 'reason' => 'Annual 13th month bonus payment, pro-rated based on service period'],
-    ];
-    
-    $adjustment = $adjustmentData[$adjId] ?? null;
-    
-    header('Content-Type: text/html');
-    ob_start();
-    ?>
-    <div class="modal-overlay">
-        <div class="modal-box">
-            <div class="modal-header">
-                <h3>Adjustment Details</h3>
-                <button type="button" class="modal-close-btn" onclick="window.closeAdjustmentModal()">✕</button>
+  $adjIdRaw = isset($_GET['adj_id']) ? $_GET['adj_id'] : '';
+  $adjId = null;
+  if (preg_match('/^ADJ-(\d+)$/', $adjIdRaw, $m)) {
+    $adjId = (int)$m[1];
+  } elseif (is_numeric($adjIdRaw)) {
+    $adjId = (int)$adjIdRaw;
+  }
+
+  $adjustment = null;
+  if ($adjId) {
+    $adjustment = $payrollAdjustment->find($adjId);
+  }
+
+  header('Content-Type: text/html');
+  ob_start();
+  ?>
+  <div class="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Adjustment Details</h3>
+        <button type="button" class="modal-close-btn" onclick="window.closeAdjustmentModal()">✕</button>
+      </div>
+      <div class="modal-content">
+        <?php if ($adjustment): ?>
+          <?php $emp = $employeeModel->findWithDetails($adjustment['employee_id'] ?? 0); ?>
+          <div style="margin-bottom: 1.5rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1rem;">
+              <div>
+                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Adjustment ID</label>
+                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo 'ADJ-'.htmlspecialchars($adjustment['id']); ?></div>
+              </div>
+              <div>
+                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Type</label>
+                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($adjustment['adjustment_type'] ?? ''); ?></div>
+              </div>
+              <div>
+                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Employee</label>
+                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($emp ? ($emp['first_name'].' '.$emp['last_name'].' ('.($emp['employee_code'] ?? $emp['employee_id']).')') : ('Employee '.($adjustment['employee_id'] ?? ''))); ?></div>
+              </div>
+              <div>
+                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Amount</label>
+                <div style="font-size: 14px; font-weight: 600; color: #1f2937;">₱<?php echo number_format($adjustment['amount'] ?? 0, 2); ?></div>
+              </div>
+              <div>
+                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Submitted Date</label>
+                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo !empty($adjustment['created_at']) ? date('F j, Y', strtotime($adjustment['created_at'])) : ''; ?></div>
+              </div>
+              <div>
+                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Approved Date</label>
+                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo !empty($adjustment['approved_at']) ? date('F j, Y', strtotime($adjustment['approved_at'])) : ''; ?></div>
+              </div>
+              <div>
+                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Paid Date</label>
+                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo !empty($adjustment['approved_at']) ? date('F j, Y', strtotime($adjustment['approved_at'])) : ''; ?></div>
+              </div>
+              <div>
+                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Status</label>
+                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><span class="badge <?php echo ($adjustment['status'] === 'approved' || $adjustment['status'] === 'processed') ? 'badge-paid' : 'badge-pending'; ?>"><?php echo htmlspecialchars(ucfirst($adjustment['status'] ?? 'pending')); ?></span></div>
+              </div>
             </div>
-            <div class="modal-content">
-                <?php if ($adjustment): ?>
-                    <div style="margin-bottom: 1.5rem;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1rem;">
-                            <div>
-                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Adjustment ID</label>
-                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($adjId); ?></div>
-                            </div>
-                            <div>
-                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Type</label>
-                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($adjustment['type']); ?></div>
-                            </div>
-                            <div>
-                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Employee</label>
-                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($adjustment['employee']); ?></div>
-                            </div>
-                            <div>
-                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Amount</label>
-                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;">₱<?php echo htmlspecialchars($adjustment['amount']); ?></div>
-                            </div>
-                            <div>
-                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Submitted Date</label>
-                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($adjustment['submitted']); ?></div>
-                            </div>
-                            <div>
-                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Approved Date</label>
-                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($adjustment['approved']); ?></div>
-                            </div>
-                            <div>
-                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Paid Date</label>
-                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><?php echo htmlspecialchars($adjustment['paid']); ?></div>
-                            </div>
-                            <div>
-                                <label style="font-size: 12px; color: #6b7280; font-weight: 500;">Status</label>
-                                <div style="font-size: 14px; font-weight: 600; color: #1f2937;"><span class="badge badge-paid">Paid</span></div>
-                            </div>
-                        </div>
                         
-                        <div style="margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">
-                            <label style="font-size: 12px; color: #6b7280; font-weight: 500; display: block; margin-bottom: 0.5rem;">Processing Reason</label>
-                            <div style="background: #f3f4f6; padding: 0.75rem; border-radius: 4px; font-size: 13px; color: #1f2937; line-height: 1.6;">
-                                <?php echo htmlspecialchars($adjustment['reason']); ?>
-                            </div>
-                        </div>
-                        
-                        <div style="margin-top: 1.5rem; padding: 1rem; background: #d1fae5; border-radius: 4px; border-left: 4px solid #22c55e;">
-                            <div style="color: #065f46; font-size: 12px;">
-                                <strong>Status:</strong> <span style="font-weight: 600;">PAID</span>
-                            </div>
-                            <div style="color: #065f46; font-size: 12px; margin-top: 0.5rem;">
-                                <strong>Completed:</strong> All approvals obtained and payment processed on <?php echo htmlspecialchars($adjustment['paid']); ?>
-                            </div>
-                        </div>
-                    </div>
-                <?php else: ?>
-                    <div style="padding: 1rem; background: #fee2e2; border-radius: 4px; color: #991b1b;">
-                        <strong>Error:</strong> Adjustment record not found.
-                    </div>
-                <?php endif; ?>
+            <div style="margin-top: 1.5rem; border-top: 1px solid #e5e7eb; padding-top: 1rem;">
+              <label style="font-size: 12px; color: #6b7280; font-weight: 500; display: block; margin-bottom: 0.5rem;">Processing Reason</label>
+              <div style="background: #f3f4f6; padding: 0.75rem; border-radius: 4px; font-size: 13px; color: #1f2937; line-height: 1.6;">
+                <?php echo htmlspecialchars($adjustment['reason'] ?? ''); ?>
+              </div>
             </div>
-        </div>
+                        
+            <?php if ($adjustment['status'] === 'approved' || $adjustment['status'] === 'processed'): ?>
+            <div style="margin-top: 1.5rem; padding: 1rem; background: #d1fae5; border-radius: 4px; border-left: 4px solid #22c55e;">
+              <div style="color: #065f46; font-size: 12px;">
+                <strong>Status:</strong> <span style="font-weight: 600;">PAID</span>
+              </div>
+              <div style="color: #065f46; font-size: 12px; margin-top: 0.5rem;">
+                <strong>Completed:</strong> All approvals obtained and payment processed on <?php echo !empty($adjustment['approved_at']) ? date('F j, Y', strtotime($adjustment['approved_at'])) : ''; ?>
+              </div>
+            </div>
+            <?php endif; ?>
+          </div>
+        <?php else: ?>
+          <div style="padding: 1rem; background: #fee2e2; border-radius: 4px; color: #991b1b;">
+            <strong>Error:</strong> Adjustment record not found.
+          </div>
+        <?php endif; ?>
+      </div>
     </div>
-    <?php
-    echo ob_get_clean();
-    exit;
+  </div>
+  <?php
+  echo ob_get_clean();
+  exit;
 elseif ($isAjax && $modal === 'calculate'):
     $calcType = isset($_GET['calc_type']) ? $_GET['calc_type'] : '';
     $employeeInfo = isset($_GET['employee']) ? $_GET['employee'] : 'Unknown Employee';
@@ -952,7 +961,8 @@ endif;
         </div>
 
         <div class="alert alert-info">
-          Estimated final pay for Sarah Williams: ₱12,500.00 (includes ₱3,000 accrued leave + ₱4,500 separation pay)
+          <?php $sampleEmp = $employees[0] ?? null; ?>
+          Estimated final pay for <?php echo $sampleEmp ? htmlspecialchars($sampleEmp['first_name'].' '.$sampleEmp['last_name']) : 'Sample Employee'; ?>: ₱12,500.00 (includes ₱3,000 accrued leave + ₱4,500 separation pay)
         </div>
 
         <div class="btn-group">
@@ -974,10 +984,9 @@ endif;
               <label>Employee Name <span style="color: #ef4444;">*</span></label>
               <select name="backpay_employee" required>
                 <option value="">-- Select Employee --</option>
-                <option value="EMP-001">John Doe (EMP-001) - HR Manager</option>
-                <option value="EMP-002">Jane Smith (EMP-002) - Accountant</option>
-                <option value="EMP-003">Michael Johnson (EMP-003) - Senior Developer</option>
-                <option value="EMP-006">Emily Davis (EMP-006) - Operations Officer</option>
+                <?php foreach ($employees as $emp): ?>
+                  <option value="<?php echo htmlspecialchars($emp['employee_code'] ?? $emp['employee_id']); ?>"><?php echo htmlspecialchars(($emp['first_name'] ?? '') . ' ' . ($emp['last_name'] ?? '') . ' (' . ($emp['employee_code'] ?? '') . ')'); ?></option>
+                <?php endforeach; ?>
               </select>
             </div>
             <div class="form-group">
@@ -1135,8 +1144,9 @@ endif;
               <label>Employee Name <span style="color: #ef4444;">*</span></label>
               <select name="sep_employee" required>
                 <option value="">-- Select Employee --</option>
-                <option value="EMP-004" selected>Sarah Williams (EMP-004) - 3 years, 2 months</option>
-                <option value="EMP-005">Robert Brown (EMP-005) - 2 years, 8 months</option>
+                <?php foreach ($employees as $emp): ?>
+                  <option value="<?php echo htmlspecialchars($emp['employee_code'] ?? $emp['employee_id']); ?>"><?php echo htmlspecialchars(($emp['first_name'] ?? '') . ' ' . ($emp['last_name'] ?? '') . ' (' . ($emp['employee_code'] ?? '') . ')'); ?></option>
+                <?php endforeach; ?>
               </select>
             </div>
             <div class="form-group">
@@ -1240,51 +1250,32 @@ endif;
           </tr>
         </thead>
         <tbody>
+          <?php
+            // Render pending adjustments
+            foreach ($adjustments as $adj) {
+              if (($adj['status'] ?? '') !== 'pending') continue;
+              $emp = $employeeModel->findWithDetails($adj['employee_id'] ?? 0);
+              $empName = $emp ? ($emp['first_name'].' '.$emp['last_name'].' ('.($emp['employee_code'] ?? $emp['employee_id']).')') : 'Employee '.$adj['employee_id'];
+              $amount = number_format($adj['amount'] ?? 0, 2);
+              $submitted = !empty($adj['created_at']) ? date('F j, Y', strtotime($adj['created_at'])) : '';
+              $statusLabel = 'Pending';
+          ?>
           <tr>
-            <td>Sarah Williams (EMP-004)</td>
-            <td>Final Pay</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱12,500.00</td>
-            <td>February 7, 2026</td>
-            <td>Juan de la Cruz (HR Officer)</td>
-            <td><span class="badge badge-pending">Pending HR Review</span></td>
+            <td><?php echo htmlspecialchars($empName); ?></td>
+            <td><?php echo htmlspecialchars($adj['adjustment_type'] ?? ''); ?></td>
+            <td style="text-align: right; font-family: 'Courier New', monospace;">₱<?php echo $amount; ?></td>
+            <td><?php echo htmlspecialchars($submitted); ?></td>
+            <td><?php echo htmlspecialchars($adj['requested_by'] ?? '—'); ?></td>
+            <td><span class="badge badge-pending"><?php echo htmlspecialchars($statusLabel); ?></span></td>
             <td>
               <form method="POST" style="display: inline;">
-                <input type="hidden" name="approval_id" value="ADJ-001">
+                <input type="hidden" name="approval_id" value="<?php echo (int)($adj['id'] ?? 0); ?>">
                 <button type="submit" name="action" value="approve" class="btn btn-success btn-sm">Approve</button>
               </form>
               <button type="button" class="btn btn-secondary btn-sm" onclick="alert('Reject action initiated')">Reject</button>
             </td>
           </tr>
-          <tr>
-            <td>John Doe (EMP-001)</td>
-            <td>Back Pay</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱5,000.00</td>
-            <td>February 5, 2026</td>
-            <td>Maria Santos (Payroll Officer)</td>
-            <td><span class="badge badge-pending">Pending Finance Review</span></td>
-            <td>
-              <form method="POST" style="display: inline;">
-                <input type="hidden" name="approval_id" value="ADJ-002">
-                <button type="submit" name="action" value="approve" class="btn btn-success btn-sm">Approve</button>
-              </form>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="alert('Reject action initiated')">Reject</button>
-            </td>
-          </tr>
-          <tr>
-            <td>All Employees (8)</td>
-            <td>13th Month Pay (Dec 2025)</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱88,000.00</td>
-            <td>February 3, 2026</td>
-            <td>Maria Garcia (Finance Manager)</td>
-            <td><span class="badge badge-pending">Pending CFO Approval</span></td>
-            <td>
-              <form method="POST" style="display: inline;">
-                <input type="hidden" name="approval_id" value="ADJ-003">
-                <button type="submit" name="action" value="approve" class="btn btn-success btn-sm">Approve</button>
-              </form>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="alert('Reject action initiated')">Reject</button>
-            </td>
-          </tr>
+          <?php } ?>
         </tbody>
       </table>
     </div>
@@ -1309,89 +1300,33 @@ endif;
           </tr>
         </thead>
         <tbody>
+          <?php
+            // Render processed/approved adjustments
+            foreach ($adjustments as $adj) {
+              $s = ($adj['status'] ?? '');
+              if (!in_array($s, ['approved','processed'])) continue;
+              $emp = $employeeModel->findWithDetails($adj['employee_id'] ?? 0);
+              $empName = $emp ? ($emp['first_name'].' '.$emp['last_name'].' ('.($emp['employee_code'] ?? $emp['employee_id']).')') : 'Employee '.$adj['employee_id'];
+              $amount = number_format($adj['amount'] ?? 0, 2);
+              $submitted = !empty($adj['created_at']) ? date('F j, Y', strtotime($adj['created_at'])) : '';
+              $approvedAt = !empty($adj['approved_at']) ? date('F j, Y', strtotime($adj['approved_at'])) : '';
+              $paidDate = !empty($adj['paid_at']) ? date('F j, Y', strtotime($adj['paid_at'])) : ($adj['approved_at'] ?? '');
+          ?>
           <tr>
-            <td>Michael Johnson (EMP-003)</td>
-            <td>Back Pay (Promotion)</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱7,500.00</td>
-            <td>January 28, 2026</td>
-            <td>January 30, 2026</td>
-            <td>February 7, 2026</td>
+            <td><?php echo htmlspecialchars($empName); ?></td>
+            <td><?php echo htmlspecialchars($adj['adjustment_type'] ?? ''); ?></td>
+            <td style="text-align: right; font-family: 'Courier New', monospace;">₱<?php echo $amount; ?></td>
+            <td><?php echo htmlspecialchars($submitted); ?></td>
+            <td><?php echo htmlspecialchars($approvedAt); ?></td>
+            <td><?php echo htmlspecialchars($paidDate); ?></td>
             <td><span class="badge badge-paid">Paid</span></td>
             <td>
-              <button type="button" onclick="window.openAdjustmentModal('ADJ-100')" class="btn btn-secondary btn-sm">Details</button>
+              <button type="button" onclick="window.openAdjustmentModal('<?php echo htmlspecialchars('ADJ-'.$adj['id']); ?>')" class="btn btn-secondary btn-sm">Details</button>
             </td>
           </tr>
-          <tr>
-            <td>David Martinez (EMP-007)</td>
-            <td>Back Pay (Correction)</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱3,000.00</td>
-            <td>January 20, 2026</td>
-            <td>January 22, 2026</td>
-            <td>February 1, 2026</td>
-            <td><span class="badge badge-paid">Paid</span></td>
-            <td>
-              <button type="button" onclick="window.openAdjustmentModal('ADJ-099')" class="btn btn-secondary btn-sm">Details</button>
-            </td>
-          </tr>
-          <tr>
-            <td>Emily Davis (EMP-006)</td>
-            <td>13th Month Pay (2024)</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱11,000.00</td>
-            <td>December 20, 2024</td>
-            <td>December 22, 2024</td>
-            <td>December 24, 2024</td>
-            <td><span class="badge badge-paid">Paid</span></td>
-            <td>
-              <button type="button" onclick="window.openAdjustmentModal('ADJ-089')" class="btn btn-secondary btn-sm">Details</button>
-            </td>
-          </tr>
+          <?php } ?>
         </tbody>
       </table>
-    </div>
-  </div>
-
-  <!-- Compliance & Rules -->
-  <div class="section">
-    <h3 class="section-header">📋 Adjustment Processing Rules & Compliance</h3>
-
-    <div class="adjustment-card">
-      <h4>▶ Final Pay</h4>
-      <p>Processed when employee leaves organization (resignation, retirement, termination)</p>
-      <p><strong>Components:</strong> Pro-rated salary, accrued leave, separation pay, mid-year bonus (pro-rated)</p>
-      <p><strong>Rule:</strong> Approval required from HR Manager + Finance. Must match employment contract terms.</p>
-    </div>
-
-    <div class="adjustment-card">
-      <h4>▶ Back Pay</h4>
-      <p>Retroactive payment for salary corrections or missed adjustments</p>
-      <p><strong>Components:</strong> Additional pay for prior months, recalculation of deductions if needed</p>
-      <p><strong>Rule:</strong> Requires manager approval + reason documentation. Must reconcile with prior payroll records.</p>
-    </div>
-
-    <div class="adjustment-card">
-      <h4>▶ 13th Month Pay</h4>
-      <p>Legally mandated year-end bonus (Philippine law - minimum ₱88.34/day)</p>
-      <p><strong>Components:</strong> One month basic pay based on highest monthly earned during the year</p>
-      <p><strong>Rule:</strong> Minimum 3 months service to qualify. Pro-rated for separated employees. CFO approval required for company-wide processing.</p>
-    </div>
-
-    <div class="adjustment-card">
-      <h4>▶ Separation Pay</h4>
-      <p>Legally mandated severance (Philippine Labor Code Article 283-284)</p>
-      <p><strong>Components:</strong> Half to one month salary per year of service (based on separation reason)</p>
-      <p><strong>Rule:</strong> Required for retrenchment, redundancy, end of contract. Finance + Legal approval required. Mandatory 30-day notice period applies.</p>
-    </div>
-
-    <div class="alert alert-warning" style="margin-top: 2rem;">
-      <strong>⚠️ Critical Rules - ALL ADJUSTMENTS:</strong>
-      <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
-        <li><strong>No Regular Payroll:</strong> Adjustments processed separately, NOT included in regular bi-weekly payroll</li>
-        <li><strong>Approval Mandatory:</strong> Department manager + HR/Finance dual approval required before processing</li>
-        <li><strong>Reason Logged:</strong> All adjustments must have documented reason for audit trail</li>
-        <li><strong>Calculation Verified:</strong> Automated calculations cross-checked against employment contracts and labor law requirements</li>
-        <li><strong>Compliance Check:</strong> System validates all adjustments against Philippine labor law requirements</li>
-        <li><strong>Audit Trail:</strong> Complete history of all adjustments, approvals, and payments maintained</li>
-      </ul>
     </div>
   </div>
 

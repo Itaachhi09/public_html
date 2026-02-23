@@ -8,7 +8,21 @@ require_once __DIR__ . '/../../../config/BaseModel.php';
 class PayrollRunEmployee extends BaseModel {
     protected $table = 'payroll_run_employees';
     protected $primaryKey = 'id';
-    protected $fillable = ['payroll_run_id', 'employee_id', 'basic_pay', 'gross_pay', 'total_deductions', 'net_pay', 'payslip_number', 'status'];
+    protected $fillable = [
+        'payroll_run_id', 
+        'employee_id', 
+        'basic_pay', 
+        'incentives',
+        'gross_pay', 
+        'withholding_tax',
+        'sss_contribution',
+        'philhealth_contribution',
+        'pagibig_contribution',
+        'total_deductions', 
+        'net_pay', 
+        'payslip_number', 
+        'status'
+    ];
 
     /**
      * Get all for a run with employee details

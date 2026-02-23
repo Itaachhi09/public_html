@@ -31,6 +31,11 @@ $payrollRunEmployee = new PayrollRunEmployee();
 // Route controller actions (handles POST/GET requests)
 $controllerData = PayrollRunController::route();
 
+// Handle preview parameter from URL
+if (!empty($_GET['preview_payroll_id'])) {
+    $_SESSION['preview_payroll_id'] = (int)$_GET['preview_payroll_id'];
+}
+
 // Check if user selected a payroll to preview
 $previewPayrollId = $_SESSION['preview_payroll_id'] ?? null;
 $previewData = null;
@@ -398,6 +403,36 @@ $rejectedRuns = $payrollApproval->getByStatus('rejected');
     margin-bottom: 2rem;
   }
 
+  /* Scrollable History Table */
+  .payroll-history-table {
+    max-height: 600px;
+    overflow-y: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  }
+
+  .payroll-history-table::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .payroll-history-table::-webkit-scrollbar-track {
+    background: #f3f4f6;
+  }
+
+  .payroll-history-table::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 4px;
+  }
+
+  .payroll-history-table::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+
+  .payroll-history-table table tr:hover {
+    background: #f3f4f6 !important;
+  }
+
   .payroll-item {
     padding: 1.5rem;
     background: #f9fafb;
@@ -610,90 +645,154 @@ $rejectedRuns = $payrollApproval->getByStatus('rejected');
   } 
   ?>
 
-  <!-- Payroll Runs List -->
+  <!-- Create New Payroll Run & History -->
   <?php if (!$previewData): ?>
   <div class="section">
-    <h3 class="section-header">📋 Payroll Runs</h3>
-
-    <div class="payroll-list">
-      <!-- Current Pending Payroll -->
-      <div class="payroll-item">
-        <div class="payroll-info">
-          <h4>Payroll Run - February 2026 (Period 1: Feb 1-15)</h4>
-          <p>Cut-off: Feb 1-15, 2026 | Pay Date: Feb 22, 2026</p>
-          <p style="margin-top: 0.5rem;">
-            <span class="badge badge-draft">DRAFT</span>
-            <span style="margin-left: 0.5rem; color: #6b7280;">8 employees | ₱87,000.00 gross</span>
-          </p>
+    <!-- Create New Payroll Run -->
+    <div class="form-section">
+      <h4>🚀 Create New Payroll Run</h4>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Period Start Date <span style="color: #ef4444;">*</span></label>
+          <input type="date" id="payroll_start_date" name="start_date" required style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px;">
         </div>
-        <div class="payroll-actions">
-          <form method="POST" action="<?= BASE_URL ?>dashboard.php" style="display: inline;">
-            <input type="hidden" name="action" value="preview">
-            <input type="hidden" name="payroll_id" value="1">
-            <button type="submit" class="btn btn-primary btn-sm">Preview & Process</button>
-          </form>
+        <div class="form-group">
+          <label>Period End Date <span style="color: #ef4444;">*</span></label>
+          <input type="date" id="payroll_end_date" name="end_date" required style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px;">
         </div>
       </div>
 
-      <!-- Previous Approved Payroll -->
-      <div class="payroll-item locked">
-        <div class="payroll-info">
-          <h4>Payroll Run - January 2026 (Period 2: Jan 16-31)</h4>
-          <p>Cut-off: Jan 16-31, 2026 | Pay Date: Feb 7, 2026</p>
-          <p style="margin-top: 0.5rem;">
-            <span class="badge badge-locked">✓ LOCKED</span>
-            <span style="margin-left: 0.5rem; color: #6b7280;">8 employees | ₱85,500.00 gross</span>
-          </p>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Pay Date <span style="color: #ef4444;">*</span></label>
+          <input type="date" id="payroll_pay_date" name="pay_date" required style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px;">
         </div>
-        <div class="payroll-actions">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayrollModal('PAYROLL-2026-01-16', 'January 2026 Period 2', '8', '85500.00')">View Details</button>
+        <div class="form-group">
+          <label>Include Employees</label>
+          <div style="padding: 0.75rem; background: white; border: 1px solid #d1d5db; border-radius: 4px; color: #6b7280; font-size: 13px;">
+            8 active employees with payroll profiles will be included
+          </div>
         </div>
       </div>
 
-      <!-- Previous Approved Payroll -->
-      <div class="payroll-item locked">
-        <div class="payroll-info">
-          <h4>Payroll Run - January 2026 (Period 1: Jan 1-15)</h4>
-          <p>Cut-off: Jan 1-15, 2026 | Pay Date: Jan 20, 2026</p>
-          <p style="margin-top: 0.5rem;">
-            <span class="badge badge-locked">✓ LOCKED</span>
-            <span style="margin-left: 0.5rem; color: #6b7280;">8 employees | ₱83,200.00 gross</span>
-          </p>
-        </div>
-        <div class="payroll-actions">
-          <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayrollModal('PAYROLL-2026-01-01', 'January 2026 Period 1', '8', '83200.00')">View Details</button>
-        </div>
+      <div class="btn-group">
+        <button type="button" onclick="window.openPayrollConfirmModal()" class="btn btn-primary">Run Payroll</button>
       </div>
     </div>
 
-    <!-- Create New Payroll Run -->
-    <form method="POST" action="<?= BASE_URL ?>dashboard.php">
-      <div class="form-section">
-        <h4>🚀 Create New Payroll Run</h4>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Select Payroll Period <span style="color: #ef4444;">*</span></label>
-            <select name="payroll_period" required>
-              <option value="">-- Select Period --</option>
-              <option value="2026-02-01">February 2026 (Period 1: Feb 1-15)</option>
-              <option value="2026-02-16">February 2026 (Period 2: Feb 16-28)</option>
-              <option value="2026-03-01">March 2026 (Period 1: Mar 1-15)</option>
-            </select>
-            <small>Cutoff dates are defined in Setup & Configuration</small>
-          </div>
-          <div class="form-group">
-            <label>Include Employees</label>
-            <div style="padding: 0.75rem; background: white; border: 1px solid #d1d5db; border-radius: 4px; color: #6b7280; font-size: 13px;">
-              8 active employees with payroll profiles will be included
-            </div>
-          </div>
-        </div>
+    <h3 class="section-header" style="margin-top: 2rem;">📋 Payroll Runs History</h3>
 
-        <div class="btn-group">
-          <button type="submit" name="action" value="run_payroll" class="btn btn-primary">Run Payroll</button>
-        </div>
-      </div>
-    </form>
+    <div class="payroll-history-table">
+      <?php 
+        // Fetch all payroll runs with user info from database
+        $allRuns = Database::getInstance()->query(
+          "SELECT pr.*, u.name as created_by_name 
+           FROM payroll_runs pr 
+           LEFT JOIN users u ON pr.created_by = u.id 
+           ORDER BY pr.start_date DESC"
+        );
+        
+        if (empty($allRuns)) {
+          echo '<div style="padding: 2rem; text-align: center; color: #6b7280; background: #f9fafb; border-radius: 4px;">No payroll runs created yet.</div>';
+        } else {
+      ?>
+      <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+        <thead>
+          <tr style="background: #f3f4f6; border-bottom: 2px solid #e5e7eb; position: sticky; top: 0; z-index: 10;">
+            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #1f2937;">Period Name</th>
+            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #1f2937;">Cut-off Dates</th>
+            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #1f2937;">Pay Date</th>
+            <th style="padding: 1rem; text-align: center; font-weight: 600; color: #1f2937;">Status</th>
+            <th style="padding: 1rem; text-align: center; font-weight: 600; color: #1f2937;">Employees</th>
+            <th style="padding: 1rem; text-align: right; font-weight: 600; color: #1f2937;">Gross Amount</th>
+            <th style="padding: 1rem; text-align: left; font-weight: 600; color: #1f2937;">Processed By</th>
+            <th style="padding: 1rem; text-align: center; font-weight: 600; color: #1f2937;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php 
+            $rowCount = 0;
+            foreach ($allRuns as $pRun) {
+              $rowCount++;
+              // Get employees and totals for this run
+              $employees = $payrollRunEmployee->getByRunWithEmployee($pRun['id']);
+              $employeeCount = count($employees);
+              $totalGross = 0;
+              $totalDeductions = 0;
+              $totalNet = 0;
+              
+              foreach ($employees as $emp) {
+                $totalGross += (float)$emp['gross_pay'];
+                $totalDeductions += (float)$emp['total_deductions'];
+                $totalNet += (float)$emp['net_pay'];
+              }
+              
+              // Determine status badge
+              $statusBadge = '';
+              $statusColor = '';
+              switch (strtoupper($pRun['status'])) {
+                case 'DRAFT':
+                  $statusBadge = 'DRAFT';
+                  $statusColor = '#fbbf24';
+                  break;
+                case 'PROCESSED':
+                  $statusBadge = '⏳ PROCESSED';
+                  $statusColor = '#3b82f6';
+                  break;
+                case 'LOCKED':
+                  $statusBadge = '✓ LOCKED';
+                  $statusColor = '#10b981';
+                  break;
+                case 'APPROVED':
+                  $statusBadge = '✓ APPROVED';
+                  $statusColor = '#10b981';
+                  break;
+                default:
+                  $statusBadge = strtoupper($pRun['status']);
+                  $statusColor = '#6b7280';
+              }
+              
+              $bgColor = $rowCount % 2 === 0 ? '#f9fafb' : 'white';
+              $createdByName = $pRun['created_by_name'] ?? 'System';
+          ?>
+          <tr style="border-bottom: 1px solid #e5e7eb; background: <?php echo $bgColor; ?>;">
+            <td style="padding: 1rem; color: #1f2937; font-weight: 500;"><?php echo htmlspecialchars($pRun['period_name']); ?></td>
+            <td style="padding: 1rem; color: #6b7280; font-size: 13px;">
+              <?php echo date('M d, Y', strtotime($pRun['start_date'])); ?> - <?php echo date('M d, Y', strtotime($pRun['end_date'])); ?>
+            </td>
+            <td style="padding: 1rem; color: #6b7280; font-size: 13px;">
+              <?php echo date('M d, Y', strtotime($pRun['pay_date'])); ?>
+            </td>
+            <td style="padding: 1rem; text-align: center;">
+              <span style="background: <?php echo $statusColor; ?>; color: white; padding: 0.4rem 0.8rem; border-radius: 4px; font-size: 12px; font-weight: 500; display: inline-block;">
+                <?php echo $statusBadge; ?>
+              </span>
+            </td>
+            <td style="padding: 1rem; text-align: center; color: #1f2937; font-weight: 500;">
+              <?php echo $employeeCount; ?>
+            </td>
+            <td style="padding: 1rem; text-align: right; color: #1f2937; font-weight: 500;">
+              ₱<?php echo number_format($totalGross, 2); ?>
+            </td>
+            <td style="padding: 1rem; color: #6b7280; font-size: 13px;">
+              <?php echo htmlspecialchars($createdByName); ?>
+            </td>
+            <td style="padding: 1rem; text-align: center;">
+              <button type="button" style="background: #3b82f6; color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; font-size: 13px; font-weight: 500;" 
+                onclick="window.viewPayrollDetails(<?php echo (int)$pRun['id']; ?>)">
+                View Details
+              </button>
+            </td>
+          </tr>
+          <?php
+            }
+          ?>
+        </tbody>
+      </table>
+      <?php
+        }
+      ?>
+    </div>
   </div>
   <?php endif; ?>
 
@@ -702,10 +801,7 @@ $rejectedRuns = $payrollApproval->getByStatus('rejected');
   <div class="section">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
       <h3 class="section-header" style="margin: 0;">👁️ Payroll Preview</h3>
-      <form method="POST" action="<?= BASE_URL ?>dashboard.php" style="display: inline; margin: 0;">
-        <input type="hidden" name="action" value="cancel_preview">
-        <button type="submit" class="btn btn-secondary btn-sm">← Back to List</button>
-      </form>
+      <button type="button" onclick="window.location.href='<?= BASE_URL ?>dashboard.php'" class="btn btn-secondary btn-sm">← Back to List</button>
     </div>
 
     <div class="alert alert-info">
@@ -800,178 +896,9 @@ $rejectedRuns = $payrollApproval->getByStatus('rejected');
       </table>
     </div>
 
-    <!-- Outliers -->
-    <div class="outlier-section">
-      <h4>⚠️ Outliers & Alerts</h4>
-      <div class="outlier-item">
-        <span class="outlier-type">HIGH DEDUCTION</span>
-        <strong>EMP-008 (Jessica Wilson):</strong> Deductions are 36.3% of gross (₱4,990.00). Contains pending manual loan deduction.
-      </div>
-      <div class="outlier-item">
-        <span class="outlier-type">NEGATIVE VARIANCE</span>
-        <strong>EMP-004 (Sarah Williams):</strong> Net pay 28.9% below average. Verify deductions are correct.
-      </div>
-    </div>
 
-    <!-- Payroll Approval Workflow -->
-    <h3 class="section-header" style="margin-top: 2rem;">✓ Approval Workflow</h3>
-
-    <div class="alert alert-info">
-      Payroll requires three-step approval before processing. Each approver verifies and authorizes specific aspects of the payroll.
-    </div>
-
-    <div class="approval-flow">
-      <div class="flow-step completed">
-        <h4>Step 1: Payroll Officer</h4>
-        <p>Initiates payroll run, reviews preview</p>
-        <div class="status">✓ COMPLETED</div>
-        <div style="margin-top: 0.5rem; font-size: 11px; color: #6b7280;">
-          Juan dela Cruz | Feb 8, 2026 10:30 AM
-        </div>
-      </div>
-
-      <div class="flow-step current">
-        <h4>Step 2: HR Manager</h4>
-        <p>Verifies employee records and calculations</p>
-        <div class="status">AWAITING APPROVAL</div>
-        <div style="margin-top: 1rem; padding-top: 1rem; border-top: 2px solid;">
-          <form method="POST" action="<?= BASE_URL ?>dashboard.php" style="display: flex; gap: 0.5rem;">
-            <input type="hidden" name="payroll_id" value="<?php echo isset($previewData['id']) ? (int)$previewData['id'] : ''; ?>">
-            <button type="submit" name="action" value="approve_hr" class="btn btn-success btn-sm">Approve</button>
-            <button type="submit" name="action" value="reject_hr" class="btn btn-danger btn-sm">Reject</button>
-          </form>
-        </div>
-      </div>
-
-      <div class="flow-step pending">
-        <h4>Step 3: Finance Manager</h4>
-        <p>Final authorization before processing</p>
-        <div class="status">PENDING</div>
-      </div>
-    </div>
-
-    <!-- HR Approval Form (When In Step 2) -->
-    <div class="form-section" style="margin-top: 2rem; background: #dbeafe; border-left-color: #f59e0b;">
-      <h4 style="color: #1e40af;">HR Manager Review & Approval</h4>
-      <div class="alert alert-info">
-        As HR Manager, verify that all employee records, earnings, and deductions are accurate before proceeding to Finance approval.
-      </div>
-
-      <form method="POST" action="<?= BASE_URL ?>dashboard.php">
-        <input type="hidden" name="payroll_id" value="<?php echo isset($previewData['id']) ? (int)$previewData['id'] : ''; ?>">
-        <div class="form-row full">
-          <div class="form-group">
-            <label>Review Notes (Optional)</label>
-            <textarea name="hr_notes" style="min-height: 80px; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 4px; font-family: inherit; font-size: 13px;" placeholder="Add any review notes or concerns..."></textarea>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>Employee Count Verified</label>
-            <input type="checkbox" name="hr_employee_count" value="1" style="width: auto; margin-top: 0.25rem;">
-            <small>I confirm 8 active employees included in payroll</small>
-          </div>
-          <div class="form-group">
-            <label>Calculations Verified</label>
-            <input type="checkbox" name="hr_calculations" value="1" style="width: auto; margin-top: 0.25rem;">
-            <small>I verified earnings, deductions, and net pay calculations</small>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>No System Errors</label>
-            <input type="checkbox" name="hr_no_errors" value="1" style="width: auto; margin-top: 0.25rem;">
-            <small>No system errors or warnings detected</small>
-          </div>
-          <div class="form-group">
-            <label>Deductions Validated</label>
-            <input type="checkbox" name="hr_deductions" value="1" style="width: auto; margin-top: 0.25rem;">
-            <small>All statutory and other deductions are correct</small>
-          </div>
-        </div>
-
-        <div class="btn-group">
-          <button type="submit" name="action" value="approve_hr" class="btn btn-success">Approve for Finance Review</button>
-          <button type="submit" name="action" value="reject_hr" class="btn btn-danger">Reject - Request Corrections</button>
-          <button type="reset" class="btn btn-secondary">Clear Form</button>
-        </div>
-      </form>
-    </div>
   </div>
   <?php endif; ?>
-
-  <!-- Locked Payroll View -->
-  <div class="section">
-    <h3 class="section-header">🔒 Locked Payroll - January 2026 Period 2</h3>
-
-    <div class="alert alert-success">
-      <strong>✓ Payroll Locked:</strong> This payroll has been approved and processed. No further edits are permitted. All changes are tracked in the audit log.
-    </div>
-
-    <div class="approval-flow">
-      <div class="flow-step completed">
-        <h4>Step 1: Payroll Officer</h4>
-        <p>Initiated payroll run</p>
-        <div class="status">✓ COMPLETED</div>
-        <div style="margin-top: 0.5rem; font-size: 11px; color: #6b7280;">
-          Juan dela Cruz | Jan 31, 2026 9:15 AM
-        </div>
-      </div>
-
-      <div class="flow-step completed">
-        <h4>Step 2: HR Manager</h4>
-        <p>Verified employee records</p>
-        <div class="status">✓ APPROVED</div>
-        <div style="margin-top: 0.5rem; font-size: 11px; color: #6b7280;">
-          Maria Santos | Jan 31, 2026 2:00 PM
-        </div>
-      </div>
-
-      <div class="flow-step completed">
-        <h4>Step 3: Finance Manager</h4>
-        <p>Final authorization</p>
-        <div class="status">✓ APPROVED</div>
-        <div style="margin-top: 0.5rem; font-size: 11px; color: #6b7280;">
-          Carlos Reyes | Feb 1, 2026 10:30 AM
-        </div>
-      </div>
-    </div>
-
-    <div class="alert alert-info" style="margin-top: 2rem;">
-      <strong>ℹ️ Next Steps:</strong> This locked payroll is ready for bank file generation and salary disbursement. Process through Banking module to generate bank transfer files.
-    </div>
-  </div>
-
-  <!-- Important Rules & Information -->
-  <div class="section">
-    <h3 class="section-header">📋 Payroll Processing Rules</h3>
-
-    <div class="alert alert-warning">
-      <strong>⚠️ Critical Rules:</strong>
-      <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
-        <li><strong>Approved payroll is locked:</strong> Once all three approvals are obtained, payroll cannot be edited or deleted.</li>
-        <li><strong>No edits after approval:</strong> Any corrections require creating a new payroll run (adjustment payroll).</li>
-        <li><strong>Outlier review required:</strong> All employees with outliers must be reviewed before HR approval.</li>
-        <li><strong>Mandatory verifications:</strong> HR approver must verify employee count, calculations, and deductions before approving.</li>
-        <li><strong>Three-step approval:</strong> Payroll Officer initiates → HR verifies → Finance authorizes.</li>
-      </ul>
-    </div>
-
-    <div class="alert alert-info">
-      <strong>ℹ️ Approval Roles & Responsibilities:</strong>
-      <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
-        <li><strong>Payroll Officer:</strong> Creates payroll run, reviews preview, submits for HR approval.</li>
-        <li><strong>HR Manager:</strong> Verifies employee data accuracy, earnings, deductions, and outliers. Can reject if issues found.</li>
-        <li><strong>Finance Manager:</strong> Final approval with authority to process payroll. Verifies bank details and payment instructions.</li>
-      </ul>
-    </div>
-
-    <div class="alert alert-success">
-      <strong>✓ Audit Trail:</strong> All approvals, rejections, and payroll changes are logged with timestamp and user information for compliance and audit purposes.
-    </div>
-  </div>
 
 </div>
 
@@ -989,6 +916,18 @@ $rejectedRuns = $payrollApproval->getByStatus('rejected');
 </div>
 
 <script>
+<?php
+  $jsEmployees = [];
+  foreach ($previewEmployees as $pe) {
+    $jsEmployees[] = [
+      'name' => trim(($pe['first_name'] ?? '') . ' ' . ($pe['last_name'] ?? '') . ' (' . ($pe['employee_code'] ?? '') . ')'),
+      'basic' => number_format($pe['basic_pay'] ?? 0, 2),
+      'gross' => number_format($pe['gross_pay'] ?? 0, 2),
+      'ded' => number_format($pe['total_deductions'] ?? 0, 2),
+      'net' => number_format($pe['net_pay'] ?? 0, 2),
+    ];
+  }
+?>
 // Payroll Modal Functions
 window.openPayrollModal = function(payrollId, periodName, employeeCount, grossAmount) {
   const modal = document.getElementById('payroll-modal-overlay');
@@ -1019,17 +958,8 @@ window.openPayrollModal = function(payrollId, periodName, employeeCount, grossAm
   html += '</tr></thead>';
   html += '<tbody>';
   
-  // Sample employee data
-  const employees = [
-    {name: 'John Doe (EMP-001)', basic: '6,000.00', gross: '11,000.00', ded: '3,350.00', net: '7,650.00'},
-    {name: 'Jane Smith (EMP-002)', basic: '6,000.00', gross: '11,000.00', ded: '3,700.00', net: '7,300.00'},
-    {name: 'Michael Johnson (EMP-003)', basic: '7,000.00', gross: '12,500.00', ded: '4,450.00', net: '8,050.00'},
-    {name: 'Sarah Williams (EMP-004)', basic: '5,000.00', gross: '9,000.00', ded: '2,600.00', net: '6,400.00'},
-    {name: 'Robert Brown (EMP-005)', basic: '5,000.00', gross: '9,000.00', ded: '2,750.00', net: '6,250.00'},
-    {name: 'Emily Davis (EMP-006)', basic: '6,000.00', gross: '11,000.00', ded: '3,575.00', net: '7,425.00'},
-    {name: 'David Martinez (EMP-007)', basic: '5,400.00', gross: '9,700.00', ded: '3,230.00', net: '6,470.00'},
-    {name: 'Jessica Wilson (EMP-008)', basic: '7,500.00', gross: '13,800.00', ded: '4,990.00', net: '8,810.00'}
-  ];
+  // Use server-provided preview employees when available
+  const employees = <?php echo json_encode($jsEmployees); ?> || [];
   
   employees.forEach(emp => {
     html += '<tr style="border-bottom: 1px solid #e5e7eb;">';
@@ -1063,10 +993,519 @@ window.closePayrollModal = function() {
   modal.classList.remove('active');
 };
 
+// Payroll Confirmation Modal Functions
+window.openPayrollConfirmModal = function() {
+  const startDate = document.getElementById('payroll_start_date').value;
+  const endDate = document.getElementById('payroll_end_date').value;
+  const payDate = document.getElementById('payroll_pay_date').value;
+  
+  // Validate inputs
+  if (!startDate) {
+    alert('Please enter a period start date.');
+    document.getElementById('payroll_start_date').focus();
+    return;
+  }
+  
+  if (!endDate) {
+    alert('Please enter a period end date.');
+    document.getElementById('payroll_end_date').focus();
+    return;
+  }
+  
+  if (!payDate) {
+    alert('Please enter a pay date.');
+    document.getElementById('payroll_pay_date').focus();
+    return;
+  }
+  
+  // Validate date logic
+  if (startDate >= endDate) {
+    alert('Start date must be before end date.');
+    return;
+  }
+  
+  if (endDate >= payDate) {
+    alert('End date must be before pay date.');
+    return;
+  }
+  
+  // Format dates for display
+  const startObj = new Date(startDate);
+  const endObj = new Date(endDate);
+  const payObj = new Date(payDate);
+  
+  const startFormatted = startObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const endFormatted = endObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const payFormatted = payObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  
+  // Generate period name
+  const periodName = `Payroll Period: ${startFormatted} - ${endFormatted}`;
+  
+  
+  // Create modal HTML
+  const modalHTML = `
+    <div class="payroll-modal-overlay active" id="payroll-confirm-overlay" onclick="if(event.target === this) window.closePayrollConfirmModal()">
+      <div class="payroll-modal" style="width: 550px;">
+        <div class="payroll-modal-header">
+          <h2 class="payroll-modal-title">⚠️ Admin Verification Required</h2>
+          <button type="button" class="payroll-modal-close" onclick="window.closePayrollConfirmModal()">×</button>
+        </div>
+        <div class="payroll-modal-body" style="padding: 2rem;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; padding: 1rem; background: #f3f4f6; border-radius: 6px;">
+            <div>
+              <label style="font-size: 12px; color: #6b7280; font-weight: 600;">Payroll Period</label>
+              <div style="font-size: 13px; color: #1f2937; font-weight: 500; margin-top: 0.5rem;">${startFormatted} to ${endFormatted}</div>
+              <div style="font-size: 12px; color: #6b7280; margin-top: 0.25rem;">Pay Date: ${payFormatted}</div>
+            </div>
+            <div>
+              <label style="font-size: 12px; color: #6b7280; font-weight: 600;">Employees to Process</label>
+              <div style="font-size: 15px; color: #1f2937; font-weight: 600; margin-top: 0.5rem;">8 employees</div>
+            </div>
+          </div>
+          
+          <div style="padding: 1rem; background: #dbeafe; border-radius: 6px; border-left: 4px solid #3b82f6; margin-bottom: 2rem;">
+            <div style="font-size: 13px; color: #1e40af; line-height: 1.6;">
+              <strong>What will happen:</strong><br>
+              ✓ All earnings components (basic, incentives, bonuses, allowances, overtime) will be calculated<br>
+              ✓ All statutory deductions (withholding tax, SSS, PhilHealth, Pag-IBIG) will be calculated<br>
+              ✓ Net pay will be generated for each employee<br>
+              ✓ Payroll records will be locked
+            </div>
+          </div>
+          
+          <div style="margin-bottom: 2rem; padding: 1rem; background: #fef3c7; border-radius: 6px; border-left: 4px solid #f59e0b;">
+            <div style="font-size: 13px; color: #92400e; line-height: 1.6;">
+              <strong>🔐 Security:</strong><br>
+              Enter your admin password to authorize this payroll run. This action is logged for audit purposes.
+            </div>
+          </div>
+
+          <div style="margin-bottom: 2rem;">
+            <label style="font-size: 12px; color: #6b7280; font-weight: 600; display: block; margin-bottom: 0.5rem;">Admin Password <span style="color: #ef4444;">*</span></label>
+            <input type="password" id="payroll_admin_password" placeholder="Enter your admin password" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; box-sizing: border-box;" />
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <button type="button" onclick="window.closePayrollConfirmModal()" class="btn btn-secondary" style="padding: 0.75rem; border: 1px solid #d1d5db; background: white; color: #1f2937; border-radius: 4px; cursor: pointer; font-weight: 500;">
+              Cancel
+            </button>
+            <button type="button" onclick="window.submitPayrollRunWithPassword()" class="btn btn-primary" style="padding: 0.75rem; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
+              Confirm & Run Payroll
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Remove existing confirm modals
+  const existing = document.getElementById('payroll-confirm-overlay');
+  if (existing) {
+    existing.remove();
+  }
+  
+  // Insert modal
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  
+  // Focus on password field
+  setTimeout(() => {
+    document.getElementById('payroll_admin_password').focus();
+  }, 100);
+  
+  // Allow Enter key to submit
+  document.getElementById('payroll_admin_password').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      window.submitPayrollRunWithPassword();
+    }
+  });
+};
+
+window.closePayrollConfirmModal = function() {
+  const overlay = document.getElementById('payroll-confirm-overlay');
+  if (overlay) {
+    overlay.classList.remove('active');
+    setTimeout(() => {
+      overlay.remove();
+    }, 300);
+  }
+};
+
+window.submitPayrollRunWithPassword = function() {
+  const startDate = document.getElementById('payroll_start_date').value;
+  const endDate = document.getElementById('payroll_end_date').value;
+  const payDate = document.getElementById('payroll_pay_date').value;
+  const adminPassword = document.getElementById('payroll_admin_password').value;
+  
+  if (!adminPassword || adminPassword.trim() === '') {
+    alert('Please enter your admin password.');
+    document.getElementById('payroll_admin_password').focus();
+    return;
+  }
+  
+  // Close modal
+  window.closePayrollConfirmModal();
+  
+  // Build period name from dates
+  const startObj = new Date(startDate);
+  const endObj = new Date(endDate);
+  const startFormatted = startObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const endFormatted = endObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const periodName = `Payroll Period: ${startFormatted} - ${endFormatted}`;
+  
+  // Build period value string: "Period Name|start_date|end_date|pay_date"
+  const periodValue = `${periodName}|${startDate}|${endDate}|${payDate}`;
+  
+  // Use AJAX to submit without full page redirect
+  const formData = new FormData();
+  formData.append('action', 'run_payroll');
+  formData.append('payroll_period', periodValue);
+  formData.append('admin_password', adminPassword);
+  
+  // Show loading indicator
+  const btn = document.querySelector('.btn-primary');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Processing Payroll...';
+  }
+  
+  fetch('<?= BASE_URL ?>modules/payroll/payroll_processing_handler.php', {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Show success message
+      const messageDiv = document.createElement('div');
+      messageDiv.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #22c55e; color: white; padding: 1rem 1.5rem; border-radius: 4px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 9999; animation: slideIn 0.3s ease;';
+      messageDiv.innerHTML = '✓ ' + data.message;
+      document.body.appendChild(messageDiv);
+      
+      // Reload page after success to show updated list
+      setTimeout(() => {
+        location.reload();
+      }, 2000);
+    } else {
+      // Show error message
+      alert('Error: ' + data.message);
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Confirm & Run Payroll';
+      }
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('An error occurred while processing the payroll: ' + error);
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Confirm & Run Payroll';
+    }
+  });
+};
+
 // Close modal on Escape key
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') {
+    window.closePayrollConfirmModal();
     window.closePayrollModal();
   }
 });
+
+// Payroll Approval Action Handler
+window.submitPayrollApprovalAction = function(action, payrollId) {
+  if (!payrollId) {
+    alert('Payroll ID is missing.');
+    return;
+  }
+  
+  // Create and submit hidden form
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '<?= BASE_URL ?>dashboard.php';
+  
+  const actionInput = document.createElement('input');
+  actionInput.type = 'hidden';
+  actionInput.name = 'action';
+  actionInput.value = action;
+  
+  const payrollIdInput = document.createElement('input');
+  payrollIdInput.type = 'hidden';
+  payrollIdInput.name = 'payroll_id';
+  payrollIdInput.value = payrollId;
+  
+  const pageInput = document.createElement('input');
+  pageInput.type = 'hidden';
+  pageInput.name = 'page';
+  pageInput.value = 'payroll_processing_approval';
+  
+  const refInput = document.createElement('input');
+  refInput.type = 'hidden';
+  refInput.name = 'ref';
+  refInput.value = 'payroll';
+  
+  form.appendChild(actionInput);
+  form.appendChild(payrollIdInput);
+  form.appendChild(pageInput);
+  form.appendChild(refInput);
+  
+  document.body.appendChild(form);
+  form.submit();
+};
+
+// View Payroll Details in Modal
+window.viewPayrollDetails = function(payrollId) {
+  // Fetch payroll details via AJAX
+  const formData = new FormData();
+  formData.append('action', 'get_payroll_details');
+  formData.append('payroll_id', payrollId);
+  
+  fetch('<?= BASE_URL ?>modules/payroll/payroll_processing_handler.php', {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      window.currentPayrollData = data.payroll;
+      window.openPayrollDetailsModal(data.payroll, data.employees);
+    } else {
+      alert('Error loading payroll details: ' + (data.message || 'Unknown error'));
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('An error occurred while loading payroll details.');
+  });
+};
+
+// Open Payroll Details Modal
+window.openPayrollDetailsModal = function(payrollData, employees) {
+  // Store employees globally for access in payslip display
+  window.currentPayrollEmployees = employees;
+  
+  let employeeList = '';
+  let firstEmployeeId = employees[0]?.employee_id || 0;
+  
+  employees.forEach((emp, idx) => {
+    employeeList += `
+      <div style="padding: 0.75rem 1rem; cursor: pointer; background: ${idx === 0 ? '#dbeafe' : '#f9fafb'}; border-left: ${idx === 0 ? '4px solid #3b82f6' : '4px solid transparent'}; transition: all 0.2s;"
+        onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='${idx === 0 ? '#dbeafe' : '#f9fafb'}'"
+        onclick="window.showPayslipDetail(${idx})">        <div style="font-weight: 500; color: #1f2937;">${emp.employee_code}</div>
+        <div style="font-size: 12px; color: #6b7280;">${emp.first_name} ${emp.last_name}</div>
+        <div style="font-size: 12px; color: #6b7280; margin-top: 0.25rem;">₱${parseFloat(emp.gross_pay).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+      </div>
+    `;
+  });
+  
+  const startDate = new Date(payrollData.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const endDate = new Date(payrollData.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const payDate = new Date(payrollData.pay_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  
+  const modalHTML = `
+    <div class="payroll-modal-overlay active" id="details-modal-overlay" onclick="if(event.target === this) window.closePayrollDetailsModal()">
+      <div class="payroll-modal" style="width: 1100px; max-height: 90vh; display: grid; grid-template-columns: 300px 1fr;">
+        <!-- Employee List -->
+        <div style="background: white; border-right: 1px solid #e5e7eb; overflow-y: auto; max-height: 90vh;">
+          <div style="padding: 1rem; background: #f3f4f6; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #1f2937;">
+            📋 Select Employee
+          </div>
+          <div id="employee-list-container" style="padding: 0;">
+            ${employeeList}
+          </div>
+        </div>
+        
+        <!-- Payslip Detail -->
+        <div style="overflow-y: auto; max-height: 90vh;">
+          <div class="payroll-modal-header" style="padding: 1.5rem; border-bottom: 1px solid #e5e7eb; background: #f9fafb;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <h2 class="payroll-modal-title" style="margin: 0;">PAYSLIP</h2>
+              <button type="button" class="payroll-modal-close" onclick="window.closePayrollDetailsModal()" style="background: none; border: none; font-size: 28px; cursor: pointer; color: #6b7280;">×</button>
+            </div>
+          </div>
+          <div id="payslip-detail-container" style="padding: 2rem;">
+            <!-- Will be populated by showPayslipDetail -->
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  
+  // Remove existing modals
+  const existing = document.getElementById('details-modal-overlay');
+  if (existing) {
+    existing.remove();
+  }
+  
+  // Insert modal
+  document.body.insertAdjacentHTML('beforeend', modalHTML);
+  
+  // Show first employee's payslip
+  if (employees.length > 0) {
+    window.showPayslipDetail(0);
+  }
+};
+
+// Show individual payslip detail
+window.showPayslipDetail = function(empIdx) {
+  // Get employee from global array
+  const emp = window.currentPayrollEmployees ? window.currentPayrollEmployees[empIdx] : null;
+  
+  if (!emp) {
+    console.error('Employee not found at index', empIdx);
+    return;
+  }
+  
+  // Use actual employee data from database
+  const basicPay = emp.basic_pay || 0;
+  const incentives = emp.incentives !== null && emp.incentives !== undefined ? emp.incentives : 0;
+  const withholdingTax = emp.withholding_tax !== null && emp.withholding_tax !== undefined ? emp.withholding_tax : 0;
+  const sssContribution = emp.sss_contribution !== null && emp.sss_contribution !== undefined ? emp.sss_contribution : 0;
+  const philhealthContribution = emp.philhealth_contribution !== null && emp.philhealth_contribution !== undefined ? emp.philhealth_contribution : 0;
+  const pagibigContribution = emp.pagibig_contribution !== null && emp.pagibig_contribution !== undefined ? emp.pagibig_contribution : 0;
+  const grossPay = emp.gross_pay || 0;
+  const totalDeductions = emp.total_deductions || 0;
+  const netPay = emp.net_pay || 0;
+  
+  const payslipHTML = `
+    <!-- Company Header -->
+    <div style="margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 2px solid #1f2937;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 1rem;">
+        <div>
+          <h3 style="margin: 0 0 0.5rem 0; font-size: 16px; font-weight: 700;">Healthcare Hospital Inc.</h3>
+          <p style="margin: 0.25rem 0; font-size: 12px; color: #6b7280;">123 Hospital Avenue, Makati City</p>
+          <p style="margin: 0.25rem 0; font-size: 12px; color: #6b7280;">Email: payroll@healthcare.com | Phone: +63-2-555-1234</p>
+        </div>
+        <div style="text-align: right;">
+          <h2 style="margin: 0; font-size: 20px; font-weight: 700;">PAYSLIP</h2>
+          <p style="margin: 0.5rem 0 0 0; font-size: 12px; color: #6b7280;">Pay Period: ${window.currentPayrollData && window.currentPayrollData.start_date ? new Date(window.currentPayrollData.start_date).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}) + ' - ' + new Date(window.currentPayrollData.end_date).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}) : ''}</p>
+          <p style="margin: 0.25rem 0 0 0; font-size: 12px; color: #6b7280;">Payment Date: ${window.currentPayrollData && window.currentPayrollData.pay_date ? new Date(window.currentPayrollData.pay_date).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}) : ''}</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Employee Information -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; padding: 1rem; background: #f9fafb; border-radius: 6px;">
+      <div>
+        <div style="margin-bottom: 1rem;">
+          <label style="font-size: 11px; color: #6b7280; font-weight: 600;">Employee ID</label>
+          <div style="font-size: 14px; color: #1f2937; font-weight: 500;">${emp.employee_code}</div>
+        </div>
+        <div style="margin-bottom: 1rem;">
+          <label style="font-size: 11px; color: #6b7280; font-weight: 600;">Name</label>
+          <div style="font-size: 14px; color: #1f2937; font-weight: 500;">${emp.first_name} ${emp.last_name}</div>
+        </div>
+        <div style="margin-bottom: 1rem;">
+          <label style="font-size: 11px; color: #6b7280; font-weight: 600;">Department</label>
+          <div style="font-size: 14px; color: #1f2937; font-weight: 500;">${emp.department_name || 'N/A'}</div>
+        </div>
+        <div style="margin-bottom: 0;">
+          <label style="font-size: 11px; color: #6b7280; font-weight: 600;">Position</label>
+          <div style="font-size: 14px; color: #1f2937; font-weight: 500;">${emp.position_name || 'N/A'}</div>
+        </div>
+      </div>
+      <div>
+        <div style="margin-bottom: 1rem;">
+          <label style="font-size: 11px; color: #6b7280; font-weight: 600;">Employment Type</label>
+          <div style="font-size: 14px; color: #1f2937; font-weight: 500;">Regular Full-Time</div>
+        </div>
+        <div style="margin-bottom: 1rem;">
+          <label style="font-size: 11px; color: #6b7280; font-weight: 600;">Pay Type</label>
+          <div style="font-size: 14px; color: #1f2937; font-weight: 500;">Per Month</div>
+        </div>
+        <div style="margin-bottom: 1rem;">
+          <label style="font-size: 11px; color: #6b7280; font-weight: 600;">Bank Account</label>
+          <div style="font-size: 14px; color: #1f2937; font-weight: 500;">•••••••...XXXX</div>
+        </div>
+        <div style="margin-bottom: 0;">
+          <label style="font-size: 11px; color: #6b7280; font-weight: 600;">Generated</label>
+          <div style="font-size: 14px; color: #1f2937; font-weight: 500;">${new Date().toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'})}</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Earnings Section -->
+    <div style="margin-bottom: 1.5rem;">
+      <h4 style="margin: 0 0 0.75rem 0; font-size: 12px; font-weight: 700; color: #1f2937; border-bottom: 1px solid #d1d5db; padding-bottom: 0.5rem;">EARNINGS</h4>
+      <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; font-size: 13px;">
+        <span style="color: #1f2937;">Basic Pay</span>
+        <span style="font-family: monospace; font-weight: 500;">₱${parseFloat(basicPay).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; font-size: 13px;">
+        <span style="color: #1f2937;">Incentives / Allowances</span>
+        <span style="font-family: monospace; font-weight: 500;">₱${parseFloat(incentives).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding: 0.75rem 0; font-size: 13px; font-weight: 600; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb;">
+        <span style="color: #1f2937;">Total Earnings</span>
+        <span style="font-family: monospace;">₱${parseFloat(grossPay).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+      </div>
+    </div>
+    
+    <!-- Deductions Section -->
+    <div style="margin-bottom: 1.5rem;">
+      <h4 style="margin: 0 0 0.75rem 0; font-size: 12px; font-weight: 700; color: #1f2937; border-bottom: 1px solid #d1d5db; padding-bottom: 0.5rem;">STATUTORY DEDUCTIONS</h4>
+      <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; font-size: 13px;">
+        <span style="color: #1f2937;">Withholding Tax (BIR)</span>
+        <span style="font-family: monospace; font-weight: 500;">₱${parseFloat(withholdingTax).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; font-size: 13px;">
+        <span style="color: #1f2937;">SSS Contribution</span>
+        <span style="font-family: monospace; font-weight: 500;">₱${parseFloat(sssContribution).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; font-size: 13px;">
+        <span style="color: #1f2937;">PhilHealth Premium</span>
+        <span style="font-family: monospace; font-weight: 500;">₱${parseFloat(philhealthContribution).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; font-size: 13px;">
+        <span style="color: #1f2937;">Pag-IBIG Contribution</span>
+        <span style="font-family: monospace; font-weight: 500;">₱${parseFloat(pagibigContribution).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+      </div>
+      <div style="display: flex; justify-content: space-between; padding: 0.75rem 0; font-size: 13px; font-weight: 600; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb;">
+        <span style="color: #1f2937;">Total Deductions</span>
+        <span style="font-family: monospace;">₱${parseFloat(totalDeductions).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+      </div>
+    </div>
+    
+    <!-- Net Pay -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #dbeafe; border-radius: 6px; border-left: 4px solid #3b82f6;">
+      <span style="font-size: 14px; font-weight: 700; color: #1e40af;">NET PAY</span>
+      <span style="font-family: monospace; font-size: 18px; font-weight: 700; color: #1e40af;">₱${parseFloat(netPay).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+    </div>
+    
+    <div style="color: #6b7280; font-size: 12px; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+      Net payment via bank transfer to registered bank account
+    </div>
+  `;
+  
+  document.getElementById('payslip-detail-container').innerHTML = payslipHTML;
+};
+
+// Close Payroll Details Modal
+window.closePayrollDetailsModal = function() {
+  const overlay = document.getElementById('details-modal-overlay');
+  if (overlay) {
+    overlay.classList.remove('active');
+    setTimeout(() => {
+      overlay.remove();
+    }, 300);
+  }
+};
+
+// Clear payroll approval form
+window.clearPayrollApprovalForm = function() {
+  document.getElementById('hr_notes').value = '';
+  document.getElementById('hr_employee_count').checked = false;
+  document.getElementById('hr_calculations').checked = false;
+  document.getElementById('hr_no_errors').checked = false;
+  document.getElementById('hr_deductions').checked = false;
+};
+
+
+
 </script>

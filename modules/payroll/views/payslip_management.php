@@ -713,279 +713,29 @@ $payslips = $payrollEmployee->query("SELECT pre.*, pr.period_name, pr.pay_date, 
           </tr>
         </thead>
         <tbody>
+          <?php foreach ($payslips as $p): ?>
           <tr>
-            <td>EMP-001</td>
-            <td>John Doe</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱11,000.00</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱7,650.00</td>
-            <td><span class="badge badge-generated">Generated</span></td>
-            <td><span class="badge badge-sent">Sent</span></td>
+            <td><?php echo htmlspecialchars($p['employee_code'] ?? ''); ?></td>
+            <td><?php echo htmlspecialchars(($p['first_name'] ?? '') . ' ' . ($p['last_name'] ?? '')); ?></td>
+            <td style="text-align: right; font-family: 'Courier New', monospace;">₱<?php echo number_format($p['gross_pay'] ?? 0, 2); ?></td>
+            <td style="text-align: right; font-family: 'Courier New', monospace;">₱<?php echo number_format($p['net_pay'] ?? 0, 2); ?></td>
+            <td><?php echo (!empty($p['payslip_number'])) ? '<span class="badge badge-generated">Generated</span>' : '<span class="badge">Pending</span>'; ?></td>
+            <td><?php echo (!empty($p['payslip_sent']) || (!empty($p['sent_date']))) ? '<span class="badge badge-sent">Sent</span>' : '<span class="badge">Not Sent</span>'; ?></td>
             <td>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayslipModal('PS-2026-02-001', 'EMP-001', 'John Doe')">View</button>
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayslipModal(<?php echo (int)($p['id'] ?? 0); ?>, <?php echo (int)($p['payroll_run_id'] ?? 0); ?>, '<?php echo addslashes(($p['first_name'] ?? '') . ' ' . ($p['last_name'] ?? '')); ?>', '<?php echo addslashes($p['period_name'] ?? ''); ?>', '<?php echo addslashes($p['pay_date'] ?? ''); ?>')">View</button>
             </td>
           </tr>
-          <tr>
-            <td>EMP-002</td>
-            <td>Jane Smith</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱11,000.00</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱7,300.00</td>
-            <td><span class="badge badge-generated">Generated</span></td>
-            <td><span class="badge badge-sent">Sent</span></td>
-            <td>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayslipModal('PS-2026-02-002', 'EMP-002', 'Jane Smith')">View</button>
-            </td>
-          </tr>
-          <tr>
-            <td>EMP-003</td>
-            <td>Michael Johnson</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱12,500.00</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱8,050.00</td>
-            <td><span class="badge badge-generated">Generated</span></td>
-            <td><span class="badge badge-sent">Sent</span></td>
-            <td>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayslipModal('PS-2026-02-003', 'EMP-003', 'Michael Johnson')">View</button>
-            </td>
-          </tr>
-          <tr>
-            <td>EMP-004</td>
-            <td>Sarah Williams</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱9,000.00</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱6,400.00</td>
-            <td><span class="badge badge-generated">Generated</span></td>
-            <td><span class="badge badge-sent">Sent</span></td>
-            <td>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayslipModal('PS-2026-02-004', 'EMP-004', 'Sarah Williams')">View</button>
-            </td>
-          </tr>
-          <tr>
-            <td>EMP-005</td>
-            <td>Robert Brown</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱9,000.00</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱6,250.00</td>
-            <td><span class="badge badge-generated">Generated</span></td>
-            <td><span class="badge badge-sent">Sent</span></td>
-            <td>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayslipModal('PS-2026-02-005', 'EMP-005', 'Robert Brown')">View</button>
-            </td>
-          </tr>
-          <tr>
-            <td>EMP-006</td>
-            <td>Emily Davis</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱11,000.00</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱7,425.00</td>
-            <td><span class="badge badge-generated">Generated</span></td>
-            <td><span class="badge badge-sent">Sent</span></td>
-            <td>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayslipModal('PS-2026-02-006', 'EMP-006', 'Emily Davis')">View</button>
-            </td>
-          </tr>
-          <tr>
-            <td>EMP-007</td>
-            <td>David Martinez</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱9,700.00</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱6,470.00</td>
-            <td><span class="badge badge-generated">Generated</span></td>
-            <td><span class="badge badge-sent">Sent</span></td>
-            <td>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayslipModal('PS-2026-02-007', 'EMP-007', 'David Martinez')">View</button>
-            </td>
-          </tr>
-          <tr>
-            <td>EMP-008</td>
-            <td>Jessica Wilson</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱13,800.00</td>
-            <td style="text-align: right; font-family: 'Courier New', monospace;">₱8,810.00</td>
-            <td><span class="badge badge-generated">Generated</span></td>
-            <td><span class="badge badge-sent">Sent</span></td>
-            <td>
-              <button type="button" class="btn btn-secondary btn-sm" onclick="window.openPayslipModal('PS-2026-02-008', 'EMP-008', 'Jessica Wilson')">View</button>
-            </td>
-          </tr>
+          <?php endforeach; ?>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- Sample Payslip Preview -->
+  <!-- Payslip Preview Notice -->
   <div class="section">
-    <h3 class="section-header">📄 Payslip Sample - John Doe (EMP-001)</h3>
-
+    <h3 class="section-header">📄 Payslip Preview</h3>
     <div class="alert alert-info">
-      This is a read-only payslip. Employees can download this as PDF or view in their employee portal using their login credentials.
-    </div>
-
-    <!-- Payslip Document -->
-    <div class="payslip-preview">
-      <!-- Header -->
-      <div class="payslip-header">
-        <div class="company-info">
-          <h3>Healthcare Hospital Inc.</h3>
-          <p>123 Hospital Avenue, Makati City</p>
-          <p>Email: payroll@healthcare.com | Phone: +63-2-555-1234</p>
-        </div>
-        <div class="payslip-title">
-          <h2>PAYSLIP</h2>
-          <p>Pay Period: February 1-15, 2026</p>
-          <p>Payment Date: February 22, 2026</p>
-        </div>
-      </div>
-
-      <!-- Employee Information -->
-      <div class="employee-info">
-        <div>
-          <div class="info-item">
-            <label>Employee ID</label>
-            <value>EMP-001</value>
-          </div>
-          <div class="info-item">
-            <label>Name</label>
-            <value>John Doe</value>
-          </div>
-          <div class="info-item">
-            <label>Department</label>
-            <value>Human Resources</value>
-          </div>
-          <div class="info-item">
-            <label>Position</label>
-            <value>HR Manager</value>
-          </div>
-        </div>
-        <div>
-          <div class="info-item">
-            <label>Employment Type</label>
-            <value>Regular Full-Time</value>
-          </div>
-          <div class="info-item">
-            <label>Pay Type</label>
-            <value>Per Duty</value>
-          </div>
-          <div class="info-item">
-            <label>Bank Account</label>
-            <value>•••••••...4567</value>
-          </div>
-          <div class="info-item">
-            <label>Generated</label>
-            <value>February 8, 2026</value>
-          </div>
-        </div>
-      </div>
-
-      <!-- Earnings Section -->
-      <div class="payslip-details">
-        <h4>EARNINGS</h4>
-        <div class="detail-row">
-          <label>Basic Pay</label>
-          <value>6,000.00</value>
-        </div>
-        <div class="detail-row">
-          <label>Incentives</label>
-          <value>2,000.00</value>
-        </div>
-        <div class="detail-row">
-          <label>Double Pay</label>
-          <value>3,000.00</value>
-        </div>
-        <div class="detail-row section-total">
-          <label>Total Earnings</label>
-          <value>11,000.00</value>
-        </div>
-      </div>
-
-      <!-- Deductions Section -->
-      <div class="payslip-details">
-        <h4>STATUTORY DEDUCTIONS</h4>
-        <div class="detail-row">
-          <label>Withholding Tax (BIR)</label>
-          <value>0.00</value>
-        </div>
-        <div class="detail-row">
-          <label>SSS Contribution</label>
-          <value>406.24</value>
-        </div>
-        <div class="detail-row">
-          <label>PhilHealth Premium</label>
-          <value>247.50</value>
-        </div>
-        <div class="detail-row">
-          <label>Pag-IBIG Contribution</label>
-          <value>200.00</value>
-        </div>
-        <div class="detail-row">
-          <label>Pag-IBIG Housing Loan</label>
-          <value>1,796.26</value>
-        </div>
-        <div class="detail-row section-total">
-          <label>Statutory Deductions</label>
-          <value>2,850.00</value>
-        </div>
-      </div>
-
-      <div class="payslip-details">
-        <h4>OTHER DEDUCTIONS</h4>
-        <div class="detail-row">
-          <label>HMO Premium</label>
-          <value>0.00</value>
-        </div>
-        <div class="detail-row">
-          <label>Employee Loan</label>
-          <value>500.00</value>
-        </div>
-        <div class="detail-row section-total">
-          <label>Other Deductions</label>
-          <value>500.00</value>
-        </div>
-      </div>
-
-      <!-- Summary -->
-      <div class="payslip-details">
-        <div class="detail-row" style="font-size: 14px; font-weight: 700; padding: 1rem 0; border-bottom: 2px solid #1f2937;">
-          <label>NET PAY</label>
-          <value>7,650.00</value>
-        </div>
-        <div style="color: #6b7280; font-size: 12px; margin-top: 0.5rem;">
-          Net payment via bank transfer to registered bank account
-        </div>
-      </div>
-
-      <!-- Footer -->
-      <div class="payslip-footer">
-        <div>
-          <h4 style="color: #6b7280; font-size: 11px; font-weight: 600; margin: 0 0 0.5rem 0;">PAYROLL PROCESSOR</h4>
-          <p style="margin: 0; color: #6b7280; font-size: 11px;">Juan dela Cruz<br>Payroll Officer<br>Date: February 8, 2026</p>
-        </div>
-        <div class="ytd-summary">
-          <h4>Year-to-Date Summary (Jan-Feb 2026)</h4>
-          <div class="ytd-item">
-            <label>Total Earnings</label>
-            <value>₱21,850.00</value>
-          </div>
-          <div class="ytd-item">
-            <label>Total Statutory Deductions</label>
-            <value>₱5,610.00</value>
-          </div>
-          <div class="ytd-item">
-            <label>Total Other Deductions</label>
-            <value>₱1,200.00</value>
-          </div>
-          <div class="ytd-item" style="border-top: 1px solid #d1d5db; padding-top: 0.5rem; margin-top: 0.5rem;">
-            <label>Total Net Paid</label>
-            <value style="color: #1e40af;">₱15,040.00</value>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Payslip Actions -->
-    <div style="margin-top: 2rem; padding-top: 2rem; border-top: 1px solid #e5e7eb;">
-      <div class="btn-group">
-        <button type="button" onclick="window.print()" class="btn btn-primary">Print Payslip</button>
-        <button type="button" onclick="alert('PDF download would be generated')" class="btn btn-secondary">Download as PDF</button>
-        <form method="POST" style="display: inline;">
-          <input type="hidden" name="action" value="resend_email">
-          <input type="hidden" name="payslip_id" value="PS-2026-02-001">
-          <button type="submit" class="btn btn-secondary">Resend Email</button>
-        </form>
-      </div>
+      Click "View" on any employee row to preview the actual payslip. The preview loads real payout and deduction data from the database.
     </div>
   </div>
 
@@ -1083,37 +833,7 @@ Payroll Department</textarea>
     </form>
   </div>
 
-  <!-- Important Rules & Information -->
-  <div class="section">
-    <h3 class="section-header">📋 Payslip Management Rules</h3>
 
-    <div class="alert alert-warning">
-      <strong>⚠️ Critical Rules:</strong>
-      <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
-        <li><strong>Read-Only Payslips:</strong> Generated payslips cannot be edited or deleted. They are permanent records.</li>
-        <li><strong>Approval Required:</strong> Payslips can only be generated from approved payroll runs. Draft payroll cannot generate payslips.</li>
-        <li><strong>Employee Access:</strong> Only employees with payroll profiles for the period can receive payslips.</li>
-        <li><strong>Email Distribution:</strong> Payslips are emailed to employee email addresses on file with portal access link.</li>
-        <li><strong>PDF Generation:</strong> Payslips remain archival-ready and can be regenerated if needed.</li>
-      </ul>
-    </div>
-
-    <div class="alert alert-info">
-      <strong>ℹ️ Payslip Contents (Standard):</strong>
-      <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
-        <li><strong>Earnings Section:</strong> Basic pay, incentives, bonuses, allowances, overtime</li>
-        <li><strong>Statutory Deductions:</strong> Withholding tax, SSS, PhilHealth, Pag-IBIG</li>
-        <li><strong>Other Deductions:</strong> HMO, loans, absences, penalties</li>
-        <li><strong>Net Pay:</strong> Gross less all deductions</li>
-        <li><strong>Year-to-Date:</strong> Running totals for earnings, deductions, net pay</li>
-        <li><strong>Metadata:</strong> Employee info, pay period, payment date, processor signature</li>
-      </ul>
-    </div>
-
-    <div class="alert alert-success">
-      <strong>✓ Audit Trail:</strong> All payslip generation, email delivery, and portal access is logged. Employees can access only their own payslips. System maintains permanent record of all generated payslips for compliance.
-    </div>
-  </div>
 
 </div>
 
@@ -1132,58 +852,71 @@ Payroll Department</textarea>
 
 <script>
 // Payslip Modal Functions
-window.openPayslipModal = function(payslipId, empId, empName) {
+window.openPayslipModal = function(runEmployeeId, payrollRunId, empName, periodName, payDate) {
   const modal = document.getElementById('payslip-modal-overlay');
   const title = document.getElementById('payslip-modal-title');
   const body = document.getElementById('payslip-modal-body');
-  
-  title.textContent = 'Payslip - ' + empName + ' (' + empId + ')';
-  
-  // Sample payslip data
-  let html = '<div class="payslip-preview" style="padding: 1.5rem; margin: 0;">';
-  html += '<div class="payslip-header" style="margin-bottom: 1rem;">';
-  html += '<div class="company-info"><h3 style="font-size: 14px; margin-bottom: 0.25rem;">Healthcare Hospital Inc.</h3>';
-  html += '<p style="margin: 0; font-size: 11px; color: #6b7280;">Payslip ID: ' + payslipId + '</p></div>';
-  html += '<div class="payslip-title"><h2 style="font-size: 14px; margin: 0;">PAYSLIP</h2>';
-  html += '<p style="margin: 0.25rem 0 0 0; font-size: 11px; color: #6b7280;">Pay Period: February 1-15, 2026</p></div>';
-  html += '</div>';
-  
-  html += '<div class="employee-info" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">';
-  html += '<div><div class="info-item" style="display: flex; justify-content: space-between; border-bottom: 1px solid #e5e7eb; padding: 0.5rem 0;">';
-  html += '<label style="font-size: 12px; color: #6b7280;">Employee ID</label><value style="font-size: 12px;">' + empId + '</value></div>';
-  html += '<div class="info-item" style="display: flex; justify-content: space-between; border-bottom: 1px solid #e5e7eb; padding: 0.5rem 0;">';
-  html += '<label style="font-size: 12px; color: #6b7280;">Name</label><value style="font-size: 12px;">' + empName + '</value></div></div>';
-  html += '<div><div class="info-item" style="display: flex; justify-content: space-between; border-bottom: 1px solid #e5e7eb; padding: 0.5rem 0;">';
-  html += '<label style="font-size: 12px; color: #6b7280;">Pay Date</label><value style="font-size: 12px;">February 22, 2026</value></div>';
-  html += '<div class="info-item" style="display: flex; justify-content: space-between; padding: 0.5rem 0;">';
-  html += '<label style="font-size: 12px; color: #6b7280;">Status</label><value style="font-size: 12px;"><span class="badge badge-generated">Generated</span></value></div></div>';
-  html += '</div>';
-  
-  html += '<div style="border-top: 1px solid #e5e7eb; padding-top: 1rem; margin-top: 1rem;">';
-  html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">';
-  html += '<label>Basic Pay</label><value style="font-family: monospace;">6,000.00</value></div>';
-  html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">';
-  html += '<label>Incentives</label><value style="font-family: monospace;">2,000.00</value></div>';
-  html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; font-weight: 600; border-top: 2px solid #e5e7eb; padding-top: 0.75rem; font-size: 12px;">';
-  html += '<label>Gross Pay</label><value style="font-family: monospace;">11,000.00</value></div>';
-  html += '</div>';
-  
-  html += '<div style="border-top: 1px solid #e5e7eb; padding-top: 1rem; margin-top: 1rem;">';
-  html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">';
-  html += '<label>SSS</label><value style="font-family: monospace;">406.24</value></div>';
-  html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">';
-  html += '<label>PhilHealth</label><value style="font-family: monospace;">247.50</value></div>';
-  html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; font-weight: 600; border-top: 2px solid #e5e7eb; padding-top: 0.75rem; font-size: 12px;">';
-  html += '<label>Total Deductions</label><value style="font-family: monospace;">3,350.00</value></div>';
-  html += '</div>';
-  
-  html += '<div style="border-top: 2px solid #1f2937; padding-top: 1rem; margin-top: 1rem; display: flex; justify-content: space-between; font-weight: 700; font-size: 14px;">';
-  html += '<label>NET PAY</label><value style="font-family: monospace;">7,650.00</value></div>';
-  html += '</div>';
-  
-  body.innerHTML = html;
-  modal.classList.add('active');
-  body.scrollTop = 0;
+
+  title.textContent = 'Payslip - ' + (empName || '');
+
+  var apiUrl = '<?php echo BASE_URL; ?>modules/payroll/api.php?action=getPayrollRunEmployeeDetail&id=' + encodeURIComponent(runEmployeeId);
+  function fmt(n){ return '₱' + Number(n || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+  fetch(apiUrl, { credentials: 'same-origin' })
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      var d = res.data || {};
+      var html = '<div class="payslip-preview" style="padding: 1.5rem; margin: 0;">';
+      html += '<div class="payslip-header" style="margin-bottom: 1rem;">';
+      html += '<div class="company-info"><h3 style="font-size: 14px; margin-bottom: 0.25rem;">Healthcare Hospital Inc.</h3>';
+      html += '<p style="margin: 0; font-size: 11px; color: #6b7280;">Payslip ID: ' + (d.payslip_number || '') + '</p></div>';
+      html += '<div class="payslip-title"><h2 style="font-size: 14px; margin: 0;">PAYSLIP</h2>';
+      html += '<p style="margin: 0.25rem 0 0 0; font-size: 11px; color: #6b7280;">Pay Period: ' + (periodName || '') + '</p></div>';
+      html += '</div>';
+
+      html += '<div class="employee-info" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">';
+      html += '<div><div class="info-item" style="display: flex; justify-content: space-between; border-bottom: 1px solid #e5e7eb; padding: 0.5rem 0;">';
+      html += '<label style="font-size: 12px; color: #6b7280;">Employee ID</label><value style="font-size: 12px;">' + (d.employee_code || '') + '</value></div>';
+      html += '<div class="info-item" style="display: flex; justify-content: space-between; border-bottom: 1px solid #e5e7eb; padding: 0.5rem 0;">';
+      html += '<label style="font-size: 12px; color: #6b7280;">Name</label><value style="font-size: 12px;">' + (empName || (d.first_name + ' ' + d.last_name)) + '</value></div></div>';
+      html += '<div><div class="info-item" style="display: flex; justify-content: space-between; border-bottom: 1px solid #e5e7eb; padding: 0.5rem 0;">';
+      html += '<label style="font-size: 12px; color: #6b7280;">Pay Date</label><value style="font-size: 12px;">' + (payDate || d.pay_date || '') + '</value></div>';
+      html += '<div class="info-item" style="display: flex; justify-content: space-between; padding: 0.5rem 0;">';
+      html += '<label style="font-size: 12px; color: #6b7280;">Status</label><value style="font-size: 12px;"><span class="badge ' + ((d.payslip_number) ? 'badge-generated' : 'badge-pending') + '">' + ((d.payslip_number) ? 'Generated' : 'Pending') + '</span></value></div></div>';
+      html += '</div>';
+
+      html += '<div style="border-top: 1px solid #e5e7eb; padding-top: 1rem; margin-top: 1rem;">';
+      html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">';
+      html += '<label>Basic Pay</label><value style="font-family: monospace;">' + fmt(d.basic_pay) + '</value></div>';
+      html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">';
+      html += '<label>Incentives</label><value style="font-family: monospace;">' + fmt(d.incentives) + '</value></div>';
+      html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; font-weight: 600; border-top: 2px solid #e5e7eb; padding-top: 0.75rem; font-size: 12px;">';
+      html += '<label>Gross Pay</label><value style="font-family: monospace;">' + fmt(d.gross_pay) + '</value></div>';
+      html += '</div>';
+
+      html += '<div style="border-top: 1px solid #e5e7eb; padding-top: 1rem; margin-top: 1rem;">';
+      html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">';
+      html += '<label>SSS</label><value style="font-family: monospace;">' + fmt(d.sss_contribution) + '</value></div>';
+      html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">';
+      html += '<label>PhilHealth</label><value style="font-family: monospace;">' + fmt(d.philhealth_contribution) + '</value></div>';
+      html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">';
+      html += '<label>Pag-IBIG</label><value style="font-family: monospace;">' + fmt(d.pagibig_contribution) + '</value></div>';
+      html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; font-weight: 600; border-top: 2px solid #e5e7eb; padding-top: 0.75rem; font-size: 12px;">';
+      html += '<label>Total Deductions</label><value style="font-family: monospace;">' + fmt(d.total_deductions) + '</value></div>';
+      html += '</div>';
+
+      html += '<div style="border-top: 2px solid #1f2937; padding-top: 1rem; margin-top: 1rem; display: flex; justify-content: space-between; font-weight: 700; font-size: 14px;">';
+      html += '<label>NET PAY</label><value style="font-family: monospace;">' + fmt(d.net_pay) + '</value></div>';
+      html += '</div>';
+
+      body.innerHTML = html;
+      modal.classList.add('active');
+      body.scrollTop = 0;
+    })
+    .catch(function(err){
+      console.error('Failed to load payslip data', err);
+      alert('Failed to load payslip data.');
+    });
 };
 
 window.closePayslipModal = function() {

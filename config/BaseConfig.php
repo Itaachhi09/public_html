@@ -57,7 +57,7 @@ function canAccessMenuItem($module, $submodule = null) {
     if ($userRole === 'HR_Chief' || strtolower($userRole) === 'hr_chief' || $userRole === 'hrchief') {
         $restricted = [
             'hr_core' => ['job_titles', 'employment_types', 'locations', 'roles'],
-            'payroll' => ['setup_configuration', 'tax_contributions_engine', 'disbursement_bank_files', 'government_reports_compliance', 'security_audit_trail'],
+            'payroll' => ['setup_configuration', 'tax_contributions_engine', 'disbursement_bank_files', 'government_reports_compliance'],
             'compensation' => ['compensation_approval', 'compensation_versioning', 'pay_bonds_contracts'],
             'hmo' => ['billing'],
             'analytics' => []

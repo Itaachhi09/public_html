@@ -8,7 +8,7 @@ require_once __DIR__ . '/../../../config/BaseModel.php';
 class PayrollRun extends BaseModel {
     protected $table = 'payroll_runs';
     protected $primaryKey = 'id';
-    protected $fillable = ['period_name', 'start_date', 'end_date', 'pay_date', 'status'];
+    protected $fillable = ['period_name', 'start_date', 'end_date', 'pay_date', 'status', 'created_by'];
 
     /**
      * Get all runs ordered by date

@@ -8,6 +8,11 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 require_once __DIR__ . '/../../../config/Database.php';
 require_once __DIR__ . '/../models/GovernmentReport.php';
+require_once __DIR__ . '/../models/PayrollRunEmployee.php';
+require_once __DIR__ . '/../../hr_core/models/EmployeeModel.php';
+
+$payrollRunEmployee = new PayrollRunEmployee();
+$employeeModel = new EmployeeModel();
 
 $governmentReport = new GovernmentReport();
 
@@ -36,19 +41,60 @@ if ($isAjax && $modal === 'download') {
     exit;
 }
 
-// Handle AJAX requests for modals
+// Handle AJAX preview: generate report preview from DB if payroll_run_id provided
+// otherwise fall back to sample preview
 if ($isAjax && $modal === 'preview') {
     $reportType = isset($_GET['type']) ? $_GET['type'] : '';
-    $period = isset($_GET['period']) ? $_GET['period'] : 'February 2026';
-    $totalEmployees = isset($_GET['employees']) ? $_GET['employees'] : '8';
-    $totalContributions = isset($_GET['contributions']) ? $_GET['contributions'] : '₱3,250.12';
-    
-    // Sample report preview HTML
+    $period = isset($_GET['period']) ? $_GET['period'] : date('F Y');
+    $payrollRunId = isset($_GET['payroll_run_id']) ? (int)$_GET['payroll_run_id'] : 0;
+
+    $rows = [];
+    $totalEmployees = 0;
+    $totalContributions = 0.00;
+
+    if ($payrollRunId > 0) {
+        // Decide which column to use based on report type
+        $colMap = [
+            'sss' => 'sss_contribution',
+            'philhealth' => 'philhealth_contribution',
+            'pagibig' => 'pagibig_contribution',
+            'bir' => 'withholding_tax',
+        ];
+        $key = strtolower($reportType);
+        $col = $colMap[$key] ?? null;
+
+        if ($col) {
+            $recs = $payrollRunEmployee->query("SELECT pre.*, e.first_name, e.last_name, e.employee_code FROM payroll_run_employees pre JOIN employees e ON pre.employee_id = e.employee_id WHERE pre.payroll_run_id = ?", [$payrollRunId]);
+            foreach ($recs as $r) {
+                $amount = floatval($r[$col] ?? 0);
+                if ($amount <= 0) continue;
+                $rows[] = [
+                    'name' => trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? '')),
+                    'amount' => $amount
+                ];
+                $totalContributions += $amount;
+            }
+            $totalEmployees = count($rows);
+        }
+    }
+
+    // If no db rows, provide a minimal sample preview
+    if (empty($rows)) {
+        $rows = [
+            ['name' => 'Sample Employee A', 'amount' => 450.00],
+            ['name' => 'Sample Employee B', 'amount' => 380.00],
+            ['name' => 'Sample Employee C', 'amount' => 420.00],
+        ];
+        foreach ($rows as $r) $totalContributions += $r['amount'];
+        $totalEmployees = count($rows);
+    }
+
+    // Render preview HTML
     ?>
     <div class="modal-overlay active" style="display: flex;">
       <div class="modal-box">
         <div class="modal-header">
-          <h3>Report Preview - <?php echo ucwords(str_replace('_', ' ', $reportType)); ?></h3>
+          <h3>Report Preview - <?php echo htmlspecialchars(ucwords(str_replace('_', ' ', $reportType))); ?></h3>
           <button type="button" class="modal-close" onclick="window.closeGovernmentModal()">&times;</button>
         </div>
         <div class="modal-body">
@@ -56,22 +102,22 @@ if ($isAjax && $modal === 'preview') {
             <div style="text-align: center; margin-bottom: 1.5rem;">
               <h4 style="margin: 0 0 0.5rem 0;">Healthcare Hospital Inc.</h4>
               <p style="margin: 0; color: #666; font-size: 13px;">BIR TIN: 012-345-678</p>
-              <p style="margin: 0.5rem 0 0 0; color: #666; font-size: 13px;">Period: <?php echo $period; ?></p>
+              <p style="margin: 0.5rem 0 0 0; color: #666; font-size: 13px;">Period: <?php echo htmlspecialchars($period); ?></p>
             </div>
-            
+
             <div style="background: #f9fafb; padding: 1rem; border-radius: 4px; margin-bottom: 1rem;">
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 0.5rem;">
                 <div>
                   <label style="font-size: 12px; color: #666;">Total Employees</label>
-                  <p style="margin: 0; font-weight: 600; font-size: 16px;"><?php echo $totalEmployees; ?></p>
+                  <p style="margin: 0; font-weight: 600; font-size: 16px;"><?php echo (int)$totalEmployees; ?></p>
                 </div>
                 <div>
                   <label style="font-size: 12px; color: #666;">Total Contributions</label>
-                  <p style="margin: 0; font-weight: 600; font-size: 16px;"><?php echo $totalContributions; ?></p>
+                  <p style="margin: 0; font-weight: 600; font-size: 16px;">₱<?php echo number_format($totalContributions, 2); ?></p>
                 </div>
               </div>
             </div>
-            
+
             <table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 1rem;">
               <thead>
                 <tr style="background: #f3f4f6; border-bottom: 1px solid #e5e7eb;">
@@ -80,27 +126,21 @@ if ($isAjax && $modal === 'preview') {
                 </tr>
               </thead>
               <tbody>
+                <?php foreach ($rows as $r): ?>
                 <tr style="border-bottom: 1px solid #e5e7eb;">
-                  <td style="padding: 0.75rem;">Sarah Williams</td>
-                  <td style="padding: 0.75rem; text-align: center;">₱450.00</td>
+                  <td style="padding: 0.75rem;"><?php echo htmlspecialchars($r['name']); ?></td>
+                  <td style="padding: 0.75rem; text-align: center;">₱<?php echo number_format($r['amount'], 2); ?></td>
                 </tr>
-                <tr style="border-bottom: 1px solid #e5e7eb;">
-                  <td style="padding: 0.75rem;">John Smith</td>
-                  <td style="padding: 0.75rem; text-align: center;">₱380.00</td>
-                </tr>
-                <tr style="border-bottom: 1px solid #e5e7eb;">
-                  <td style="padding: 0.75rem;">Maria Garcia</td>
-                  <td style="padding: 0.75rem; text-align: center;">₱420.00</td>
-                </tr>
+                <?php endforeach; ?>
                 <tr style="background: #f3f4f6; border-bottom: 1px solid #e5e7eb;">
                   <td style="padding: 0.75rem; font-weight: 600;">Total</td>
-                  <td style="padding: 0.75rem; text-align: center; font-weight: 600;">₱1,250.00</td>
+                  <td style="padding: 0.75rem; text-align: center; font-weight: 600;">₱<?php echo number_format($totalContributions, 2); ?></td>
                 </tr>
               </tbody>
             </table>
 
             <div class="alert alert-info" style="background: #dbeafe; border: 1px solid #7dd3fc; padding: 0.75rem; border-radius: 4px; font-size: 13px; color: #0369a1; margin: 0;">
-              ℹ️ This is a sample preview of the report format. Actual report will include all employees in the selected period.
+              ℹ️ This preview uses data from the selected payroll run when available.
             </div>
           </div>
         </div>
@@ -117,6 +157,23 @@ if ($isAjax && $modal === 'preview') {
 // Fetch government reports
 $reports = $governmentReport->getAll();
 $totalReports = count($reports ?? []);
+
+// Compute latest payroll run aggregates (used in tab summaries)
+$latestRun = $payrollRunEmployee->query("SELECT payroll_run_id FROM payroll_run_employees ORDER BY payroll_run_id DESC LIMIT 1", []);
+$latestPayrollRunId = isset($latestRun[0]['payroll_run_id']) ? (int)$latestRun[0]['payroll_run_id'] : 0;
+$ph_total = 0.00;
+$sss_total = 0.00;
+$pagibig_total = 0.00;
+$total_employees = 0;
+if ($latestPayrollRunId > 0) {
+  $agg = $payrollRunEmployee->query("SELECT COUNT(*) AS cnt, COALESCE(SUM(sss_contribution),0) AS sss_total, COALESCE(SUM(philhealth_contribution),0) AS ph_total, COALESCE(SUM(pagibig_contribution),0) AS pagibig_total FROM payroll_run_employees WHERE payroll_run_id = ?", [$latestPayrollRunId]);
+  if (!empty($agg)) {
+    $total_employees = (int)($agg[0]['cnt'] ?? 0);
+    $sss_total = floatval($agg[0]['sss_total'] ?? 0);
+    $ph_total = floatval($agg[0]['ph_total'] ?? 0);
+    $pagibig_total = floatval($agg[0]['pagibig_total'] ?? 0);
+  }
+}
 ?>
 
 <style>
@@ -661,42 +718,42 @@ $totalReports = count($reports ?? []);
     <h3 class="section-header">📊 Available Reports & Deadlines</h3>
 
     <div class="report-grid">
-      <div class="report-card">
+      <div class="report-card" role="button" tabindex="0" onclick="window.openGovernmentModal('sss', <?php echo $latestPayrollRunId; ?>)">
         <h4>🏢 SSS Report</h4>
         <p>Social Security System contributions and membership</p>
         <p style="font-size: 11px; color: #9ca3af;">Covers: Employee ID, monthly contributions, salary</p>
         <div class="report-card due-date">Monthly by 10th working day</div>
       </div>
 
-      <div class="report-card">
+      <div class="report-card" role="button" tabindex="0" onclick="window.openGovernmentModal('philhealth', <?php echo $latestPayrollRunId; ?>)">
         <h4>🏥 PhilHealth Report</h4>
         <p>Philippine Health Insurance contributions</p>
         <p style="font-size: 11px; color: #9ca3af;">Covers: Member data, premium contributions, salaries</p>
         <div class="report-card due-date">Monthly by 10th working day</div>
       </div>
 
-      <div class="report-card">
+      <div class="report-card" role="button" tabindex="0" onclick="window.openGovernmentModal('pagibig', <?php echo $latestPayrollRunId; ?>)">
         <h4>🏦 Pag-IBIG Report</h4>
         <p>Pag-IBIG Fund contributions and loan tracking</p>
         <p style="font-size: 11px; color: #9ca3af;">Covers: Contribution records, loan details, salary</p>
         <div class="report-card due-date">Monthly by 10th working day</div>
       </div>
 
-      <div class="report-card">
+      <div class="report-card" role="button" tabindex="0" onclick="window.openGovernmentModal('bir1601', <?php echo $latestPayrollRunId; ?>)">
         <h4>📋 BIR 1601-C</h4>
         <p>Annual Withholding Tax Report</p>
         <p style="font-size: 11px; color: #9ca3af;">Covers: Yearly tax withheld by income class</p>
         <div class="report-card due-date">Annually by January 31</div>
       </div>
 
-      <div class="report-card">
+      <div class="report-card" role="button" tabindex="0" onclick="window.openGovernmentModal('bir2316', <?php echo $latestPayrollRunId; ?>)">
         <h4>📄 BIR 2316</h4>
         <p>Certificate of Withholding Tax</p>
         <p style="font-size: 11px; color: #9ca3af;">Covers: Individual tax certificates for employees</p>
         <div class="report-card due-date">Annually by January 31</div>
       </div>
 
-      <div class="report-card">
+      <div class="report-card" role="button" tabindex="0" onclick="window.openGovernmentModal('alphalist', <?php echo $latestPayrollRunId; ?>)">
         <h4>📑 BIR Alphalist</h4>
         <p>BIR registered employees with tax data</p>
         <p style="font-size: 11px; color: #9ca3af;">Covers: Complete payroll roster with TIN and tax info</p>
@@ -786,7 +843,7 @@ $totalReports = count($reports ?? []);
         </div>
 
         <div class="alert alert-info">
-          Selected period: February 2026. Total employees: 8. Total contributions: ₱1,980.00
+          Selected period: <?php echo date('F Y'); ?>. Total employees: <?php echo (int)$total_employees; ?>. Total contributions: ₱<?php echo number_format($ph_total,2); ?>
         </div>
 
         <div class="btn-group">
@@ -826,7 +883,7 @@ $totalReports = count($reports ?? []);
         </div>
 
         <div class="alert alert-info">
-          Selected period: February 2026. Total employees: 8. Total contributions: ₱1,600.00
+          Selected period: <?php echo date('F Y'); ?>. Total employees: <?php echo (int)$total_employees; ?>. Total contributions: ₱<?php echo number_format($pagibig_total,2); ?>
         </div>
 
         <div class="btn-group">
@@ -962,19 +1019,19 @@ $totalReports = count($reports ?? []);
     </div>
   </div>
 
-  <!-- Sample Report Preview -->
+  <!-- SSS Report Preview (DB-driven) -->
   <div class="section">
-    <h3 class="section-header">👁️ Sample Report - SSS Report (February 2026)</h3>
+    <h3 class="section-header">👁️ SSS Report Preview</h3>
 
     <div class="alert alert-info">
-      This is a sample preview of the SSS report format. Actual report will include current data from selected period.
+      This preview shows SSS contribution data from the latest payroll run (falls back to sample if none).
     </div>
 
     <div class="report-preview">
       <div class="report-header">
         <h3>SOCIAL SECURITY SYSTEM (SSS) CONTRIBUTION REPORT</h3>
         <p>Healthcare Hospital Inc. | BIR TIN: 012-345-678</p>
-        <p>Period: February 1-29, 2026</p>
+        <p>Period: <?php echo date('F Y'); ?></p>
       </div>
 
       <div class="report-details">
@@ -992,9 +1049,69 @@ $totalReports = count($reports ?? []);
         </div>
         <div class="detail-row">
           <label>Report Period:</label>
-          <value>February 2026</value>
+          <value><?php echo date('F Y'); ?></value>
         </div>
       </div>
+
+      <?php
+      // Fetch latest payroll_run_id
+      $latestRun = $payrollRunEmployee->query("SELECT payroll_run_id FROM payroll_run_employees ORDER BY payroll_run_id DESC LIMIT 1", []);
+      $payrollRunId = isset($latestRun[0]['payroll_run_id']) ? (int)$latestRun[0]['payroll_run_id'] : 0;
+
+      $rows = [];
+      $totalEmployeeShare = 0.0;
+      $totalEmployerShare = 0.0;
+
+      if ($payrollRunId > 0) {
+          $recs = $payrollRunEmployee->query("SELECT pre.*, e.first_name, e.last_name, e.employee_code FROM payroll_run_employees pre JOIN employees e ON pre.employee_id = e.employee_id WHERE pre.payroll_run_id = ?", [$payrollRunId]);
+          foreach ($recs as $r) {
+              $total = floatval($r['sss_contribution'] ?? 0);
+              // Prefer explicit split columns if present
+              $empShare = null;
+              $erShare = null;
+              if (isset($r['sss_employee_share'])) $empShare = floatval($r['sss_employee_share']);
+              if (isset($r['sss_employer_share'])) $erShare = floatval($r['sss_employer_share']);
+              if ($empShare === null && $erShare === null) {
+                  // split evenly
+                  $empShare = $total / 2.0;
+                  $erShare = $total / 2.0;
+              } elseif ($empShare === null) {
+                  $empShare = max(0, $total - $erShare);
+              } elseif ($erShare === null) {
+                  $erShare = max(0, $total - $empShare);
+              }
+
+              if ($total <= 0) continue;
+
+              $rows[] = [
+                  'code' => $r['employee_code'] ?? '',
+                  'sss_id' => $r['sss_id'] ?? '',
+                  'name' => trim(($r['first_name'] ?? '') . ' ' . ($r['last_name'] ?? '')),
+                  'employee_share' => $empShare,
+                  'employer_share' => $erShare,
+                  'total' => ($empShare + $erShare)
+              ];
+
+              $totalEmployeeShare += $empShare;
+              $totalEmployerShare += $erShare;
+          }
+      }
+
+      // If no data, show sample rows
+      if (empty($rows)) {
+          $rows = [
+              ['code' => 'EMP-001', 'sss_id' => '04-1234567-8', 'name' => 'John Doe', 'employee_share' => 203.12, 'employer_share' => 203.12, 'total' => 406.24],
+              ['code' => 'EMP-002', 'sss_id' => '04-2345678-9', 'name' => 'Jane Smith', 'employee_share' => 203.12, 'employer_share' => 203.12, 'total' => 406.24],
+              ['code' => 'EMP-003', 'sss_id' => '04-3456789-0', 'name' => 'Michael Johnson', 'employee_share' => 203.12, 'employer_share' => 203.12, 'total' => 406.24],
+          ];
+          foreach ($rows as $r) {
+              $totalEmployeeShare += $r['employee_share'];
+              $totalEmployerShare += $r['employer_share'];
+          }
+      }
+
+      $totalContribution = $totalEmployeeShare + $totalEmployerShare;
+      ?>
 
       <table class="report-table">
         <thead>
@@ -1002,81 +1119,27 @@ $totalReports = count($reports ?? []);
             <th>Seq #</th>
             <th>SSS ID Number</th>
             <th>Employee Name</th>
-            <th>Employee Share</th>
-            <th>Employer Share</th>
-            <th>Total Contribution</th>
+            <th style="text-align: right;">Employee Share</th>
+            <th style="text-align: right;">Employer Share</th>
+            <th style="text-align: right;">Total Contribution</th>
           </tr>
         </thead>
         <tbody>
+          <?php $seq = 1; foreach ($rows as $r): ?>
           <tr>
-            <td>1</td>
-            <td>04-1234567-8</td>
-            <td>John Doe</td>
-            <td style="text-align: right;">₱203.12</td>
-            <td style="text-align: right;">₱203.12</td>
-            <td style="text-align: right;">₱406.24</td>
+            <td><?php echo $seq++; ?></td>
+            <td><?php echo htmlspecialchars($r['sss_id'] ?? ''); ?></td>
+            <td><?php echo htmlspecialchars($r['name']); ?></td>
+            <td style="text-align: right;">₱<?php echo number_format($r['employee_share'], 2); ?></td>
+            <td style="text-align: right;">₱<?php echo number_format($r['employer_share'], 2); ?></td>
+            <td style="text-align: right;">₱<?php echo number_format($r['total'], 2); ?></td>
           </tr>
-          <tr>
-            <td>2</td>
-            <td>04-2345678-9</td>
-            <td>Jane Smith</td>
-            <td style="text-align: right;">₱203.12</td>
-            <td style="text-align: right;">₱203.12</td>
-            <td style="text-align: right;">₱406.24</td>
-          </tr>
-          <tr>
-            <td>3</td>
-            <td>04-3456789-0</td>
-            <td>Michael Johnson</td>
-            <td style="text-align: right;">₱203.12</td>
-            <td style="text-align: right;">₱203.12</td>
-            <td style="text-align: right;">₱406.24</td>
-          </tr>
-          <tr>
-            <td>4</td>
-            <td>04-4567890-1</td>
-            <td>Sarah Williams</td>
-            <td style="text-align: right;">₱182.12</td>
-            <td style="text-align: right;">₱182.12</td>
-            <td style="text-align: right;">₱364.24</td>
-          </tr>
-          <tr>
-            <td>5</td>
-            <td>04-5678901-2</td>
-            <td>Robert Brown</td>
-            <td style="text-align: right;">₱182.12</td>
-            <td style="text-align: right;">₱182.12</td>
-            <td style="text-align: right;">₱364.24</td>
-          </tr>
-          <tr>
-            <td>6</td>
-            <td>04-6789012-3</td>
-            <td>Emily Davis</td>
-            <td style="text-align: right;">₱203.12</td>
-            <td style="text-align: right;">₱203.12</td>
-            <td style="text-align: right;">₱406.24</td>
-          </tr>
-          <tr>
-            <td>7</td>
-            <td>04-7890123-4</td>
-            <td>David Martinez</td>
-            <td style="text-align: right;">₱194.62</td>
-            <td style="text-align: right;">₱194.62</td>
-            <td style="text-align: right;">₱389.24</td>
-          </tr>
-          <tr>
-            <td>8</td>
-            <td>04-8901234-5</td>
-            <td>Jessica Wilson</td>
-            <td style="text-align: right;">₱219.12</td>
-            <td style="text-align: right;">₱219.12</td>
-            <td style="text-align: right;">₱438.24</td>
-          </tr>
+          <?php endforeach; ?>
           <tr style="font-weight: 700; background: #f3f4f6;">
-            <td colspan="4" style="text-align: right;">TOTAL:</td>
-            <td style="text-align: right;">₱1,591.56</td>
-            <td style="text-align: right;">₱1,591.56</td>
-            <td style="text-align: right;">₱3,183.12</td>
+            <td colspan="3" style="text-align: right;">TOTAL:</td>
+            <td style="text-align: right;">₱<?php echo number_format($totalEmployeeShare, 2); ?></td>
+            <td style="text-align: right;">₱<?php echo number_format($totalEmployerShare, 2); ?></td>
+            <td style="text-align: right;">₱<?php echo number_format($totalContribution, 2); ?></td>
           </tr>
         </tbody>
       </table>
@@ -1084,25 +1147,25 @@ $totalReports = count($reports ?? []);
       <div class="report-summary">
         <div class="summary-item">
           <label>Total Employees</label>
-          <value>8</value>
+          <value><?php echo count($rows); ?></value>
         </div>
         <div class="summary-item">
           <label>Total Employee Share</label>
-          <value>₱1,591.56</value>
+          <value>₱<?php echo number_format($totalEmployeeShare, 2); ?></value>
         </div>
         <div class="summary-item">
           <label>Total Employer Share</label>
-          <value>₱1,591.56</value>
+          <value>₱<?php echo number_format($totalEmployerShare, 2); ?></value>
         </div>
         <div class="summary-item">
           <label>Total Contribution</label>
-          <value>₱3,183.12</value>
+          <value>₱<?php echo number_format($totalContribution, 2); ?></value>
         </div>
       </div>
 
       <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #d1d5db; color: #6b7280; font-size: 11px;">
         <p style="margin: 0.25rem 0;"><strong>Certified by:</strong> Juan dela Cruz, Payroll Officer</p>
-        <p style="margin: 0.25rem 0;"><strong>Generated:</strong> February 8, 2026 10:30 AM</p>
+        <p style="margin: 0.25rem 0;"><strong>Generated:</strong> <?php echo date('F j, Y g:i A'); ?></p>
         <p style="margin: 0.25rem 0;">This is a computer-generated report. Original signatures not required.</p>
       </div>
     </div>
@@ -1197,80 +1260,6 @@ $totalReports = count($reports ?? []);
     </div>
   </div>
 
-  <!-- Compliance Deadlines -->
-  <div class="section">
-    <h3 class="section-header">⏰ Compliance Deadlines & Requirements</h3>
-
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
-      <div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #3b82f6;">
-        <h5 style="margin: 0 0 0.75rem 0; color: #1f2937; font-size: 13px;">Monthly Reports (Due: 10th Working Day)</h5>
-        <ul style="margin: 0; padding-left: 1.5rem; color: #6b7280; font-size: 12px; line-height: 1.8;">
-          <li><strong>SSS Contribution Report:</strong> Employee and employer contributions</li>
-          <li><strong>PhilHealth Monthly Report:</strong> Premium contributions and member data</li>
-          <li><strong>Pag-IBIG Contribution Report:</strong> Fund contributions and loan tracking</li>
-        </ul>
-      </div>
-
-      <div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #f59e0b;">
-        <h5 style="margin: 0 0 0.75rem 0; color: #1f2937; font-size: 13px;">Annual Reports (Due: January 31)</h5>
-        <ul style="margin: 0; padding-left: 1.5rem; color: #6b7280; font-size: 12px; line-height: 1.8;">
-          <li><strong>BIR 1601-C:</strong> Annual withholding tax summary by income class</li>
-          <li><strong>BIR 2316:</strong> Individual withholding tax certificates for all employees</li>
-          <li><strong>BIR Alphalist:</strong> Employee roster with TIN and income data</li>
-        </ul>
-      </div>
-
-      <div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #22c55e;">
-        <h5 style="margin: 0 0 0.75rem 0; color: #1f2937; font-size: 13px;">Required Information</h5>
-        <ul style="margin: 0; padding-left: 1.5rem; color: #6b7280; font-size: 12px; line-height: 1.8;">
-          <li>Valid TIN (Tax Identification Number) for company</li>
-          <li>SSS Account Number</li>
-          <li>PhilHealth Account Number</li>
-          <li>Pag-IBIG Account Number</li>
-          <li>BIR Registration with correct classification</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
-  <!-- System Information -->
-  <div class="section">
-    <h3 class="section-header">ℹ️ System Configuration & Rules</h3>
-
-    <div class="alert alert-success">
-      <strong>✓ Company Information on File:</strong>
-      <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
-        <li>Company: Healthcare Hospital Inc.</li>
-        <li>BIR TIN: 012-345-678</li>
-        <li>SSS Account: 08-1234567-8</li>
-        <li>PhilHealth PIN: 1-001-2345678-00</li>
-        <li>Pag-IBIG Account: 123-456789-0</li>
-      </ul>
-    </div>
-
-    <div class="alert alert-info">
-      <strong>ℹ️ Report Export Formats:</strong>
-      <ul style="margin: 0.5rem 0 0 0; padding-left: 1.5rem;">
-        <li><strong>CSV:</strong> For spreadsheet editing and manual review</li>
-        <li><strong>PDF:</strong> For archival, email distribution, and formal submission</li>
-        <li><strong>HTML:</strong> For screen viewing and browser printing</li>
-        <li><strong>TXT:</strong> For electronic filing with government agencies</li>
-      </ul>
-    </div>
-
-    <div style="background: #f9fafb; padding: 1.5rem; border-radius: 8px; border-left: 4px solid #ef4444; margin-bottom: 0;">
-      <h4 style="margin: 0 0 1rem 0; color: #1f2937;">Critical Compliance Rules</h4>
-      <ul style="margin: 0; padding-left: 1.5rem; color: #6b7280; font-size: 13px; line-height: 1.8;">
-        <li><strong>Accuracy Required:</strong> All reports must match bank deposits and payroll records</li>
-        <li><strong>Timely Filing:</strong> Monthly reports due 10th working day; annual reports by January 31</li>
-        <li><strong>Employee Data Verification:</strong> All SSS/PhilHealth/Pag-IBIG numbers must be current and valid</li>
-        <li><strong>Tax Computation Verification:</strong> BIR reports must reconcile with actual tax withheld from payroll</li>
-        <li><strong>Audit Trail:</strong> All generated and submitted reports are logged with timestamps</li>
-        <li><strong>Corrections:</strong> Amended reports require appropriate notation and supporting documentation</li>
-      </ul>
-    </div>
-  </div>
-
 </div>
 
 <script>
@@ -1296,37 +1285,32 @@ function switchTab(event, tabName) {
   event.target.classList.add('active');
 }
 
-window.openGovernmentModal = function(reportType) {
-  // Get report details
-  let period = 'February 2026';
-  let employees = '8';
-  let contributions = '₱3,250.12';
-  
-  // Map for different report types
+window.openGovernmentModal = function(reportType, payrollRunId) {
+  // Get report details (period left for server-side preview)
+  let period = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
+
+  // Map for different report types (fallback labels)
   const reportMap = {
-    'sss': { name: 'SSS Report', employees: '8', contributions: '₱3,250.12' },
-    'philhealth': { name: 'PhilHealth Report', employees: '8', contributions: '₱1,980.00' },
-    'pagibig': { name: 'Pag-IBIG Report', employees: '8', contributions: '₱2,100.00' },
-    'bir1601': { name: 'BIR 1601-C Report', employees: '8', contributions: '₱18,750.00' },
-    'bir2316': { name: 'BIR 2316 Certificate', employees: '8', contributions: '₱8,500.00' },
-    'alphalist': { name: 'BIR Alphalist', employees: '8', contributions: '₱45,250.00' }
+    'sss': { name: 'SSS Report' },
+    'philhealth': { name: 'PhilHealth Report' },
+    'pagibig': { name: 'Pag-IBIG Report' },
+    'bir1601': { name: 'BIR 1601-C Report' },
+    'bir2316': { name: 'BIR 2316 Certificate' },
+    'alphalist': { name: 'BIR Alphalist' }
   };
-  
-  let reportInfo = reportMap[reportType] || { name: 'Report', employees: '8', contributions: '₱3,250.12' };
-  
-  let url = 'dashboard.php?module=payroll&view=government_reports_compliance&ajax=1&modal=preview&type=' + 
-            encodeURIComponent(reportType) +
-            '&period=' + encodeURIComponent(period) +
-            '&employees=' + encodeURIComponent(reportInfo.employees) +
-            '&contributions=' + encodeURIComponent(reportInfo.contributions);
-  
+
+  let url = 'dashboard.php?module=payroll&view=government_reports_compliance&ajax=1&modal=preview&type=' + encodeURIComponent(reportType) + '&period=' + encodeURIComponent(period);
+  if (typeof payrollRunId !== 'undefined' && payrollRunId) {
+    url += '&payroll_run_id=' + encodeURIComponent(payrollRunId);
+  }
+
   fetch(url)
     .then(response => response.text())
     .then(html => {
       const temp = document.createElement('div');
       temp.innerHTML = html;
       const modalOverlay = temp.querySelector('.modal-overlay');
-      
+
       if (modalOverlay) {
         document.querySelectorAll('.modal-overlay').forEach(m => m.remove());
         document.body.appendChild(modalOverlay);

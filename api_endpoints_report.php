@@ -134,9 +134,7 @@ $endpoints = [
             'getPayrollApprovals' => 'GET - List approvals',
             'getPayrollApprovalDetail' => 'GET - Get single approval',
             
-            // Audit Trails
-            'getPayrollAuditTrails' => 'GET - List audit trails',
-            'getPayrollAuditTrailDetail' => 'GET - Get single trail',
+            // Audit Trails (removed)
         ],
         'Total Endpoints' => 40
     ],
