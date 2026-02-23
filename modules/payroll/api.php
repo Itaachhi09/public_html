@@ -245,6 +245,36 @@ try {
                     ['success' => false, 'error' => 'Run employee not found', 'http_code' => 404];
             }
             break;
+
+        case 'getEmployeePayslipHistory':
+            $emp_id = $_GET['employee_id'] ?? null;
+            if (!$emp_id) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Employee ID required'];
+            } else {
+                // Combine history from payroll_run_employees and payslip_records so we show runs
+                // where payslips were generated into the payslip_records table as well as run entries.
+                $sql = "SELECT t.run_employee_id, t.payroll_run_id, t.gross_pay, t.net_pay, t.payslip_number, t.generated_at, t.period_name, t.start_date, t.end_date, t.pay_date, t.run_status
+                         FROM (
+                            SELECT pre.id AS run_employee_id, pre.payroll_run_id, pre.gross_pay, pre.net_pay, pre.payslip_number, pre.generated_at, pr.period_name, pr.start_date, pr.end_date, pr.pay_date, pr.status AS run_status
+                            FROM payroll_run_employees pre
+                            JOIN payroll_runs pr ON pr.id = pre.payroll_run_id
+                            WHERE pre.employee_id = ?
+                            UNION
+                            SELECT prr.id AS run_employee_id, prr.payroll_run_id, prr.gross_pay, prr.net_pay, prr.payslip_number, prr.generated_at, pr2.period_name, pr2.start_date, pr2.end_date, pr2.pay_date, pr2.status AS run_status
+                            FROM payslip_records prr
+                            JOIN payroll_runs pr2 ON pr2.id = prr.payroll_run_id
+                            WHERE prr.employee_id = ?
+                         ) t
+                         ORDER BY t.start_date DESC";
+
+                $stmt = $db->prepare($sql);
+                $stmt->execute([$emp_id, $emp_id]);
+                $history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                $response = ['success' => true, 'data' => $history];
+            }
+            break;
         
         case 'addEmployeeToPayrollRun':
             $data = json_decode(file_get_contents('php://input'), true) ?? $_POST;

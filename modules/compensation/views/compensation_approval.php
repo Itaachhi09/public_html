@@ -15,12 +15,39 @@ $pending = $approvalModel->getPending();
 
 $handlerUrl = 'modules/compensation/compensation_approval_handler.php';
 
-$typeLabels = [
-    'salary_above_band' => 'Salary above band',
-    'double_pay_tagging' => 'Double pay tagging',
-    'manual_adjustment' => 'Manual adjustment',
-    'policy_exception' => 'Policy exception',
-];
+// Helper to read enum values from information_schema
+function getEnumOptions($table, $column) {
+    try {
+        $db = \Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?");
+        $stmt->execute([$table, $column]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row || empty($row['COLUMN_TYPE'])) return [];
+        if (preg_match("/^enum\\((.*)\\)$/i", $row['COLUMN_TYPE'], $m)) {
+            preg_match_all("/'((?:[^']|\\\\')*)'/", $m[1], $matches);
+            return $matches[1] ?? [];
+        }
+    } catch (Exception $e) {
+        return [];
+    }
+    return [];
+}
+
+// Build friendly labels for request types from DB enum
+$typeLabels = [];
+$rtypes = getEnumOptions('compensation_approval_requests', 'request_type');
+if (!empty($rtypes)) {
+    foreach ($rtypes as $t) {
+        $typeLabels[$t] = ucwords(str_replace(['_', '-'], ' ', $t));
+    }
+} else {
+    $typeLabels = [
+        'salary_above_band' => 'Salary above band',
+        'double_pay_tagging' => 'Double pay tagging',
+        'manual_adjustment' => 'Manual adjustment',
+        'policy_exception' => 'Policy exception',
+    ];
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -231,10 +258,21 @@ body {
                             <label class="form-label">Type <span class="required">•</span></label>
                             <select name="request_type" required class="form-select">
                                 <option value="">Select Type</option>
-                                <option value="salary_above_band">Salary above band</option>
-                                <option value="double_pay_tagging">Double pay tagging</option>
-                                <option value="manual_adjustment">Manual adjustment</option>
-                                <option value="policy_exception">Policy exception</option>
+                                <?php
+                                $reqOpts = getEnumOptions('compensation_approval_requests', 'request_type');
+                                if (!empty($reqOpts)) {
+                                    foreach ($reqOpts as $ro) {
+                                        echo '<option value="' . htmlspecialchars($ro) . '">' . htmlspecialchars(ucwords(str_replace('_',' ',$ro))) . '</option>';
+                                    }
+                                } else {
+                                    ?>
+                                    <option value="salary_above_band">Salary above band</option>
+                                    <option value="double_pay_tagging">Double pay tagging</option>
+                                    <option value="manual_adjustment">Manual adjustment</option>
+                                    <option value="policy_exception">Policy exception</option>
+                                <?php
+                                }
+                                ?>
                             </select>
                         </div>
                         <div class="form-group">

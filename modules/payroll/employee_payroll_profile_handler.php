@@ -6,7 +6,15 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+// Detect AJAX upfront so we can return JSON errors instead of redirects
+$isAjaxRequest = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 if (empty($_SESSION['token'])) {
+    if ($isAjaxRequest) {
+        header('Content-Type: application/json');
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Not authenticated']);
+        exit;
+    }
     header('Location: ../../index.php');
     exit;
 }
@@ -22,7 +30,7 @@ $err = '';
 try {
     $db = new Database();
     $conn = $db->connect();
-    $cols = ['pay_type', 'payroll_status', 'tax_status', 'sss_status', 'philhealth_status', 'pagibig_status', 'bank_name', 'account_type', 'account_status'];
+    $cols = ['payroll_eligible','pay_type', 'payroll_status', 'tax_status', 'sss_status', 'philhealth_status', 'pagibig_status', 'bank_name', 'account_type', 'account_status'];
     $stmt = $conn->query("SHOW COLUMNS FROM employee_payroll_profiles");
     $existing = [];
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -30,7 +38,13 @@ try {
     }
     foreach ($cols as $col) {
         if (!in_array($col, $existing, true)) {
-            $type = in_array($col, ['pay_type', 'payroll_status', 'tax_status', 'sss_status', 'philhealth_status', 'pagibig_status', 'account_type', 'account_status'], true) ? 'VARCHAR(50) DEFAULT NULL' : 'VARCHAR(100) DEFAULT NULL';
+            if ($col === 'payroll_eligible') {
+                $type = 'TINYINT(1) DEFAULT 1';
+            } elseif (in_array($col, ['pay_type', 'payroll_status', 'tax_status', 'sss_status', 'philhealth_status', 'pagibig_status', 'account_type', 'account_status'], true)) {
+                $type = 'VARCHAR(50) DEFAULT NULL';
+            } else {
+                $type = 'VARCHAR(100) DEFAULT NULL';
+            }
             $conn->exec("ALTER TABLE employee_payroll_profiles ADD COLUMN `{$col}` {$type}");
         }
     }
@@ -108,6 +122,43 @@ if (!empty($_POST['employee_id'])) {
     $redirectEmployeeId = (int) $_POST['employee_id'];
     $_SESSION['payroll_profile_employee_id'] = $redirectEmployeeId;
 }
+
+// Detect AJAX requests (X-Requested-With) and return JSON instead of redirect
+$isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+if ($isAjax) {
+    // If AJAX, include updated employee/profile snapshot for client-side UI update
+    $payload = [
+        'success' => empty($err),
+        'message' => $err ?: $msg,
+        'employee_id' => $redirectEmployeeId
+    ];
+    if ($redirectEmployeeId) {
+        try {
+            $db = new Database();
+            $conn = $db->connect();
+            $stmt = $conn->prepare("SELECT e.employee_id, e.employee_code, e.first_name, e.last_name, p.pay_type, p.payroll_eligible, p.id AS profile_id FROM employees e LEFT JOIN employee_payroll_profiles p ON p.employee_id = e.employee_id WHERE e.employee_id = ? LIMIT 1");
+            $stmt->execute([$redirectEmployeeId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($row) {
+                $payload['employee'] = [
+                    'employee_id' => (int)$row['employee_id'],
+                    'employee_code' => $row['employee_code'],
+                    'name' => trim(($row['first_name'] ?? '') . ' ' . ($row['last_name'] ?? '')),
+                    'pay_type' => $row['pay_type'] ?? '---',
+                    'payroll_eligible' => (int)($row['payroll_eligible'] ?? 0),
+                    'has_profile' => !empty($row['profile_id'])
+                ];
+            }
+        } catch (Exception $e) {
+            // ignore fetch errors; still return basic payload
+        }
+    }
+
+    header('Content-Type: application/json');
+    echo json_encode($payload);
+    exit;
+}
+
 if ($redirectEmployeeId) {
     $redirectParams['employee_id'] = $redirectEmployeeId;
     // Add modal parameters to keep modal open after save

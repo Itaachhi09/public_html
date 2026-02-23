@@ -89,16 +89,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Controller processes the action and updates session/database
         $controllerResult = PayslipController::route();
-        
+
+        // If this was an AJAX/XHR request, return JSON instead of redirecting
+        $isXhr = isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        if ($isXhr) {
+          header('Content-Type: application/json; charset=utf-8');
+          echo json_encode($controllerResult ?: ['success' => false, 'message' => 'No response from controller']);
+          exit;
+        }
+
         // After controller processes the action, redirect back to the same page
         // This ensures the view reloads with updated state and displays messages
         $redirect_url = BASE_URL . 'dashboard.php?ref=payroll&page=payslip_management';
-        
+
         // Preserve payroll_id if provided
         if ($payroll_id) {
-            $redirect_url .= '&payroll_id=' . urlencode($payroll_id);
+          $redirect_url .= '&payroll_id=' . urlencode($payroll_id);
         }
-        
+
         header('Location: ' . $redirect_url);
         exit;
     }
@@ -1990,6 +1998,50 @@ $notifications = 3;
           this.style.background = 'rgba(255, 255, 255, 0.15)';
         });
       }
+      // Global AJAX form interceptor: prevents full-page redirects for forms marked data-ajax="1"
+      document.addEventListener('submit', function(e) {
+        const form = e.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        if (form.dataset && form.dataset.ajax === '1') {
+          e.preventDefault();
+          const submitBtn = form.querySelector('button[type="submit"]');
+          const origText = submitBtn ? submitBtn.textContent : null;
+          if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Processing...'; }
+          const fd = new FormData(form);
+          fetch(form.action || window.location.href, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: fd,
+            credentials: 'same-origin'
+          })
+          .then(async res => {
+            const text = await res.text();
+            try {
+              const json = JSON.parse(text);
+              if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
+              if (json && json.success) {
+                // show a small toast or alert
+                alert(json.message || 'Success');
+                // Try to close modal if present
+                document.querySelectorAll('.modal-overlay.show').forEach(m => m.remove());
+                // Optionally reload current module to reflect changes
+                // location.reload(); // not automatic to avoid losing state
+              } else {
+                alert(json.message || 'Operation failed');
+              }
+            } catch (err) {
+              if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
+              console.error('Invalid JSON response for AJAX form:', text);
+              alert('Server error: check console');
+            }
+          })
+          .catch(err => {
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = origText; }
+            console.error('AJAX form error:', err);
+            alert('Network error: check console');
+          });
+        }
+      });
     });
 
     function performGlobalSearch(query) {

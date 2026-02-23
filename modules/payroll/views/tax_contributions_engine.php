@@ -402,7 +402,7 @@ $totalTaxRecords = count($taxRecords ?? []);
 
   <!-- Filters -->
   <div class="section">
-    <form method="GET" action="">
+    <form id="taxEngineFilterForm" method="GET" action="">
       <div class="filter-section">
         <div class="form-group">
           <label>Search Employee</label>
@@ -426,6 +426,79 @@ $totalTaxRecords = count($taxRecords ?? []);
       </div>
     </form>
   </div>
+
+  <script>
+    // Intercept tax engine filter to load results via dashboard loader
+    (function(){
+      const form = document.getElementById('taxEngineFilterForm');
+      if (!form) return;
+      form.addEventListener('submit', function(e){
+        e.preventDefault();
+        const fd = new FormData(form);
+        const params = new URLSearchParams();
+        for (const [k,v] of fd.entries()) {
+          if (v !== null && String(v).trim() !== '') params.append(k, v);
+        }
+        const newQuery = params.toString();
+        const viewUrl = 'dashboard.php?module=payroll&view=tax_contributions_engine' + (newQuery ? '&' + newQuery : '');
+
+        history.replaceState(null, '', '?' + (newQuery ? ('module=payroll&view=tax_contributions_engine&' + newQuery) : 'module=payroll&view=tax_contributions_engine'));
+
+        fetch(viewUrl)
+          .then(resp => { if (!resp.ok) throw new Error('HTTP ' + resp.status); return resp.text(); })
+          .then(html => {
+            const scriptRegex = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi;
+            const execRegex = new RegExp(scriptRegex);
+            const scripts = [];
+            let match;
+            while ((match = execRegex.exec(html)) !== null) {
+              const scriptTag = match[0];
+              const scriptContent = scriptTag.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '');
+              scripts.push(scriptContent);
+            }
+
+            const htmlWithoutScripts = html.replace(scriptRegex, '');
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlWithoutScripts, 'text/html');
+
+            // Inject styles
+            const styles = doc.querySelectorAll('style');
+            styles.forEach(style => {
+              try {
+                const newStyle = document.createElement('style');
+                newStyle.setAttribute('data-module-style', 'true');
+                newStyle.textContent = style.textContent;
+                document.head.appendChild(newStyle);
+              } catch (e) { console.error('Error injecting style:', e); }
+            });
+
+            const mainContent = doc.querySelector('.main-content');
+            const contentArea = document.getElementById('content-area');
+            if (contentArea) {
+              try {
+                if (mainContent) contentArea.innerHTML = mainContent.innerHTML;
+                else contentArea.innerHTML = doc.body.innerHTML;
+              } catch (e) { console.error('Error setting content:', e); }
+            }
+
+            setTimeout(() => {
+              scripts.forEach(scriptContent => {
+                try {
+                  const scriptEl = document.createElement('script');
+                  scriptEl.textContent = scriptContent;
+                  document.body.appendChild(scriptEl);
+                  scriptEl.parentNode.removeChild(scriptEl);
+                } catch (e) { console.error('Error executing script:', e); }
+              });
+            }, 50);
+          })
+          .catch(err => {
+            console.error('Error loading tax engine filtered results:', err);
+            alert('Error loading filtered results. Check console.');
+          });
+      });
+    })();
+  </script>
 
   <!-- Summary Cards -->
   <div class="summary-cards">

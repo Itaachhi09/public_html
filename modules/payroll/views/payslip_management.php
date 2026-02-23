@@ -20,16 +20,38 @@ require_once __DIR__ . '/../../../config/Database.php';
 require_once __DIR__ . '/../../../config/BaseConfig.php';
 require_once __DIR__ . '/../models/EmployeeSalary.php';
 require_once __DIR__ . '/../models/PayrollRunEmployee.php';
+require_once __DIR__ . '/../models/PayrollRun.php';
 
 $employeeSalary = new EmployeeSalary();
 $payrollEmployee = new PayrollRunEmployee();
+$payrollRunModel = new PayrollRun();
 
-// Fetch payslips
-$payslips = $payrollEmployee->query("SELECT pre.*, pr.period_name, pr.pay_date, e.first_name, e.last_name, e.employee_code 
-                                      FROM payroll_run_employees pre 
-                                      JOIN payroll_runs pr ON pre.payroll_run_id = pr.id 
-                                      JOIN employees e ON pre.employee_id = e.employee_id 
-                                      ORDER BY pr.pay_date DESC, e.employee_code ASC");
+// Determine selected payroll run (from GET or default to latest processed/approved)
+$selected_payroll = isset($_GET['payroll_id']) && is_numeric($_GET['payroll_id']) ? (int)$_GET['payroll_id'] : null;
+$approved_runs = $payrollRunModel->query("SELECT * FROM payroll_runs WHERE status IN ('Approved','Processed') ORDER BY start_date DESC");
+
+if (!$selected_payroll) {
+  // pick the first available approved/processed run as default
+  $selected_payroll = !empty($approved_runs) ? (int)$approved_runs[0]['id'] : null;
+}
+
+$payslips = [];
+$selected_run = null;
+if ($selected_payroll) {
+  $selected_run = $payrollRunModel->find($selected_payroll);
+  $payslips = $payrollEmployee->query(
+    "SELECT pre.*, pr.period_name, pr.pay_date, e.first_name, e.last_name, e.employee_code 
+     FROM payroll_run_employees pre 
+     JOIN payroll_runs pr ON pre.payroll_run_id = pr.id 
+     JOIN employees e ON pre.employee_id = e.employee_id 
+     WHERE pre.payroll_run_id = ? 
+     ORDER BY e.employee_code ASC",
+    [$selected_payroll]
+  );
+}
+
+// Fetch payroll runs that are approved or processed (ready for payslip generation)
+$approved_runs = $payrollRunModel->query("SELECT * FROM payroll_runs WHERE status IN ('Approved','Processed') ORDER BY start_date DESC");
 ?>
 
 <style>
@@ -638,7 +660,7 @@ $payslips = $payrollEmployee->query("SELECT pre.*, pr.period_name, pr.pay_date, 
   <div class="section">
     <h3 class="section-header">🚀 Generate Payslips</h3>
 
-    <form method="POST" action="<?= BASE_URL ?>dashboard.php">
+    <form id="payslipGenerateForm" method="POST" action="<?= BASE_URL ?>dashboard.php">
       <input type="hidden" name="module" value="payroll">
       <input type="hidden" name="view" value="payslip_management">
       <input type="hidden" name="payroll_id" id="payroll_id_generate">
@@ -650,9 +672,13 @@ $payslips = $payrollEmployee->query("SELECT pre.*, pr.period_name, pr.pay_date, 
             <label>Payroll Period <span style="color: #ef4444;">*</span></label>
             <select name="payroll_id" id="payroll_period_select" required onchange="document.getElementById('payroll_id_generate').value = this.value;">
               <option value="">-- Select Period --</option>
-              <option value="1" selected>February 2026 Period 1 (Feb 1-15)</option>
-              <option value="2">January 2026 Period 2 (Jan 16-31)</option>
-              <option value="3">January 2026 Period 1 (Jan 1-15)</option>
+              <?php if (!empty($approved_runs)) : ?>
+                <?php foreach ($approved_runs as $r): ?>
+                  <option value="<?php echo (int)$r['id']; ?>" <?php echo (isset($_GET['payroll_id']) && $_GET['payroll_id'] == $r['id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($r['period_name'] . ' (' . ($r['start_date'] ?? '') . ' - ' . ($r['end_date'] ?? '') . ')'); ?></option>
+                <?php endforeach; ?>
+              <?php else: ?>
+                <option value="">No approved payroll runs available</option>
+              <?php endif; ?>
             </select>
             <small>Select the approved payroll to generate payslips</small>
           </div>
@@ -678,7 +704,15 @@ $payslips = $payrollEmployee->query("SELECT pre.*, pr.period_name, pr.pay_date, 
 
   <!-- Payslips List & Status -->
   <div class="section">
-    <h3 class="section-header">📋 Payslip Status - February 2026 Period 1</h3>
+  <?php
+    // Shorten header label by removing trailing date ranges if present (e.g. "Payroll Period: Mar 5, 2026 - Mar 20, 2026" -> "Payroll Period")
+    $header_label = $selected_run['period_name'] ?? 'Payroll Period';
+    if (strpos($header_label, ':') !== false) {
+      $parts = explode(':', $header_label, 2);
+      $header_label = trim($parts[0]);
+    }
+  ?>
+    <h3 class="section-header">📋 Payslip Status - <?php echo htmlspecialchars($header_label); ?></h3>
 
     <div class="summary-cards">
       <div class="summary-card">
@@ -859,61 +893,127 @@ window.openPayslipModal = function(runEmployeeId, payrollRunId, empName, periodN
 
   title.textContent = 'Payslip - ' + (empName || '');
 
-  var apiUrl = '<?php echo BASE_URL; ?>modules/payroll/api.php?action=getPayrollRunEmployeeDetail&id=' + encodeURIComponent(runEmployeeId);
+  var baseApi = '<?php echo BASE_URL; ?>modules/payroll/api.php';
   function fmt(n){ return '₱' + Number(n || 0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
-  fetch(apiUrl, { credentials: 'same-origin' })
+  // First fetch the run employee detail to know the employee_id
+  fetch(baseApi + '?action=getPayrollRunEmployeeDetail&id=' + encodeURIComponent(runEmployeeId), { credentials: 'same-origin' })
     .then(function(r){ return r.json(); })
     .then(function(res){
+      if (!res.success) throw new Error(res.error || 'Failed to fetch run employee');
       var d = res.data || {};
-      var html = '<div class="payslip-preview" style="padding: 1.5rem; margin: 0;">';
-      html += '<div class="payslip-header" style="margin-bottom: 1rem;">';
-      html += '<div class="company-info"><h3 style="font-size: 14px; margin-bottom: 0.25rem;">Healthcare Hospital Inc.</h3>';
-      html += '<p style="margin: 0; font-size: 11px; color: #6b7280;">Payslip ID: ' + (d.payslip_number || '') + '</p></div>';
-      html += '<div class="payslip-title"><h2 style="font-size: 14px; margin: 0;">PAYSLIP</h2>';
-      html += '<p style="margin: 0.25rem 0 0 0; font-size: 11px; color: #6b7280;">Pay Period: ' + (periodName || '') + '</p></div>';
-      html += '</div>';
+      var employeeId = d.employee_id;
 
-      html += '<div class="employee-info" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">';
-      html += '<div><div class="info-item" style="display: flex; justify-content: space-between; border-bottom: 1px solid #e5e7eb; padding: 0.5rem 0;">';
-      html += '<label style="font-size: 12px; color: #6b7280;">Employee ID</label><value style="font-size: 12px;">' + (d.employee_code || '') + '</value></div>';
-      html += '<div class="info-item" style="display: flex; justify-content: space-between; border-bottom: 1px solid #e5e7eb; padding: 0.5rem 0;">';
-      html += '<label style="font-size: 12px; color: #6b7280;">Name</label><value style="font-size: 12px;">' + (empName || (d.first_name + ' ' + d.last_name)) + '</value></div></div>';
-      html += '<div><div class="info-item" style="display: flex; justify-content: space-between; border-bottom: 1px solid #e5e7eb; padding: 0.5rem 0;">';
-      html += '<label style="font-size: 12px; color: #6b7280;">Pay Date</label><value style="font-size: 12px;">' + (payDate || d.pay_date || '') + '</value></div>';
-      html += '<div class="info-item" style="display: flex; justify-content: space-between; padding: 0.5rem 0;">';
-      html += '<label style="font-size: 12px; color: #6b7280;">Status</label><value style="font-size: 12px;"><span class="badge ' + ((d.payslip_number) ? 'badge-generated' : 'badge-pending') + '">' + ((d.payslip_number) ? 'Generated' : 'Pending') + '</span></value></div></div>';
-      html += '</div>';
+      // Fetch employee payslip history
+      return fetch(baseApi + '?action=getEmployeePayslipHistory&employee_id=' + encodeURIComponent(employeeId), { credentials: 'same-origin' })
+        .then(function(r){ return r.json(); })
+        .then(function(histRes){
+          if (!histRes.success) histRes.data = [];
+          var history = histRes.data || [];
 
-      html += '<div style="border-top: 1px solid #e5e7eb; padding-top: 1rem; margin-top: 1rem;">';
-      html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">';
-      html += '<label>Basic Pay</label><value style="font-family: monospace;">' + fmt(d.basic_pay) + '</value></div>';
-      html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">';
-      html += '<label>Incentives</label><value style="font-family: monospace;">' + fmt(d.incentives) + '</value></div>';
-      html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; font-weight: 600; border-top: 2px solid #e5e7eb; padding-top: 0.75rem; font-size: 12px;">';
-      html += '<label>Gross Pay</label><value style="font-family: monospace;">' + fmt(d.gross_pay) + '</value></div>';
-      html += '</div>';
+          // Build two-column modal: left - history list, right - detail preview
+          var html = '<div style="display:grid; grid-template-columns: 320px 1fr; gap:1rem;">';
 
-      html += '<div style="border-top: 1px solid #e5e7eb; padding-top: 1rem; margin-top: 1rem;">';
-      html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">';
-      html += '<label>SSS</label><value style="font-family: monospace;">' + fmt(d.sss_contribution) + '</value></div>';
-      html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">';
-      html += '<label>PhilHealth</label><value style="font-family: monospace;">' + fmt(d.philhealth_contribution) + '</value></div>';
-      html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">';
-      html += '<label>Pag-IBIG</label><value style="font-family: monospace;">' + fmt(d.pagibig_contribution) + '</value></div>';
-      html += '<div style="display: flex; justify-content: space-between; padding: 0.5rem 0; font-weight: 600; border-top: 2px solid #e5e7eb; padding-top: 0.75rem; font-size: 12px;">';
-      html += '<label>Total Deductions</label><value style="font-family: monospace;">' + fmt(d.total_deductions) + '</value></div>';
-      html += '</div>';
+          // Left: history list with cutoff filters
+          html += '<div style="border-right:1px solid #e5e7eb; padding-right:0.5rem;">';
+          html += '<div style="margin-bottom:0.5rem;"> <strong>Payroll History</strong><br><small style="color:#6b7280;">Filter by cut-off / period</small></div>';
+          html += '<div style="max-height:60vh; overflow:auto;">';
+          if (history.length === 0) {
+            html += '<div style="color:#6b7280;">No payslip history found for this employee.</div>';
+          } else {
+            html += '<ul style="list-style:none; padding:0; margin:0;">';
+            history.forEach(function(h){
+              var label = (h.period_name || (h.start_date + ' - ' + h.end_date));
+              var status = h.payslip_number ? 'Generated' : 'Pending';
+              html += '<li style="margin:0 0 0.5rem 0;">';
+              html += '<button type="button" class="history-row" data-runempid="' + h.run_employee_id + '" data-label="' + (label+'').replace(/"/g,'') + '" style="width:100%; text-align:left; padding:0.5rem; border-radius:4px; border:1px solid #e5e7eb; background:white;">';
+              html += '<div style="display:flex; justify-content:space-between; align-items:center;">';
+              html += '<div style="font-size:13px; color:#1f2937;">' + label + '</div>';
+              html += '<div style="font-size:12px; color:#6b7280;">' + (h.run_status || '') + '</div>';
+              html += '</div>';
+              html += '<div style="display:flex; justify-content:space-between; margin-top:6px; font-size:12px; color:#374151;">';
+              html += '<div>' + (h.pay_date || '') + '</div>';
+              html += '<div>' + (h.payslip_number ? '<span class="badge badge-generated">Generated</span>' : '<span class="badge">Pending</span>') + '</div>';
+              html += '</div>';
+              html += '</button>';
+              html += '</li>';
+            });
+            html += '</ul>';
+          }
+          html += '</div>'; // history scroll
+          html += '</div>'; // left column
 
-      html += '<div style="border-top: 2px solid #1f2937; padding-top: 1rem; margin-top: 1rem; display: flex; justify-content: space-between; font-weight: 700; font-size: 14px;">';
-      html += '<label>NET PAY</label><value style="font-family: monospace;">' + fmt(d.net_pay) + '</value></div>';
-      html += '</div>';
+          // Right: detail placeholder
+          html += '<div id="payslip-detail-panel">';
+          html += '<div style="color:#6b7280; margin-bottom:0.5rem;">Select a payroll period on the left to view the detailed payslip.</div>';
+          html += '</div>';
 
-      body.innerHTML = html;
-      modal.classList.add('active');
-      body.scrollTop = 0;
-    })
-    .catch(function(err){
+          html += '</div>'; // grid
+
+          body.innerHTML = html;
+          modal.classList.add('active');
+          body.scrollTop = 0;
+
+          // Attach click handlers to history rows
+          var rows = body.querySelectorAll('.history-row');
+          rows.forEach(function(btn){
+            btn.addEventListener('click', function(){
+              var rid = this.getAttribute('data-runempid');
+              var lbl = this.getAttribute('data-label');
+              loadPayslipDetail(rid, lbl);
+            });
+          });
+
+          // Auto-load the clicked runEmployeeId (the one that opened the modal) if present
+          if (runEmployeeId) {
+            loadPayslipDetail(runEmployeeId, periodName || '');
+          }
+
+          // Function to load individual payslip detail into right panel
+          function loadPayslipDetail(runEmpId, label) {
+            var panel = document.getElementById('payslip-detail-panel');
+            panel.innerHTML = '<div style="padding:1rem; color:#6b7280;">Loading payslip...</div>';
+            fetch(baseApi + '?action=getPayrollRunEmployeeDetail&id=' + encodeURIComponent(runEmpId), { credentials: 'same-origin' })
+              .then(function(r){ return r.json(); })
+              .then(function(r2){
+                if (!r2.success) throw new Error(r2.error || 'Failed to load payslip');
+                var d = r2.data || {};
+                var html = '<div class="payslip-preview" style="padding: 1rem; margin: 0;">';
+                html += '<div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:1rem;">';
+                html += '<div><h3 style="margin:0; font-size:14px;">Healthcare Hospital Inc.</h3><p style="margin:0; font-size:11px; color:#6b7280;">Payslip ID: ' + (d.payslip_number || '') + '</p></div>';
+                html += '<div style="text-align:right;"><h2 style="margin:0; font-size:14px;">PAYSLIP</h2><p style="margin:0; font-size:11px; color:#6b7280;">' + (label || '') + '</p></div>';
+                html += '</div>';
+
+                html += '<div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">';
+                html += '<div><div style="display:flex; justify-content:space-between; border-bottom:1px solid #e5e7eb; padding:0.5rem 0;"> <label style="color:#6b7280;">Employee ID</label><value>' + (d.employee_id || '') + '</value></div>';
+                html += '<div style="display:flex; justify-content:space-between; padding:0.5rem 0;"> <label style="color:#6b7280;">Name</label><value>' + (empName || (d.first_name + ' ' + d.last_name)) + '</value></div></div>';
+                html += '<div><div style="display:flex; justify-content:space-between; border-bottom:1px solid #e5e7eb; padding:0.5rem 0;"> <label style="color:#6b7280;">Pay Date</label><value>' + (d.pay_date || '') + '</value></div>';
+                html += '<div style="display:flex; justify-content:space-between; padding:0.5rem 0;"> <label style="color:#6b7280;">Status</label><value>' + (d.payslip_number ? '<span class="badge badge-generated">Generated</span>' : '<span class="badge">Pending</span>') + '</value></div></div>';
+                html += '</div>';
+
+                html += '<div style="border-top:1px solid #e5e7eb; padding-top:1rem;">';
+                html += '<div style="display:flex; justify-content:space-between; padding:0.5rem 0;">Basic Pay <value>' + fmt(d.basic_pay) + '</value></div>';
+                html += '<div style="display:flex; justify-content:space-between; padding:0.5rem 0;">Incentives <value>' + fmt(d.incentives) + '</value></div>';
+                html += '<div style="display:flex; justify-content:space-between; padding:0.5rem 0; font-weight:600;">Gross Pay <value>' + fmt(d.gross_pay) + '</value></div>';
+                html += '</div>';
+
+                html += '<div style="border-top:1px solid #e5e7eb; padding-top:1rem;">';
+                html += '<div style="display:flex; justify-content:space-between; padding:0.5rem 0;">SSS <value>' + fmt(d.sss_contribution) + '</value></div>';
+                html += '<div style="display:flex; justify-content:space-between; padding:0.5rem 0;">PhilHealth <value>' + fmt(d.philhealth_contribution) + '</value></div>';
+                html += '<div style="display:flex; justify-content:space-between; padding:0.5rem 0; font-weight:600;">Total Deductions <value>' + fmt(d.total_deductions) + '</value></div>';
+                html += '</div>';
+
+                html += '<div style="border-top:2px solid #1f2937; padding-top:1rem; margin-top:1rem; display:flex; justify-content:space-between; font-weight:700;">NET PAY <value>' + fmt(d.net_pay) + '</value></div>';
+                html += '</div>';
+
+                panel.innerHTML = html;
+              }).catch(function(err){
+                panel.innerHTML = '<div style="color:#ef4444;">Failed to load payslip detail.</div>';
+                console.error(err);
+              });
+          }
+        });
+    }).catch(function(err){
       console.error('Failed to load payslip data', err);
       alert('Failed to load payslip data.');
     });
@@ -930,4 +1030,57 @@ document.addEventListener('keydown', function(e) {
     window.closePayslipModal();
   }
 });
+</script>
+
+<script>
+// AJAX submit for payslip generation / generate & email
+;(function(){
+  var form = document.getElementById('payslipGenerateForm');
+  if (!form) return;
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    var submitter = e.submitter || document.activeElement;
+    var actionVal = (submitter && submitter.name === 'action') ? submitter.value : (new FormData(form)).get('action');
+    if (!actionVal) {
+      alert('Please choose an action.');
+      return;
+    }
+
+    var fd = new FormData(form);
+    fd.set('ref', 'payroll');
+    fd.set('page', 'payslip_management');
+    fd.set('action', actionVal);
+
+    // disable buttons
+    var buttons = form.querySelectorAll('button[type="submit"]');
+    buttons.forEach(function(b){ b.disabled = true; });
+
+    fetch('<?= BASE_URL ?>dashboard.php', {
+      method: 'POST',
+      body: fd,
+      credentials: 'same-origin',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    }).then(function(r){ return r.json(); })
+    .then(function(json){
+      if (json && json.success) {
+        alert(json.message || 'Operation successful');
+        // reload module content in-place
+        return fetch('<?= BASE_URL ?>dashboard.php?module=payroll&view=payslip_management', { credentials: 'same-origin' });
+      }
+      throw new Error((json && json.message) ? json.message : 'Operation failed');
+    }).then(function(r){ return r.text(); }).then(function(html){
+      var container = document.getElementById('content-area');
+      if (container) container.innerHTML = html;
+      else location.reload();
+    }).catch(function(err){
+      console.error(err);
+      alert('Error: ' + (err.message || err));
+    }).finally(function(){
+      buttons.forEach(function(b){ b.disabled = false; });
+    });
+  });
+})();
 </script>

@@ -15,12 +15,32 @@ $approvedActive = $versionModel->getApprovedActive();
 
 $handlerUrl = 'modules/compensation/compensation_versioning_handler.php';
 
-$typeLabels = [
-    'pay_component' => 'Pay component',
-    'salary_band' => 'Salary band',
-    'policy' => 'Policy',
-    'employee_assignment' => 'Employee assignment',
-];
+// Build friendly labels for entity types from distinct values in DB (fallback to sensible defaults)
+$typeLabels = [];
+try {
+    $rows = $versionModel->query("SELECT DISTINCT entity_type FROM compensation_version_history ORDER BY entity_type");
+    if (!empty($rows)) {
+        foreach ($rows as $r) {
+            $key = $r['entity_type'];
+            $typeLabels[$key] = ucwords(str_replace(['_', '-'], ' ', $key));
+        }
+    } else {
+        // fallback defaults
+        $typeLabels = [
+            'pay_component' => 'Pay component',
+            'salary_band' => 'Salary band',
+            'policy' => 'Policy',
+            'employee_assignment' => 'Employee assignment',
+        ];
+    }
+} catch (Exception $e) {
+    $typeLabels = [
+        'pay_component' => 'Pay component',
+        'salary_band' => 'Salary band',
+        'policy' => 'Policy',
+        'employee_assignment' => 'Employee assignment',
+    ];
+}
 ?>
 <!DOCTYPE html>
 <html>

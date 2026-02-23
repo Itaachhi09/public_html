@@ -144,14 +144,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
         // Get employees with salary and department info
+        // Use existing `job_titles` and `employee_salaries` tables; select latest salary via subquery
         $employees = Database::getInstance()->query(
-            "SELECT pre.*, e.employee_code, e.first_name, e.last_name, e.department_id, e.position_id,
-                    d.department_name, p.position_name, es.basic_rate, es.salary_type
+            "SELECT pre.*, e.employee_code, e.first_name, e.last_name, e.department_id, e.job_title_id,
+                    d.department_name, j.title AS job_title,
+                    (SELECT basic_rate FROM employee_salaries WHERE employee_id = e.employee_id ORDER BY effective_date DESC LIMIT 1) AS basic_rate,
+                    (SELECT salary_type FROM employee_salaries WHERE employee_id = e.employee_id ORDER BY effective_date DESC LIMIT 1) AS salary_type
              FROM payroll_run_employees pre
              JOIN employees e ON e.employee_id = pre.employee_id
              LEFT JOIN departments d ON d.department_id = e.department_id
-             LEFT JOIN positions p ON p.position_id = e.position_id
-             LEFT JOIN employee_salary es ON es.employee_id = e.employee_id AND es.is_current = 1
+             LEFT JOIN job_titles j ON e.job_title_id = j.job_title_id
              WHERE pre.payroll_run_id = ?
              ORDER BY e.last_name",
             [$payroll_id]

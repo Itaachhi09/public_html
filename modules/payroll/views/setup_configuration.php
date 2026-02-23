@@ -6,6 +6,7 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+require_once __DIR__ . '/../../../config/BaseConfig.php';
 require_once __DIR__ . '/../../../config/Database.php';
 require_once __DIR__ . '/../models/PayrollConfiguration.php';
 require_once __DIR__ . '/../models/PayrollComponent.php';
@@ -703,11 +704,6 @@ $totalComponents = count($components ?? []);
           <textarea id="componentDesc" placeholder="Brief description of the component" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 4px; min-height: 80px; resize: vertical;"></textarea>
         </div>
 
-        <div>
-          <label style="display: block; font-weight: 500; margin-bottom: 0.5rem;">Category</label>
-          <input type="text" id="componentCategory" placeholder="e.g., Allowance, Tax, Contribution" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 4px;">
-        </div>
-
         <div id="componentMessage" style="padding: 0.75rem; border-radius: 4px; display: none;"></div>
 
         <div style="display: flex; gap: 1rem; margin-top: 1rem;">
@@ -1377,6 +1373,9 @@ $totalComponents = count($components ?? []);
 </div>
 
 <script>
+  // Base URL for API calls (auto-detected from server configuration)
+  const APP_BASE_URL = '<?php echo BASE_URL; ?>';
+  
   // Tab switching is now globally defined in dashboard.php
   // All other setup-specific functions below
 
@@ -1416,7 +1415,7 @@ $totalComponents = count($components ?? []);
       submitBtn.disabled = true;
       submitBtn.textContent = 'Saving...';
 
-      const response = await fetch('/public_html/modules/payroll/setup_configuration_handler.php', {
+      const response = await fetch(APP_BASE_URL + 'modules/payroll/setup_configuration_handler.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1466,7 +1465,7 @@ $totalComponents = count($components ?? []);
     }
 
     try {
-      const response = await fetch('/public_html/modules/payroll/setup_configuration_handler.php', {
+      const response = await fetch(APP_BASE_URL + 'modules/payroll/setup_configuration_handler.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1478,7 +1477,16 @@ $totalComponents = count($components ?? []);
         })
       });
 
+      if (!response.ok) {
+        console.error('HTTP Error:', response.status, response.statusText);
+        const text = await response.text();
+        console.error('Response body:', text);
+        throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+      }
+
       const result = await response.json();
+
+      console.log('Pay frequency response:', result);
 
       const infoBox = document.getElementById('payFrequencyInfo');
       const table = document.getElementById('payFrequencyTable');
@@ -1558,7 +1566,7 @@ $totalComponents = count($components ?? []);
       submitBtn.disabled = true;
       submitBtn.textContent = 'Saving...';
 
-      const response = await fetch('/public_html/modules/payroll/setup_configuration_handler.php', {
+      const response = await fetch(APP_BASE_URL + 'modules/payroll/setup_configuration_handler.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1612,7 +1620,7 @@ $totalComponents = count($components ?? []);
     if (!container) return;
     
     try {
-      const response = await fetch('/public_html/modules/payroll/setup_configuration_handler.php', {
+      const response = await fetch(APP_BASE_URL + 'modules/payroll/setup_configuration_handler.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1660,7 +1668,6 @@ $totalComponents = count($components ?? []);
     const codeHint = document.getElementById('codeHint');
     const nameField = document.getElementById('componentName');
     const descField = document.getElementById('componentDesc');
-    const categoryField = document.getElementById('componentCategory');
     const typeField = document.getElementById('componentType');
     const idField = document.getElementById('componentId');
     
@@ -1676,7 +1683,6 @@ $totalComponents = count($components ?? []);
       codeField.value = '';
       nameField.value = '';
       descField.value = '';
-      categoryField.value = '';
       idField.value = '';
       form.reset();
     } else {
@@ -1706,7 +1712,7 @@ $totalComponents = count($components ?? []);
     window.openComponentModal(type, true, componentId);
     
     // Fetch component data and populate form
-    fetch('/public_html/modules/payroll/setup_configuration_handler.php', {
+    fetch(APP_BASE_URL + 'modules/payroll/setup_configuration_handler.php', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1724,7 +1730,6 @@ $totalComponents = count($components ?? []);
         document.getElementById('componentCode').value = comp.code;
         document.getElementById('componentName').value = comp.name;
         document.getElementById('componentDesc').value = comp.description || '';
-        document.getElementById('componentCategory').value = comp.category || '';
       }
     })
     .catch(error => {
@@ -1748,7 +1753,6 @@ $totalComponents = count($components ?? []);
     const componentCode = document.getElementById('componentCode').value;
     const componentName = document.getElementById('componentName').value;
     const componentDesc = document.getElementById('componentDesc').value;
-    const componentCategory = document.getElementById('componentCategory').value;
     const messageDiv = document.getElementById('componentMessage');
     const submitBtn = this.querySelector('button[type="submit"]');
 
@@ -1766,8 +1770,7 @@ $totalComponents = count($components ?? []);
         code: componentCode,
         name: componentName,
         description: componentDesc,
-        component_type: componentType,
-        category: componentCategory
+        component_type: componentType
       };
 
       const action = componentId ? 'edit_component' : 'add_component';
@@ -1775,7 +1778,7 @@ $totalComponents = count($components ?? []);
         payload.id = componentId;
       }
 
-      const response = await fetch('/public_html/modules/payroll/setup_configuration_handler.php', {
+      const response = await fetch(APP_BASE_URL + 'modules/payroll/setup_configuration_handler.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1818,7 +1821,7 @@ $totalComponents = count($components ?? []);
       this.disabled = true;
       this.textContent = 'Deleting...';
 
-      const response = await fetch('/public_html/modules/payroll/setup_configuration_handler.php', {
+      const response = await fetch(APP_BASE_URL + 'modules/payroll/setup_configuration_handler.php', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1857,10 +1860,49 @@ $totalComponents = count($components ?? []);
     window.openComponentModal('deduction', false);
   });
 
+  // Tab switching function for setup configuration
+  window.switchTab = function(event, tabName) {
+    if (event && event.preventDefault) {
+      event.preventDefault();
+    }
+    
+    // Remove active class from all tabs
+    const tabs = document.querySelectorAll('.tabs .tab');
+    tabs.forEach(tab => {
+      tab.classList.remove('active');
+    });
+    
+    // Add active class to clicked tab
+    if (event && event.currentTarget) {
+      event.currentTarget.classList.add('active');
+    }
+    
+    // Hide all tab content
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => {
+      content.classList.remove('active');
+    });
+    
+    // Show selected tab content
+    const selectedContent = document.getElementById(tabName);
+    if (selectedContent) {
+      selectedContent.classList.add('active');
+    }
+    
+    // Load data for specific tabs
+    if (tabName === 'pay-frequency') {
+      window.reloadPayFrequencyData();
+    } else if (tabName === 'salary-components') {
+      window.loadComponentsDisplay('salary');
+      window.loadComponentsDisplay('deduction');
+    }
+  };
+
   // Initialize setup configuration on page load
   window.loadSetup = function() {
-    // Load initial data if needed
-    console.log('Setup configuration loaded');
+    window.reloadPayFrequencyData();
+    window.loadComponentsDisplay('salary');
+    window.loadComponentsDisplay('deduction');
   };
 
   // Initialize on page load

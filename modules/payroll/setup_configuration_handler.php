@@ -111,6 +111,291 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $err = "Error saving calendar: " . $e->getMessage();
             $success = false;
         }
+        
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => $success,
+            'message' => $msg ?: $err,
+            'action' => $action
+        ]);
+        exit;
+    }
+    
+    // Get payroll calendar
+    else if ($action === 'get_calendar') {
+        try {
+            $year = $input['year'] ?? date('Y');
+            $config_key = 'payroll_calendar_' . $year;
+            
+            // First try to get saved calendar
+            $sql = "SELECT config_value FROM payroll_configurations WHERE config_key = ? AND is_active = 1";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$config_key]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            $periods = [];
+            
+            if ($result && !empty($result['config_value'])) {
+                // Use saved calendar
+                $calendar_data = json_decode($result['config_value'], true);
+                
+                if (isset($calendar_data['period_1'])) {
+                    $periods[] = [
+                        'period_number' => 1,
+                        'cutoff_start' => $calendar_data['period_1']['cutoff_start'],
+                        'cutoff_end' => $calendar_data['period_1']['cutoff_end'],
+                        'pay_date' => $calendar_data['period_1']['pay_date'],
+                        'frequency' => 'Bi-weekly'
+                    ];
+                }
+                if (isset($calendar_data['period_2'])) {
+                    $periods[] = [
+                        'period_number' => 2,
+                        'cutoff_start' => $calendar_data['period_2']['cutoff_start'],
+                        'cutoff_end' => $calendar_data['period_2']['cutoff_end'],
+                        'pay_date' => $calendar_data['period_2']['pay_date'],
+                        'frequency' => 'Bi-weekly'
+                    ];
+                }
+            } else {
+                // Build from individual config values
+                $sql = "SELECT config_key, config_value FROM payroll_configurations 
+                        WHERE config_key IN ('cutoff_1_start', 'cutoff_1_end', 'pay_day_1', 'cutoff_2_start', 'cutoff_2_end', 'pay_day_2') 
+                        AND is_active = 1";
+                $stmt = $conn->prepare($sql);
+                $stmt->execute();
+                $configs = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+                
+                if (!empty($configs)) {
+                    // Period 1
+                    if (isset($configs['cutoff_1_start'], $configs['cutoff_1_end'], $configs['pay_day_1'])) {
+                        $cutoff_start = $year . '-' . str_pad((int)$configs['cutoff_1_start'], 2, '0', STR_PAD_LEFT) . '-01';
+                        $cutoff_end = $year . '-' . str_pad((int)$configs['cutoff_1_end'], 2, '0', STR_PAD_LEFT) . '-28'; // Approximate
+                        $pay_date = $year . '-' . str_pad((int)$configs['pay_day_1'], 2, '0', STR_PAD_LEFT) . '-01';
+                        
+                        $periods[] = [
+                            'period_number' => 1,
+                            'cutoff_start' => $cutoff_start,
+                            'cutoff_end' => $cutoff_end,
+                            'pay_date' => $pay_date,
+                            'frequency' => 'Bi-weekly'
+                        ];
+                    }
+                    
+                    // Period 2
+                    if (isset($configs['cutoff_2_start'], $configs['cutoff_2_end'], $configs['pay_day_2'])) {
+                        $cutoff_start = $year . '-' . str_pad((int)$configs['cutoff_2_start'], 2, '0', STR_PAD_LEFT) . '-01';
+                        $cutoff_end = $year . '-12-31'; // End of year for last period
+                        $pay_date = $year . '-' . str_pad((int)$configs['pay_day_2'], 2, '0', STR_PAD_LEFT) . '-01';
+                        
+                        $periods[] = [
+                            'period_number' => 2,
+                            'cutoff_start' => $cutoff_start,
+                            'cutoff_end' => $cutoff_end,
+                            'pay_date' => $pay_date,
+                            'frequency' => 'Bi-weekly'
+                        ];
+                    }
+                }
+            }
+            
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'periods' => $periods,
+                'message' => empty($periods) ? 'No calendar configured' : 'Calendar loaded'
+            ]);
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error retrieving calendar: ' . $e->getMessage()
+            ]);
+        }
+        exit;
+    }
+    
+    // Get all salary components (earnings or deductions)
+    else if ($action === 'get_components') {
+        try {
+            $type = $input['type'] ?? 'salary';
+            
+            // Map type to component_type DB value
+            $componentType = ($type === 'salary') ? 'base' : 'deduction';
+            
+            $sql = "SELECT id, name, code, description FROM salary_component_definitions 
+                    WHERE component_type = ? AND is_active = 1 ORDER BY name ASC";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$componentType]);
+            $components = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'components' => $components ?: []
+            ]);
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error retrieving components: ' . $e->getMessage()
+            ]);
+        }
+        exit;
+    }
+    
+    // Get single component for editing
+    else if ($action === 'get_component') {
+        try {
+            $id = $input['id'] ?? 0;
+            
+            $sql = "SELECT id, name, code, description FROM salary_component_definitions 
+                    WHERE id = ? AND is_active = 1";
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([$id]);
+            $component = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($component) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'component' => $component
+                ]);
+            } else {
+                header('Content-Type: application/json');
+                http_response_code(404);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Component not found'
+                ]);
+            }
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error retrieving component: ' . $e->getMessage()
+            ]);
+        }
+        exit;
+    }
+    
+    // Add new component
+    else if ($action === 'add_component') {
+        try {
+            $code = trim($input['code'] ?? '');
+            $name = trim($input['name'] ?? '');
+            $description = trim($input['description'] ?? '');
+            $category = trim($input['category'] ?? '');
+            $componentType = $input['component_type'] ?? 'base';
+            
+            if (empty($code) || empty($name)) {
+                throw new Exception('Code and name are required');
+            }
+            
+            // Map type to DB value
+            $dbComponentType = ($componentType === 'salary') ? 'base' : 'deduction';
+            
+            $sql = "INSERT INTO salary_component_definitions 
+                    (code, name, description, component_type, is_active, created_at) 
+                    VALUES (?, ?, ?, ?, 1, NOW())";
+            $stmt = $conn->prepare($sql);
+            $result = $stmt->execute([$code, $name, $description, $dbComponentType]);
+            
+            if ($result) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Component added successfully',
+                    'id' => $conn->lastInsertId()
+                ]);
+            } else {
+                throw new Exception('Failed to add component');
+            }
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ]);
+        }
+        exit;
+    }
+    
+    // Edit component
+    else if ($action === 'edit_component') {
+        try {
+            $id = $input['id'] ?? 0;
+            $code = trim($input['code'] ?? '');
+            $name = trim($input['name'] ?? '');
+            $description = trim($input['description'] ?? '');
+            $category = trim($input['category'] ?? '');
+            
+            if (empty($id) || empty($code) || empty($name)) {
+                throw new Exception('ID, code and name are required');
+            }
+            
+            $sql = "UPDATE salary_component_definitions 
+                    SET name = ?, description = ?, updated_at = NOW()
+                    WHERE id = ? AND is_active = 1";
+            $stmt = $conn->prepare($sql);
+            $result = $stmt->execute([$name, $description, $id]);
+            
+            if ($result) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Component updated successfully'
+                ]);
+            } else {
+                throw new Exception('Failed to update component');
+            }
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ]);
+        }
+        exit;
+    }
+    
+    // Delete component
+    else if ($action === 'delete_component') {
+        try {
+            $id = $input['id'] ?? 0;
+            
+            if (empty($id)) {
+                throw new Exception('Component ID is required');
+            }
+            
+            // Soft delete
+            $sql = "UPDATE salary_component_definitions SET is_active = 0, updated_at = NOW() WHERE id = ?";
+            $stmt = $conn->prepare($sql);
+            $result = $stmt->execute([$id]);
+            
+            if ($result) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Component deleted successfully'
+                ]);
+            } else {
+                throw new Exception('Failed to delete component');
+            }
+        } catch (Exception $e) {
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Error: ' . $e->getMessage()
+            ]);
+        }
+        exit;
     }
     
     // Handle bank settings save
@@ -163,6 +448,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $err = "Error saving bank settings: " . $e->getMessage();
             $success = false;
         }
+        
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => $success,
+            'message' => $msg ?: $err,
+            'action' => $action
+        ]);
+        exit;
     }
     
     // Handle generic configuration save
@@ -204,16 +497,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $success = false;
             }
         }
+        
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => $success,
+            'message' => $msg ?: $err,
+            'action' => $action
+        ]);
+        exit;
     }
     
-    // Return JSON for AJAX requests
-    header('Content-Type: application/json');
-    echo json_encode([
-        'success' => $success,
-        'message' => $msg ?: $err,
-        'action' => $action
-    ]);
-    exit;
+    // Default - Unknown action
+    else {
+        header('Content-Type: application/json');
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Unknown action: ' . htmlspecialchars($action)
+        ]);
+        exit;
+    }
 }
 
 // Handle GET requests (should not reach here but just in case)

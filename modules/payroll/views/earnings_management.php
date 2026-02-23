@@ -555,7 +555,7 @@ if ($modal === 'view' && $employee_id) {
 
   <!-- Filters -->
   <div class="section">
-    <form method="GET" action="<?= BASE_URL ?>dashboard.php">
+    <form id="earningsFilterForm" method="GET" action="<?= BASE_URL ?>dashboard.php">
       <div class="filter-section">
         <div class="form-group">
           <label>Search Employee</label>
@@ -586,6 +586,89 @@ if ($modal === 'view' && $employee_id) {
       </div>
     </form>
   </div>
+
+  <script>
+    // Intercept earnings filter form to load filtered view via dashboard loader
+    (function(){
+      const form = document.getElementById('earningsFilterForm');
+      if (!form) return;
+      form.addEventListener('submit', function(e){
+        e.preventDefault();
+        const fd = new FormData(form);
+        const params = new URLSearchParams();
+        for (const [k,v] of fd.entries()) {
+          if (v !== null && String(v).trim() !== '') params.append(k, v);
+        }
+        const newQuery = params.toString();
+        const viewUrl = 'dashboard.php?module=payroll&view=earnings_management' + (newQuery ? '&' + newQuery : '');
+
+        // Update browser URL (so filters are shareable)
+        history.replaceState(null, '', '?' + (newQuery ? ('module=payroll&view=earnings_management&' + newQuery) : 'module=payroll&view=earnings_management'));
+
+        // Fetch the module HTML and inject into content area (replicates dashboard loader behavior)
+        fetch(viewUrl)
+          .then(response => {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            return response.text();
+          })
+          .then(html => {
+            // Extract scripts
+            const scriptRegex = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi;
+            const execRegex = new RegExp(scriptRegex);
+            const scripts = [];
+            let match;
+            while ((match = execRegex.exec(html)) !== null) {
+              const scriptTag = match[0];
+              const scriptContent = scriptTag.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '');
+              scripts.push(scriptContent);
+            }
+
+            const htmlWithoutScripts = html.replace(scriptRegex, '');
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlWithoutScripts, 'text/html');
+
+            // Inject styles
+            const styles = doc.querySelectorAll('style');
+            styles.forEach(style => {
+              try {
+                const newStyle = document.createElement('style');
+                newStyle.setAttribute('data-module-style', 'true');
+                newStyle.textContent = style.textContent;
+                document.head.appendChild(newStyle);
+              } catch (e) { console.error('Error injecting style:', e); }
+            });
+
+            // Replace content area
+            const mainContent = doc.querySelector('.main-content');
+            const contentArea = document.getElementById('content-area');
+            if (contentArea) {
+              try {
+                if (mainContent) contentArea.innerHTML = mainContent.innerHTML;
+                else contentArea.innerHTML = doc.body.innerHTML;
+              } catch (e) {
+                console.error('Error setting content:', e);
+              }
+            }
+
+            // Execute scripts
+            setTimeout(() => {
+              scripts.forEach(scriptContent => {
+                try {
+                  const scriptEl = document.createElement('script');
+                  scriptEl.textContent = scriptContent;
+                  document.body.appendChild(scriptEl);
+                  scriptEl.parentNode.removeChild(scriptEl);
+                } catch (e) { console.error('Error executing script:', e); }
+              });
+            }, 50);
+          })
+          .catch(err => {
+            console.error('Error loading filtered earnings:', err);
+            alert('Error loading filtered results. Check console.');
+          });
+      });
+    })();
+  </script>
 
   <!-- Earnings Summary -->
   <div class="earnings-summary">

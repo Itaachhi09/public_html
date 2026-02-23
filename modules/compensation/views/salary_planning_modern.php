@@ -10,6 +10,7 @@ require_once __DIR__ . '/../../../config/Database.php';
 require_once __DIR__ . '/../models/PayGrade.php';
 require_once __DIR__ . '/../models/GradeLevel.php';
 require_once __DIR__ . '/../models/SalaryBand.php';
+require_once __DIR__ . '/../../../config/currency.php';
 
 $payGradeModel = new PayGrade();
 $gradeLevelModel = new GradeLevel();
@@ -291,9 +292,9 @@ body {
                     <tr>
                         <td><span class="code"><?php echo htmlspecialchars($b['pay_grade_code']); ?></span></td>
                         <td><?php echo $b['grade_level_name'] ? htmlspecialchars($b['grade_level_name']) : '—'; ?></td>
-                        <td class="num">₦<?php echo number_format((float) $b['min_salary'], 0); ?></td>
-                        <td class="num">₦<?php echo number_format((float) $b['midpoint_salary'], 0); ?></td>
-                        <td class="num">₦<?php echo number_format((float) $b['max_salary'], 0); ?></td>
+                        <td class="num"><?php echo format_currency($b['min_salary'], 0); ?></td>
+                        <td class="num"><?php echo format_currency($b['midpoint_salary'], 0); ?></td>
+                        <td class="num"><?php echo format_currency($b['max_salary'], 0); ?></td>
                         <td><span class="badge badge-<?php echo $b['status'] === 'Active' ? 'active' : 'inactive'; ?>"><?php echo $b['status']; ?></span></td>
                         <td></td>
                     </tr>

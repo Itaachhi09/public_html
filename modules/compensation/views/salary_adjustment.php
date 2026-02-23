@@ -9,6 +9,7 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../../../config/Database.php';
 require_once __DIR__ . '/../models/SalaryAdjustment.php';
 require_once __DIR__ . '/../models/SalaryBand.php';
+require_once __DIR__ . '/../../../config/currency.php';
 
 $adjustmentModel = new SalaryAdjustment();
 $bandModel = new SalaryBand();
@@ -21,6 +22,24 @@ $employees = $adjustmentModel->query(
 );
 
 $handlerUrl = 'modules/compensation/salary_adjustment_handler.php';
+
+// Helper: read enum values from information_schema for a given table.column
+function getEnumOptions($table, $column) {
+    try {
+        $db = \Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?");
+        $stmt->execute([$table, $column]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row || empty($row['COLUMN_TYPE'])) return [];
+        if (preg_match("/^enum\\((.*)\\)$/i", $row['COLUMN_TYPE'], $m)) {
+            preg_match_all("/'((?:[^']|\\\\')*)'/", $m[1], $matches);
+            return $matches[1] ?? [];
+        }
+    } catch (Exception $e) {
+        return [];
+    }
+    return [];
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -165,8 +184,8 @@ body {
                     <tr>
                         <td><?php echo htmlspecialchars(($a['last_name'] ?? '') . ', ' . ($a['first_name'] ?? '')); ?></td>
                         <td><?php echo htmlspecialchars($a['adjustment_type']); ?></td>
-                        <td class="num">₦<?php echo $a['previous_amount'] !== null ? number_format((float)$a['previous_amount'], 0) : '—'; ?></td>
-                        <td class="num">₦<?php echo number_format((float)$a['new_amount'], 0); ?></td>
+                        <td class="num"><?php echo $a['previous_amount'] !== null ? format_currency($a['previous_amount'], 2) : '—'; ?></td>
+                        <td class="num"><?php echo format_currency($a['new_amount'], 2); ?></td>
                         <td><?php echo htmlspecialchars($a['effective_date']); ?></td>
                         <td>
                             <span class="status-badge status-<?php echo strtolower($a['status']); ?>">
@@ -216,11 +235,24 @@ body {
                             <label class="form-label">Type <span class="required">•</span></label>
                             <select name="adjustment_type" required class="form-select">
                                 <option value="">Select Type</option>
-                                <option value="Promotion">Promotion</option>
-                                <option value="Merit increase">Merit increase</option>
-                                <option value="Market alignment">Market alignment</option>
-                                <option value="Temporary allowance">Temporary allowance</option>
-                                <option value="Correction">Correction</option>
+                                <?php
+                                $opts = getEnumOptions('salary_adjustments', 'adjustment_type');
+                                if (!empty($opts)) {
+                                    foreach ($opts as $opt) {
+                                        $val = htmlspecialchars($opt);
+                                        echo "<option value=\"{$val}\">{$val}</option>\n";
+                                    }
+                                } else {
+                                    // fallback to previous static list when enum not available
+                                    ?>
+                                    <option value="Promotion">Promotion</option>
+                                    <option value="Merit increase">Merit increase</option>
+                                    <option value="Market alignment">Market alignment</option>
+                                    <option value="Temporary allowance">Temporary allowance</option>
+                                    <option value="Correction">Correction</option>
+                                <?php
+                                }
+                                ?>
                             </select>
                         </div>
                     </div>
@@ -231,10 +263,23 @@ body {
                             <label class="form-label">Trigger <span class="required">•</span></label>
                             <select name="trigger_type" required class="form-select">
                                 <option value="">Select Trigger</option>
-                                <option value="Performance review">Performance review</option>
-                                <option value="Role change">Role change</option>
-                                <option value="Policy update">Policy update</option>
-                                <option value="Management decision">Management decision</option>
+                                <?php
+                                $topts = getEnumOptions('salary_adjustments', 'trigger_type');
+                                if (!empty($topts)) {
+                                    foreach ($topts as $t) {
+                                        $v = htmlspecialchars($t);
+                                        echo "<option value=\"{$v}\">{$v}</option>\n";
+                                    }
+                                } else {
+                                    // fallback to sensible defaults
+                                    ?>
+                                    <option value="Performance review">Performance review</option>
+                                    <option value="Role change">Role change</option>
+                                    <option value="Policy update">Policy update</option>
+                                    <option value="Management decision">Management decision</option>
+                                <?php
+                                }
+                                ?>
                             </select>
                         </div>
                         <div class="form-group">
@@ -295,6 +340,8 @@ body {
 </div>
 
 <script>
+// expose app currency symbol to JS
+window.APP_CURRENCY = '<?php echo app_currency_symbol(); ?>';
 function toggleForm(id) {
     document.getElementById(id).classList.toggle('visible');
 }
@@ -304,7 +351,8 @@ function showBandRange(select) {
     const range = document.getElementById('band-range');
     
     if (option.value && option.dataset.min && option.dataset.max) {
-        range.textContent = 'Band range: ₦' + Number(option.dataset.min).toLocaleString() + ' – ₦' + Number(option.dataset.max).toLocaleString();
+        const CUR = window.APP_CURRENCY || '₱';
+        range.textContent = 'Band range: ' + CUR + Number(option.dataset.min).toLocaleString() + ' – ' + CUR + Number(option.dataset.max).toLocaleString();
         range.style.display = 'block';
     } else {
         range.style.display = 'none';

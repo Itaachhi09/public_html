@@ -37,6 +37,27 @@ $deduction_status = isset($_GET['deduction_status']) ? trim($_GET['deduction_sta
 $db = new Database();
 $conn = $db->connect();
 
+// Detect primary key column name for employee_deductions (some schemas use different names)
+$pkCol = 'id';
+$cols = [];
+try {
+  $colStmt = $conn->prepare("SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'employee_deductions'");
+  $colStmt->execute();
+  $cols = $colStmt->fetchAll(PDO::FETCH_COLUMN);
+  $candidates = ['id','deduction_id','employee_deduction_id','employee_deductions_id','emp_deduction_id'];
+  foreach ($candidates as $c) {
+    if (in_array($c, $cols, true)) { $pkCol = $c; break; }
+  }
+  if (!in_array($pkCol, $cols, true) && !empty($cols)) {
+    $pkCol = $cols[0];
+  }
+} catch (Exception $e) {
+  // ignore - will fallback to 'id' and may error later
+}
+
+// Detect if created_at column exists so ORDER BY can use it safely
+$hasCreatedAt = in_array('created_at', $cols, true);
+
 // Validate status filter - only allow valid values AND check if data exists
 $valid_statuses = ['active', 'processed', 'pending', 'calculated'];  
 if (!empty($deduction_status) && in_array($deduction_status, $valid_statuses)) {
@@ -89,27 +110,26 @@ if (!empty($search)) {
 $whereClause = !empty($whereConditions) ? "WHERE " . implode(" AND ", $whereConditions) : "";
 
 // Fetch deductions with filters
-$sql = "
-    SELECT 
-        ed.id,
-        ed.employee_id,
-        ed.deduction_code,
-        ed.deduction_type,
-        ed.amount,
-        ed.status,
-        ed.is_mandatory,
-        e.employee_code,
-        e.first_name,
-        e.last_name,
-        es.basic_rate as gross_pay,
-        d.department_name
-    FROM employee_deductions ed
-    JOIN employees e ON ed.employee_id = e.employee_id
-    LEFT JOIN employee_salaries es ON e.employee_id = es.employee_id
-    LEFT JOIN departments d ON e.department_id = d.department_id
-    {$whereClause}
-    ORDER BY ed.created_at DESC
-";
+$orderBy = $hasCreatedAt ? 'ed.created_at DESC' : "ed.{$pkCol} DESC";
+$sql = "SELECT \n" .
+     "    ed.{$pkCol} AS id,\n" .
+     "    ed.employee_id,\n" .
+     "    ed.deduction_code,\n" .
+     "    ed.deduction_type,\n" .
+     "    ed.amount,\n" .
+     "    ed.status,\n" .
+     "    ed.is_mandatory,\n" .
+     "    e.employee_code,\n" .
+     "    e.first_name,\n" .
+     "    e.last_name,\n" .
+     "    es.basic_rate as gross_pay,\n" .
+     "    d.department_name\n" .
+     "FROM employee_deductions ed\n" .
+     "JOIN employees e ON ed.employee_id = e.employee_id\n" .
+     "LEFT JOIN employee_salaries es ON e.employee_id = es.employee_id\n" .
+     "LEFT JOIN departments d ON e.department_id = d.department_id\n" .
+     $whereClause . "\n" .
+     "ORDER BY {$orderBy}";
 
 $deductionsQuery = $conn->prepare($sql);
 $deductionsQuery->execute($params);
@@ -146,36 +166,38 @@ $filters = [];
 $deductionBreakdown = null;
 $employeeInfo = null;
 if ($modal === 'view' && $employee_id) {
-    $deductionBreakdownStmt = $conn->prepare("
-        SELECT 
-            ed.id,
-            ed.deduction_code,
-            ed.deduction_type,
-            ed.amount,
-            ed.status,
-            ed.is_mandatory,
-            ed.frequency,
-            ed.notes,
-            ed.created_at
-        FROM employee_deductions
-        WHERE employee_id = ?
-        ORDER BY ed.created_at DESC
-    ");
-    $deductionBreakdownStmt->execute([$employee_id]);
-    $deductionBreakdown = $deductionBreakdownStmt->fetchAll(PDO::FETCH_ASSOC);
+  $dbgOrder = $hasCreatedAt ? 'ed.created_at DESC' : "ed.{$pkCol} DESC";
+  $selectCreated = $hasCreatedAt ? 'ed.created_at' : "NULL AS created_at";
+  $deductionBreakdownStmt = $conn->prepare("
+    SELECT 
+      ed.{$pkCol} AS id,
+      ed.deduction_code,
+      ed.deduction_type,
+      ed.amount,
+      ed.status,
+      ed.is_mandatory,
+      ed.frequency,
+      ed.notes,
+      " . $selectCreated . "
+    FROM employee_deductions ed
+    WHERE employee_id = ?
+    ORDER BY " . $dbgOrder . "
+  ");
+  $deductionBreakdownStmt->execute([$employee_id]);
+  $deductionBreakdown = $deductionBreakdownStmt->fetchAll(PDO::FETCH_ASSOC);
     
     $employeeInfoStmt = $conn->prepare("
         SELECT 
-            e.employee_id,
-            e.employee_code,
-            e.first_name,
-            e.last_name,
-            d.department_name,
-            j.job_title,
-            es.basic_rate
+          e.employee_id,
+          e.employee_code,
+          e.first_name,
+          e.last_name,
+          d.department_name,
+          j.title AS job_title,
+          es.basic_rate
         FROM employees e
         LEFT JOIN departments d ON e.department_id = d.department_id
-        LEFT JOIN positions j ON e.job_title_id = j.position_id
+        LEFT JOIN job_titles j ON e.job_title_id = j.job_title_id
         LEFT JOIN employee_salaries es ON e.employee_id = es.employee_id
         WHERE e.employee_id = ?
     ");
@@ -721,7 +743,7 @@ if (!($isAjax && $modal)):
 <script>
   window.openDeductionsModal = function(empIdOrMode) {
     // Fetch modal content via AJAX without page refresh
-    let url = '<?= BASE_URL ?>dashboard.php?module=payroll&view=deductions_management&ajax=1';
+    let url = 'dashboard.php?module=payroll&view=deductions_management&ajax=1';
     if (empIdOrMode === 'add') {
       url += '&modal=add';
     } else {

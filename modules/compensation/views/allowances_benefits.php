@@ -13,6 +13,24 @@ $benefitModel = new BenefitDefinition();
 $benefits = $benefitModel->getAll(false);
 
 $handlerUrl = 'modules/compensation/allowances_benefits_handler.php';
+
+// Helper to read enum options from DB
+function getEnumOptions($table, $column) {
+    try {
+        $db = \Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?");
+        $stmt->execute([$table, $column]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row || empty($row['COLUMN_TYPE'])) return [];
+        if (preg_match("/^enum\\((.*)\\)$/i", $row['COLUMN_TYPE'], $m)) {
+            preg_match_all("/'((?:[^']|\\\\')*)'/", $m[1], $matches);
+            return $matches[1] ?? [];
+        }
+    } catch (Exception $e) {
+        return [];
+    }
+    return [];
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -225,8 +243,19 @@ body {
                             <label class="form-label">Attach To <span class="required">•</span></label>
                             <select name="attach_to" required class="form-select" onchange="toggleRoleField()">
                                 <option value="">Select</option>
-                                <option value="duty">Duty</option>
-                                <option value="role">Role</option>
+                                <?php
+                                $attachOpts = getEnumOptions('benefit_definitions', 'attach_to');
+                                if (!empty($attachOpts)) {
+                                    foreach ($attachOpts as $ao) {
+                                        echo '<option value="' . htmlspecialchars($ao) . '">' . htmlspecialchars(ucwords(str_replace('_',' ',$ao))) . '</option>';
+                                    }
+                                } else {
+                                    ?>
+                                    <option value="duty">Duty</option>
+                                    <option value="role">Role</option>
+                                <?php
+                                }
+                                ?>
                             </select>
                         </div>
                         <div class="form-group" id="roles-field">

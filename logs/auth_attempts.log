@@ -226,3 +226,9 @@
 [2026-02-23 05:56:48] [login_success] [otp_verified] Email: johnpaulaustria321@gmail.com | IP: ::1
 [2026-02-23 16:27:09] [otp_sent] [success] Email: johnpaulaustria321@gmail.com | IP: ::1
 [2026-02-23 16:27:23] [login_success] [otp_verified] Email: johnpaulaustria321@gmail.com | IP: ::1
+[2026-02-23 22:37:59] [login_failed] [user_not_found] Email: uyt@gmail.com | IP: 192.168.1.10
+[2026-02-23 22:47:44] [otp_sent] [success] Email: johnpaulaustria321@gmail.com | IP: 192.168.1.10
+[2026-02-23 23:10:51] [login_failed] [password_mismatch] Email: lipejuje@gmail.com | IP: 192.168.1.10
+[2026-02-24 02:29:07] [otp_sent] [success] Email: johnpaulaustria321@gmail.com | IP: ::1
+[2026-02-24 02:29:25] [otp_sent] [success] Email: johnpaulaustria321@gmail.com | IP: ::1
+[2026-02-24 02:35:22] [login_success] [otp_verified] Email: johnpaulaustria321@gmail.com | IP: ::1

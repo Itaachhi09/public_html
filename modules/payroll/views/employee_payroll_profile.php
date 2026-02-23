@@ -563,7 +563,7 @@ $baseQuery = 'ref=payroll&page=employee_payroll_profile';
 
   <!-- Search and Filter -->
   <div class="section">
-    <form method="GET" action="<?php echo htmlspecialchars($dashboardUrl); ?>">
+    <form id="profileSearchForm" method="GET" action="<?php echo htmlspecialchars($dashboardUrl); ?>">
       <?php if ($selected_employee_id): ?><input type="hidden" name="employee_id" value="<?php echo $selected_employee_id; ?>"><?php endif; ?>
       <div class="search-box">
         <input type="text" name="search" placeholder="Search by Employee ID or Name..." value="<?php echo htmlspecialchars($search); ?>">
@@ -601,7 +601,7 @@ $baseQuery = 'ref=payroll&page=employee_payroll_profile';
             $q = $baseQuery . '&employee_id=' . (int)$emp['employee_id'];
             if ($search) $q .= '&search=' . urlencode($search);
             ?>
-          <tr>
+          <tr id="employee-row-<?php echo (int)$emp['employee_id']; ?>">
             <td><?php echo htmlspecialchars($code); ?></td>
             <td><?php echo htmlspecialchars($name); ?></td>
             <td><?php echo htmlspecialchars($payTypeLabel); ?></td>
@@ -665,7 +665,7 @@ $baseQuery = 'ref=payroll&page=employee_payroll_profile';
           $fullName = trim(($emp['first_name'] ?? '') . ' ' . ($emp['last_name'] ?? ''));
           $basicRate = $sal ? number_format((float)$sal['basic_rate'], 2) : '0.00';
         ?>
-        <form method="POST" action="<?php echo htmlspecialchars($handlerUrl); ?>">
+        <form id="profileForm" method="POST" action="<?php echo htmlspecialchars($handlerUrl); ?>" data-ajax="1">
           <input type="hidden" name="employee_id" value="<?php echo (int)$emp['employee_id']; ?>">
 
           <div class="form-section">
@@ -848,7 +848,7 @@ $baseQuery = 'ref=payroll&page=employee_payroll_profile';
         </form>
         <?php if ($modalProfile): ?>
         <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb;">
-          <form method="POST" action="<?php echo htmlspecialchars($handlerUrl); ?>" style="display: inline;">
+          <form id="deleteProfileForm" method="POST" action="<?php echo htmlspecialchars($handlerUrl); ?>" style="display: inline;" data-ajax="1">
             <input type="hidden" name="action" value="delete">
             <input type="hidden" name="employee_id" value="<?php echo (int)$emp['employee_id']; ?>">
             <button type="submit" class="btn btn-danger" onclick="return confirm('Are you sure you want to delete this profile?');">Delete Profile</button>
@@ -864,3 +864,218 @@ $baseQuery = 'ref=payroll&page=employee_payroll_profile';
   <?php } ?>
 
 </div>
+<script>
+// Intercept profile create/update and delete forms to submit via AJAX and avoid full-page redirect
+;(function(){
+  const handlerUrl = '<?php echo $handlerUrl; ?>';
+
+  function submitAjaxForm(form, onSuccess, onError) {
+    const fd = new FormData(form);
+    fetch(form.action || handlerUrl, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: fd,
+      credentials: 'same-origin'
+    })
+    .then(async res => {
+      const text = await res.text();
+      try {
+        const json = JSON.parse(text);
+        onSuccess && onSuccess(json);
+      } catch (err) {
+        onError && onError(new Error('Invalid JSON response: ' + text));
+      }
+    })
+    .catch(err => onError && onError(err));
+  }
+
+  const profileForm = document.getElementById('profileForm');
+  if (profileForm) {
+    profileForm.addEventListener('submit', function(e){
+      e.preventDefault();
+      const submitBtn = profileForm.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving...';
+      submitAjaxForm(profileForm, function(result){
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        console.log('Profile save response:', result);
+        if (result && result.success) {
+          const successDiv = document.querySelector('.modal-success');
+          if (successDiv) successDiv.textContent = '✓ Profile saved successfully!';
+          else {
+            const md = document.createElement('div'); md.className = 'modal-success'; md.textContent = '✓ Profile saved successfully!';
+            const modalBody = document.querySelector('.modal-body'); if (modalBody) modalBody.insertBefore(md, modalBody.firstChild);
+          }
+          // Update the employee row in the table if server returned updated snapshot
+          if (result.employee && result.employee.employee_id) {
+            const rid = 'employee-row-' + result.employee.employee_id;
+            const row = document.getElementById(rid);
+            if (row) {
+              // Pay type (3rd column, index 2)
+              if (row.children[2]) row.children[2].textContent = result.employee.pay_type || '---';
+              // Payroll status (4th column, index 3)
+              if (row.children[3]) {
+                const active = parseInt(result.employee.payroll_eligible || 0, 10) === 1;
+                row.children[3].innerHTML = `<span class="status-badge ${active ? 'status-active' : 'status-inactive'}">${active ? 'Active' : 'Inactive'}</span>`;
+              }
+              // Profile status (5th column, index 4)
+              if (row.children[4]) {
+                const hasProfile = !!result.employee.has_profile;
+                row.children[4].innerHTML = `<span class="status-badge ${hasProfile ? 'status-active' : 'status-no-profile'}">${hasProfile ? 'Configured' : 'No Profile'}</span>`;
+              }
+              // Action button (6th column) - update to View/Edit or Create Profile
+              if (row.children[5]) {
+                const btnHtml = result.employee.has_profile ?
+                  `<button type="button" onclick="window.openProfileModal('edit', ${result.employee.employee_id})" class="btn btn-secondary">View/Edit</button>` :
+                  `<button type="button" onclick="window.openProfileModal('create', ${result.employee.employee_id})" class="btn btn-primary">Create Profile</button>`;
+                row.children[5].innerHTML = btnHtml;
+              }
+            }
+          }
+          // Refresh module list to ensure consistent state (in case some fields weren't returned)
+          if (typeof window.loadPayrollPage === 'function') {
+            // Reload payroll employee profile module
+            window.loadPayrollPage(null, 'employee_payroll_profile');
+          }
+        } else {
+          alert(result && result.message ? result.message : 'Failed to save profile');
+        }
+      }, function(err){
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+        console.error('Profile save error:', err);
+        alert('Error saving profile. Check console for details.');
+      });
+    });
+  }
+
+  const deleteForm = document.getElementById('deleteProfileForm');
+  if (deleteForm) {
+    deleteForm.addEventListener('submit', function(e){
+      if (!confirm('Are you sure you want to delete this profile?')) { e.preventDefault(); return; }
+      e.preventDefault();
+      const btn = deleteForm.querySelector('button[type="submit"]');
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = 'Deleting...';
+      submitAjaxForm(deleteForm, function(result){
+        btn.disabled = false; btn.textContent = orig;
+        if (result && result.success) {
+          const md = document.createElement('div'); md.className = 'modal-success'; md.textContent = '✓ Profile deleted.';
+          const modalBody = document.querySelector('.modal-body'); if (modalBody) modalBody.insertBefore(md, modalBody.firstChild);
+          if (result.employee && result.employee.employee_id) {
+            const rid = 'employee-row-' + result.employee.employee_id;
+            const row = document.getElementById(rid);
+            if (row) {
+              // Set pay type to '---' if not provided
+              if (row.children[2]) row.children[2].textContent = result.employee.pay_type || '---';
+              // Payroll status
+              if (row.children[3]) {
+                const active = parseInt(result.employee.payroll_eligible || 0, 10) === 1;
+                row.children[3].innerHTML = `<span class="status-badge ${active ? 'status-active' : 'status-inactive'}">${active ? 'Active' : 'Inactive'}</span>`;
+              }
+              // Profile status -> No Profile
+              if (row.children[4]) {
+                row.children[4].innerHTML = `<span class="status-badge status-no-profile">No Profile</span>`;
+              }
+              // Action -> Create Profile
+              if (row.children[5]) {
+                row.children[5].innerHTML = `<button type="button" onclick="window.openProfileModal('create', ${result.employee.employee_id})" class="btn btn-primary">Create Profile</button>`;
+              }
+            }
+          }
+          // Refresh the module list to reflect deletion
+          if (typeof window.loadPayrollPage === 'function') {
+            window.loadPayrollPage(null, 'employee_payroll_profile');
+          }
+        } else {
+          alert(result && result.message ? result.message : 'Failed to delete profile');
+        }
+      }, function(err){
+        btn.disabled = false; btn.textContent = orig;
+        console.error('Delete profile error:', err);
+        alert('Error deleting profile. Check console for details.');
+      });
+    });
+  }
+})();
+</script>
+
+<script>
+  // Intercept the payroll profile search to load results via the dashboard loader
+  (function(){
+    const form = document.getElementById('profileSearchForm');
+    if (!form) return;
+    form.addEventListener('submit', function(e){
+      e.preventDefault();
+      const fd = new FormData(form);
+      const params = new URLSearchParams();
+      for (const [k,v] of fd.entries()) {
+        if (v !== null && String(v).trim() !== '') params.append(k, v);
+      }
+      const newQuery = params.toString();
+      const viewUrl = 'dashboard.php?module=payroll&view=employee_payroll_profile' + (newQuery ? '&' + newQuery : '');
+
+      // Update browser URL so results are shareable/bookmarkable
+      history.replaceState(null, '', '?' + (newQuery ? ('module=payroll&view=employee_payroll_profile&' + newQuery) : 'module=payroll&view=employee_payroll_profile'));
+
+      fetch(viewUrl)
+        .then(resp => { if (!resp.ok) throw new Error('HTTP ' + resp.status); return resp.text(); })
+        .then(html => {
+          const scriptRegex = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi;
+          const execRegex = new RegExp(scriptRegex);
+          const scripts = [];
+          let match;
+          while ((match = execRegex.exec(html)) !== null) {
+            const scriptTag = match[0];
+            const scriptContent = scriptTag.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '');
+            scripts.push(scriptContent);
+          }
+
+          const htmlWithoutScripts = html.replace(scriptRegex, '');
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(htmlWithoutScripts, 'text/html');
+
+          // Inject styles from module
+          const styles = doc.querySelectorAll('style');
+          styles.forEach(style => {
+            try {
+              const newStyle = document.createElement('style');
+              newStyle.setAttribute('data-module-style', 'true');
+              newStyle.textContent = style.textContent;
+              document.head.appendChild(newStyle);
+            } catch (e) { console.error('Error injecting style:', e); }
+          });
+
+          // Replace content area with returned module HTML
+          const mainContent = doc.querySelector('.main-content');
+          const contentArea = document.getElementById('content-area');
+          if (contentArea) {
+            try {
+              if (mainContent) contentArea.innerHTML = mainContent.innerHTML;
+              else contentArea.innerHTML = doc.body.innerHTML;
+            } catch (e) { console.error('Error setting content:', e); }
+          }
+
+          // Execute embedded scripts
+          setTimeout(() => {
+            scripts.forEach(scriptContent => {
+              try {
+                const scriptEl = document.createElement('script');
+                scriptEl.textContent = scriptContent;
+                document.body.appendChild(scriptEl);
+                scriptEl.parentNode.removeChild(scriptEl);
+              } catch (e) { console.error('Error executing script:', e); }
+            });
+          }, 50);
+        })
+        .catch(err => {
+          console.error('Error loading profile search results:', err);
+          alert('Error loading results. Check console for details.');
+        });
+    });
+  })();
+</script>

@@ -21,6 +21,24 @@ $benefits = $benefitDef->getAll(false);
 
 $handlerUrl = 'modules/compensation/compensation_structure_handler.php';
 $currentTab = $_GET['tab'] ?? 'base';
+
+// Helper to read enum options from DB
+function getEnumOptions($table, $column) {
+    try {
+        $db = \Database::getInstance()->getConnection();
+        $stmt = $db->prepare("SELECT COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?");
+        $stmt->execute([$table, $column]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row || empty($row['COLUMN_TYPE'])) return [];
+        if (preg_match("/^enum\\((.*)\\)$/i", $row['COLUMN_TYPE'], $m)) {
+            preg_match_all("/'((?:[^']|\\\\')*)'/", $m[1], $matches);
+            return $matches[1] ?? [];
+        }
+    } catch (Exception $e) {
+        return [];
+    }
+    return [];
+}
 ?>
 <!DOCTYPE html>
 <html>
@@ -232,7 +250,23 @@ body {
                         <div class="form-group"><label class="form-label">Name <span class="required">•</span></label><input type="text" name="name" required class="form-input" placeholder="Base Pay" maxlength="255"></div>
                     </div>
                     <div class="form-row full"><div class="form-group"><label class="form-label">Description <span class="required">•</span></label><textarea name="description" required class="form-textarea" placeholder="What is this?" maxlength="500"></textarea></div></div>
-                    <div class="form-row"><div class="form-group"><label class="form-label">Type</label><select name="component_type" class="form-select"><option value="base">Base</option><option value="allowance" selected>Allowance</option><option value="deduction">Deduction</option></select></div><div class="form-checkbox-group"><input type="checkbox" id="sal-tax" name="taxable" value="1"><label for="sal-tax">Taxable</label></div></div>
+                    <div class="form-row"><div class="form-group"><label class="form-label">Type</label><select name="component_type" class="form-select">
+                        <?php
+                        $copts = getEnumOptions('salary_component_definitions', 'component_type');
+                        if (!empty($copts)) {
+                            foreach ($copts as $co) {
+                                $sel = $co === 'allowance' ? ' selected' : '';
+                                echo '<option value="' . htmlspecialchars($co) . '"' . $sel . '>' . htmlspecialchars(ucwords(str_replace('_',' ',$co))) . '</option>';
+                            }
+                        } else {
+                            ?>
+                            <option value="base">Base</option>
+                            <option value="allowance" selected>Allowance</option>
+                            <option value="deduction">Deduction</option>
+                        <?php
+                        }
+                        ?>
+                        </select></div><div class="form-checkbox-group"><input type="checkbox" id="sal-tax" name="taxable" value="1"><label for="sal-tax">Taxable</label></div></div>
                     <div class="form-actions"><button type="submit" class="btn btn-primary btn-sm">Create</button><button type="button" class="btn btn-sm" onclick="toggleForm('add-salary-form'); return false;">Cancel</button></div>
                 </form>
             </div>
@@ -276,7 +310,23 @@ body {
                         <div class="form-group"><label class="form-label">Name <span class="required">•</span></label><input type="text" name="name" required class="form-input" placeholder="Admission" maxlength="255"></div>
                     </div>
                     <div class="form-row full"><div class="form-group"><label class="form-label">Description <span class="required">•</span></label><textarea name="description" required class="form-textarea" placeholder="What is this?"></textarea></div></div>
-                    <div class="form-row"><div class="form-group"><label class="form-label">Rate Type</label><select name="rate_type" class="form-select"><option value="per_case" selected>Per Case</option><option value="fixed_amount">Fixed Amount</option></select></div><div class="form-group"><label class="form-label">Default Rate (₦)</label><input type="number" name="default_rate" class="form-input" placeholder="0.00" step="0.01" min="0"></div></div>
+                    <div class="form-row"><div class="form-group"><label class="form-label">Rate Type</label><select name="rate_type" class="form-select">
+                        <?php
+                        // rate_type may not be a DB enum in this schema; try incentive_types.rate_type first
+                        $ropts = getEnumOptions('incentive_types', 'rate_type');
+                        if (!empty($ropts)) {
+                            foreach ($ropts as $r) {
+                                echo '<option value="' . htmlspecialchars($r) . '">' . htmlspecialchars(ucwords(str_replace('_',' ',$r))) . '</option>';
+                            }
+                        } else {
+                            // fallback static options
+                            ?>
+                            <option value="per_case" selected>Per Case</option>
+                            <option value="fixed_amount">Fixed Amount</option>
+                        <?php
+                        }
+                        ?>
+                        </select></div><div class="form-group"><label class="form-label">Default Rate (₱)</label><input type="number" name="default_rate" class="form-input" placeholder="0.00" step="0.01" min="0"></div></div>
                     <div class="form-actions"><button type="submit" class="btn btn-primary btn-sm">Create</button><button type="button" class="btn btn-sm" onclick="toggleForm('add-incentive-form'); return false;">Cancel</button></div>
                 </form>
             </div>
@@ -318,9 +368,38 @@ body {
                         <div class="form-group"><label class="form-label">Name <span class="required">•</span></label><input type="text" name="name" required class="form-input" placeholder="Free Meals" maxlength="255"></div>
                     </div>
                     <div class="form-row full"><div class="form-group"><label class="form-label">Description <span class="required">•</span></label><textarea name="description" required class="form-textarea" placeholder="What is this?"></textarea></div></div>
-                    <div class="form-row"><div class="form-group"><label class="form-label">Category</label><select name="benefit_category" class="form-select"><option value="non_cash" selected>Non Cash</option><option value="cash_equivalent">Cash Equivalent</option></select></div><div class="form-group"><label class="form-label">Impact</label><select name="payroll_impact" class="form-select"><option value="informational" selected>Informational</option><option value="included_in_payroll">In Payroll</option></select></div></div>
+                    <div class="form-row"><div class="form-group"><label class="form-label">Category</label><select name="benefit_category" class="form-select">
+                        <?php
+                        // No dedicated DB enum/table for benefit categories in this schema; keep fallback options
+                        ?>
+                        <option value="non_cash" selected>Non Cash</option>
+                        <option value="cash_equivalent">Cash Equivalent</option>
+                        </select></div><div class="form-group"><label class="form-label">Impact</label><select name="payroll_impact" class="form-select">
+                        <?php
+                        // payroll_impact not present as an enum in schema; fallback options kept
+                        ?>
+                        <option value="informational" selected>Informational</option>
+                        <option value="included_in_payroll">In Payroll</option>
+                        </select></div></div>
                     <div class="form-row"><div class="form-group"><label class="form-label">From <span class="required">•</span></label><input type="date" name="effective_from" required class="form-input"></div><div class="form-group"><label class="form-label">To</label><input type="date" name="effective_to" class="form-input"></div></div>
-                    <div class="form-row"><div class="form-checkbox-group"><input type="checkbox" id="ben-tax" name="taxable" value="1"><label for="ben-tax">Taxable</label></div><div class="form-group"><label class="form-label">Attach</label><select name="attach_to" class="form-select"><option value="role" selected>Role</option><option value="duty">Duty</option></select></div></div>
+                    <div class="form-row"><div class="form-checkbox-group"><input type="checkbox" id="ben-tax" name="taxable" value="1"><label for="ben-tax">Taxable</label></div><div class="form-group"><label class="form-label">Attach</label><select name="attach_to" class="form-select">
+                        <?php
+                        $aopts = getEnumOptions('benefit_definitions', 'attach_to');
+                        if (!empty($aopts)) {
+                            foreach ($aopts as $a) {
+                                $display = htmlspecialchars(ucwords(str_replace('_',' ',$a)));
+                                $value = htmlspecialchars($a);
+                                $sel = $a === 'role' ? ' selected' : '';
+                                echo "<option value=\"{$value}\"{$sel}>{$display}</option>";
+                            }
+                        } else {
+                            ?>
+                            <option value="role" selected>Role</option>
+                            <option value="duty">Duty</option>
+                        <?php
+                        }
+                        ?>
+                        </select></div></div>
                     <div class="form-actions"><button type="submit" class="btn btn-primary btn-sm">Create</button><button type="button" class="btn btn-sm" onclick="toggleForm('add-benefit-form'); return false;">Cancel</button></div>
                 </form>
             </div>
@@ -336,10 +415,20 @@ function toggleForm(id) {
 }
 
 function switchTab(tab, sec) {
+    // Hide all tab content sections
     document.querySelectorAll('#' + sec + '-base, #' + sec + '-allowance, #' + sec + '-deduction').forEach(e => e.classList.remove('active'));
-    document.getElementById(sec + '-' + tab).classList.add('active');
+    // Show selected tab content
+    const contentEl = document.getElementById(sec + '-' + tab);
+    if (contentEl) contentEl.classList.add('active');
+    // Remove active class from all tab buttons
     document.querySelectorAll('.tabs .tab').forEach(e => e.classList.remove('active'));
-    event.target.classList.add('active');
+    // Add active class to the clicked button (find by matching tab text or data attribute)
+    const tabButtons = document.querySelectorAll('.tabs .tab');
+    tabButtons.forEach(btn => {
+        if (btn.textContent.toLowerCase().includes(tab.replace('-', ' ').toLowerCase())) {
+            btn.classList.add('active');
+        }
+    });
     window.history.replaceState({}, '', '?tab=' + tab);
 }
 </script>
