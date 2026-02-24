@@ -914,33 +914,25 @@ window.openPayslipModal = function(runEmployeeId, payrollRunId, empName, periodN
           // Build two-column modal: left - history list, right - detail preview
           var html = '<div style="display:grid; grid-template-columns: 320px 1fr; gap:1rem;">';
 
-          // Left: history list with cutoff filters
-          html += '<div style="border-right:1px solid #e5e7eb; padding-right:0.5rem;">';
-          html += '<div style="margin-bottom:0.5rem;"> <strong>Payroll History</strong><br><small style="color:#6b7280;">Filter by cut-off / period</small></div>';
-          html += '<div style="max-height:60vh; overflow:auto;">';
+          // Left: history list styled like the payroll processing modal (selectable list)
+          html += '<div style="background: white; border-right:1px solid #e5e7eb; overflow-y:auto; max-height:60vh;">';
+          html += '<div style="padding: 1rem; background: #f3f4f6; border-bottom: 1px solid #e5e7eb; font-weight: 600; color: #1f2937;">Payroll History</div>';
+          html += '<div id="history-list-container" style="padding:0;">';
           if (history.length === 0) {
-            html += '<div style="color:#6b7280;">No payslip history found for this employee.</div>';
+            html += '<div style="padding:1rem; color:#6b7280;">No payslip history found for this employee.</div>';
           } else {
-            html += '<ul style="list-style:none; padding:0; margin:0;">';
-            history.forEach(function(h){
+            history.forEach(function(h, idx){
               var label = (h.period_name || (h.start_date + ' - ' + h.end_date));
-              var status = h.payslip_number ? 'Generated' : 'Pending';
-              html += '<li style="margin:0 0 0.5rem 0;">';
-              html += '<button type="button" class="history-row" data-runempid="' + h.run_employee_id + '" data-label="' + (label+'').replace(/"/g,'') + '" style="width:100%; text-align:left; padding:0.5rem; border-radius:4px; border:1px solid #e5e7eb; background:white;">';
-              html += '<div style="display:flex; justify-content:space-between; align-items:center;">';
-              html += '<div style="font-size:13px; color:#1f2937;">' + label + '</div>';
-              html += '<div style="font-size:12px; color:#6b7280;">' + (h.run_status || '') + '</div>';
+              var statusBadge = h.payslip_number ? '<span class="badge badge-generated">Generated</span>' : '<span class="badge">Pending</span>';
+              var bg = (idx === 0) ? '#dbeafe' : '#f9fafb';
+              var leftBorder = (idx === 0) ? '4px solid #3b82f6' : '4px solid transparent';
+              html += '<div class="history-item" data-runempid="' + h.run_employee_id + '" data-label="' + (label+'').replace(/"/g,'') + '" style="padding:0.75rem 1rem; cursor:pointer; background:' + bg + '; border-left:' + leftBorder + ';">';
+              html += '<div style="font-weight:500; color:#1f2937;">' + label + '</div>';
+              html += '<div style="font-size:12px; color:#6b7280;">' + (h.pay_date || '') + ' &nbsp; ' + statusBadge + '</div>';
               html += '</div>';
-              html += '<div style="display:flex; justify-content:space-between; margin-top:6px; font-size:12px; color:#374151;">';
-              html += '<div>' + (h.pay_date || '') + '</div>';
-              html += '<div>' + (h.payslip_number ? '<span class="badge badge-generated">Generated</span>' : '<span class="badge">Pending</span>') + '</div>';
-              html += '</div>';
-              html += '</button>';
-              html += '</li>';
             });
-            html += '</ul>';
           }
-          html += '</div>'; // history scroll
+          html += '</div>'; // history container
           html += '</div>'; // left column
 
           // Right: detail placeholder
@@ -954,19 +946,30 @@ window.openPayslipModal = function(runEmployeeId, payrollRunId, empName, periodN
           modal.classList.add('active');
           body.scrollTop = 0;
 
-          // Attach click handlers to history rows
-          var rows = body.querySelectorAll('.history-row');
-          rows.forEach(function(btn){
-            btn.addEventListener('click', function(){
+          // Attach click handlers to history items
+          var items = body.querySelectorAll('.history-item');
+          items.forEach(function(it, i){
+            it.addEventListener('click', function(){
+              // clear highlight
+              items.forEach(function(x){ x.style.background = '#f9fafb'; x.style.borderLeft = '4px solid transparent'; });
+              // highlight selected
+              this.style.background = '#dbeafe';
+              this.style.borderLeft = '4px solid #3b82f6';
               var rid = this.getAttribute('data-runempid');
               var lbl = this.getAttribute('data-label');
               loadPayslipDetail(rid, lbl);
             });
           });
 
-          // Auto-load the clicked runEmployeeId (the one that opened the modal) if present
+          // Auto-load the clicked runEmployeeId (the one that opened the modal) if present,
+          // otherwise load the first history item if available
           if (runEmployeeId) {
             loadPayslipDetail(runEmployeeId, periodName || '');
+            // highlight matching item
+            var match = body.querySelector('.history-item[data-runempid="' + runEmployeeId + '"]');
+            if (match) { match.style.background = '#dbeafe'; match.style.borderLeft = '4px solid #3b82f6'; }
+          } else if (items.length > 0) {
+            items[0].click();
           }
 
           // Function to load individual payslip detail into right panel

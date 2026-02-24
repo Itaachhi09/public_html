@@ -99,11 +99,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'component_type' => $componentType,
                 'taxable' => !empty($_POST['taxable']) ? 1 : 0,
                 'is_active' => 1,
-                'effective_from' => !empty($_POST['effective_from']) ? $_POST['effective_from'] : null,
-                'effective_to' => !empty($_POST['effective_to']) ? $_POST['effective_to'] : null,
-                'configured_by_role' => $currentUserRole,
-                'last_updated_by_id' => $currentUserId,
-                'last_updated_reason' => 'Initial creation',
             ]);
             $msg = "Salary component '{$name}' created successfully.";
         }
@@ -161,16 +156,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'code' => $code,
                 'name' => $name,
                 'description' => $description,
-                'status' => 'active',
-                'is_approved' => 1, // Backward compatibility
-                'rate_type' => $rateType,
-                'default_rate' => $defaultRate > 0 ? $defaultRate : null,
-                'used_by_roles' => $usedByRoles ?: 'All',
-                'configured_by_role' => $currentUserRole,
-                'last_updated_by_id' => $currentUserId,
-                'last_updated_reason' => 'Initial creation',
+                'is_approved' => 1,
             ]);
-            $msg = "Incentive component '{$name}' created successfully. Type: {$rateType}.";
+            $msg = "Incentive component '{$name}' created successfully.";
         }
     }
     elseif ($action === 'deactivate_incentive' || $action === 'archive_incentive') {
@@ -233,21 +221,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'code' => $code,
                 'name' => $name,
                 'description' => $description,
-                'benefit_category' => $benefitCategory,
-                'payroll_impact' => $payrollImpact,
                 'taxable' => !empty($_POST['taxable']) ? 1 : 0,
-                'taxable_lock' => 0, // Lock only after first payroll use
                 'eligible_roles' => $eligibleRoles ?: 'All',
                 'effective_from' => $effectiveFrom,
                 'effective_to' => !empty($_POST['effective_to']) ? $_POST['effective_to'] : null,
                 'attach_to' => in_array($_POST['attach_to'] ?? '', ['duty', 'role']) ? $_POST['attach_to'] : 'role',
                 'is_active' => 1,
-                'hidden_when_inactive' => 1,
-                'configured_by_role' => $currentUserRole,
-                'last_updated_by_id' => $currentUserId,
-                'last_updated_reason' => 'Initial creation',
             ]);
-            $msg = "Benefit '{$name}' created successfully. Category: {$benefitCategory}.";
+            $msg = "Benefit '{$name}' created successfully.";
         }
     }
     elseif ($action === 'deactivate_benefit') {

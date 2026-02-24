@@ -1,6 +1,6 @@
 <?php
 /**
- * Salary Planning - Modern Design
+ * Salary Planning - Enhanced Design
  * Pay Grades > Grade Levels > Salary Bands
  */
 if (session_status() === PHP_SESSION_NONE) {
@@ -20,6 +20,10 @@ $payGrades = $payGradeModel->getAllWithBands(false);
 $gradeLevels = $gradeLevelModel->getAllWithGrade(false);
 $bands = $salaryBandModel->getAllWithDetails(false);
 
+// Calculate band statistics
+$activeBands = count(array_filter($bands, fn($b) => $b['status'] === 'Active'));
+$inactiveBands = count(array_filter($bands, fn($b) => $b['status'] !== 'Active'));
+
 $handlerUrl = 'modules/compensation/salary_planning_handler.php';
 $expandGrade = $_GET['expand_grade'] ?? '';
 $pageTitle = 'Salary Planning';
@@ -38,25 +42,404 @@ require __DIR__ . '/partials/header.php';
 </div>
 <?php endif; ?>
 
-<div class="content">
+<style>
+.page-header {
+  background: white;
+  padding: 24px;
+  margin-bottom: 24px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
 
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-        <div style="display:flex; gap:8px; align-items:center;">
-            <input id="comp-search" class="form-input" placeholder="Search pay grades, bands, levels..." onkeypress="if(event.key==='Enter') performCompSearch();">
-            <button class="btn btn-sm" onclick="performCompSearch();">Search</button>
-        </div>
-    </div>
+.header-content h1 {
+  margin: 0 0 4px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.header-content p {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+}
+
+.header-actions button {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.header-actions button:hover {
+  background: #2563eb;
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+}
+
+.search-filters {
+  background: white;
+  padding: 16px 24px;
+  margin-bottom: 24px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  flex: 1;
+  min-width: 250px;
+  position: relative;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+
+.filter-tabs {
+  display: flex;
+  gap: 12px;
+}
+
+.filter-btn {
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #6b7280;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.filter-btn:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: #f0f9ff;
+}
+
+.filter-btn.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.section-card {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.section-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.section-card-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+.salary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.salary-table thead {
+  background: #f9fafb;
+}
+
+.salary-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.salary-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #1f2937;
+}
+
+.salary-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.salary-table .code-badge {
+  background: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.salary-table .num {
+  text-align: right;
+  font-weight: 500;
+}
+
+.salary-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge-active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge-inactive {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.action-btn {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #6b7280;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: #f0f9ff;
+}
+
+.empty-message {
+  text-align: center;
+  padding: 48px 24px;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.add-form {
+  display: none;
+  background: #f9fafb;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.add-form.visible {
+  display: block;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-row.full {
+  grid-template-columns: 1fr;
+}
+
+.form-row.three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 13px;
+}
+
+.required {
+  color: #ef4444;
+}
+
+.form-input,
+.form-select {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.summary-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.summary-card-title {
+  font-weight: 600;
+  color: #1f2937;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.summary-check {
+  font-size: 16px;
+}
+
+.summary-details {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.rules-notice {
+  background: #eff6ff;
+  border-left: 4px solid #3b82f6;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: #1e40af;
+}
+</style>
+
+<!-- Page Header -->
+<div class="page-header">
+  <div class="header-content">
+    <h1>Salary Planning</h1>
+    <p>Configure pay grades, salary bands, and grade levels</p>
+  </div>
+  <div class="header-actions">
+    <button onclick="toggleForm('add-band-form'); return false;">+ New Band</button>
+  </div>
+</div>
+
+<!-- Search & Filters -->
+<div class="search-filters">
+  <div class="search-box">
+    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+    <input id="comp-search" type="text" placeholder="Search pay grades, bands, levels..." onkeypress="if(event.key==='Enter') performCompSearch();">
+  </div>
+  <div class="filter-tabs">
+    <button class="filter-btn active" onclick="filterSalaryBands('all'); return false;">All Status</button>
+    <button class="filter-btn" onclick="filterSalaryBands('active'); return false;">Active (<?php echo $activeBands; ?>)</button>
+    <button class="filter-btn" onclick="filterSalaryBands('inactive'); return false;">Inactive (<?php echo $inactiveBands; ?>)</button>
+  </div>
+</div>
+
+<div class="content">
 
         <!-- 1. PAY GRADES -->
         <div class="section">
             <div class="section-header">
                 <div class="section-title">1. Pay Grades</div>
                 <button class="btn btn-primary btn-sm" onclick="toggleForm('add-paygrade-form'); return false;">+ Add</button>
-            </div>
-
-            <div class="callout callout-info">
-                <div class="callout-icon">ℹ</div>
-                <div class="callout-text"><strong>Pay Grades</strong> group positions by salary level. Each grade can have multiple bands and levels. Required to set up salary structure.</div>
             </div>
 
             <?php if (empty($payGrades)): ?>
@@ -79,7 +462,7 @@ require __DIR__ . '/partials/header.php';
                         <td><?php echo htmlspecialchars($pg['name']); ?></td>
                         <td><?php echo (int) ($pg['band_count'] ?? 0); ?></td>
                         <td><?php echo htmlspecialchars($pg['range_summary'] ?? '—'); ?></td>
-                        <td class="action-cell"></td>
+                            <td class="action-cell"></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -112,11 +495,6 @@ require __DIR__ . '/partials/header.php';
                 <button class="btn btn-primary btn-sm" onclick="toggleForm('add-gradelevel-form'); return false;">+ Add</button>
             </div>
 
-            <div class="callout callout-info">
-                <div class="callout-icon">ℹ</div>
-                <div class="callout-text"><strong>Grade Levels</strong> represent steps within a pay grade (e.g., Junior, Senior, Lead). Optional but recommended for career progression.</div>
-            </div>
-
             <?php if (empty($gradeLevels)): ?>
             <div class="empty-state">No grade levels yet.</div>
             <?php else: ?>
@@ -135,7 +513,7 @@ require __DIR__ . '/partials/header.php';
                         <td><span class="code"><?php echo htmlspecialchars($gl['pay_grade_code']); ?></span></td>
                         <td><span class="code"><?php echo htmlspecialchars($gl['code']); ?></span></td>
                         <td><?php echo htmlspecialchars($gl['name']); ?></td>
-                        <td class="action-cell"></td>
+                            <td class="action-cell"></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -175,10 +553,7 @@ require __DIR__ . '/partials/header.php';
                 <button class="btn btn-primary btn-sm" onclick="toggleForm('add-band-form'); return false;">+ Add</button>
             </div>
             
-            <div class="callout callout-warning">
-                <div class="callout-icon">⚠</div>
-                <div class="callout-text"><strong>Critical:</strong> Salary bands define compensation ranges. Min ≤ Mid ≤ Max must be maintained. Assignments outside bands require approval. This is the foundation of salary equity.</div>
-            </div>
+            <div class="rules-notice">Assignments outside band require approval. Min ≤ Mid ≤ Max.</div>
 
             <?php if (empty($bands)): ?>
             <div class="empty-state">No salary bands defined.</div>
@@ -204,7 +579,7 @@ require __DIR__ . '/partials/header.php';
                         <td class="num"><?php echo format_currency($b['midpoint_salary'], 0); ?></td>
                         <td class="num"><?php echo format_currency($b['max_salary'], 0); ?></td>
                         <td><span class="badge badge-<?php echo $b['status'] === 'Active' ? 'active' : 'inactive'; ?>"><?php echo $b['status']; ?></span></td>
-                        <td class="action-cell"></td>
+                            <td class="action-cell"></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -254,11 +629,6 @@ require __DIR__ . '/partials/header.php';
                 <div class="section-title">4. Validated Structure</div>
             </div>
 
-            <div class="callout callout-success">
-                <div class="callout-icon">✓</div>
-                <div class="callout-text"><strong>Structure Status:</strong> All sections must be configured to enable employee compensation management. Use the checklist below.</div>
-            </div>
-
             <div class="summary-grid">
                 <?php 
                 $activeGrades = array_filter($payGrades, fn($p) => $p['status'] === 'Active');
@@ -295,27 +665,6 @@ require __DIR__ . '/partials/header.php';
 </div>
 
 <script>
-// Compensation table enhancer (per-view)
-;(function(){
-    try {
-        var table = document.querySelector('table.comp-table');
-        if (!table) return;
-        var parent = table.parentElement;
-        if (!parent.classList.contains('list-card')) {
-            var card = document.createElement('div'); card.className='list-card'; parent.insertBefore(card, table); card.appendChild(table); parent = card;
-        }
-        var toolbar = document.createElement('div'); toolbar.className='comp-toolbar';
-        var search = document.createElement('input'); search.type='search'; search.className='comp-search'; search.placeholder='Search table...';
-        var pageSize = document.createElement('select'); pageSize.className='comp-page-size'; [10,25,50,100].forEach(function(n){ var o=document.createElement('option'); o.value=n; o.textContent=n+' / page'; pageSize.appendChild(o); });
-        var pagination = document.createElement('div'); pagination.className='comp-pagination';
-        toolbar.appendChild(search); toolbar.appendChild(pageSize); toolbar.appendChild(pagination);
-        parent.parentElement.insertBefore(toolbar, parent);
-        var tbody = table.tBodies[0]; var rows = Array.prototype.slice.call(tbody.rows); var currentPage=1;
-        function renderPagination(totalPages){ pagination.innerHTML=''; if(totalPages<=1) return; var prev=document.createElement('button'); prev.textContent='Prev'; prev.disabled=currentPage===1; prev.addEventListener('click', function(){ if(currentPage>1){ currentPage--; update(); } }); pagination.appendChild(prev); for(var i=1;i<=totalPages;i++){ (function(p){ var b=document.createElement('button'); b.textContent=p; if(p===currentPage) b.classList.add('active'); b.addEventListener('click', function(){ currentPage=p; update(); }); pagination.appendChild(b); })(i); } var next=document.createElement('button'); next.textContent='Next'; next.disabled=currentPage===totalPages; next.addEventListener('click', function(){ if(currentPage<totalPages){ currentPage++; update(); } }); pagination.appendChild(next); }
-        function update(){ var q=(search.value||'').toLowerCase().trim(); var filtered = rows.filter(function(r){ return r.textContent.toLowerCase().indexOf(q)!==-1; }); var pageSizeVal = parseInt(pageSize.value,10)||10; var totalPages = Math.max(1, Math.ceil(filtered.length/pageSizeVal)); if(currentPage>totalPages) currentPage=totalPages; rows.forEach(function(r){ r.style.display='none'; }); var start=(currentPage-1)*pageSizeVal, end=start+pageSizeVal; filtered.slice(start,end).forEach(function(r){ r.style.display=''; }); renderPagination(totalPages); }
-        search.addEventListener('input', function(){ currentPage=1; update(); }); pageSize.addEventListener('change', function(){ currentPage=1; update(); }); update();
-    } catch (e){ console && console.error('comp table enhancer', e); }
-})();
 function performCompSearch(){
     var q = document.getElementById('comp-search')?.value || '';
     var params = new URLSearchParams(window.location.search);

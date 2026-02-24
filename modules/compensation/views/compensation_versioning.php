@@ -10,10 +10,19 @@ require_once __DIR__ . '/../../../config/Database.php';
 require_once __DIR__ . '/../models/CompensationVersionHistory.php';
 
 $versionModel = new CompensationVersionHistory();
-$history = $versionModel->getAll([]);
+$allHistory = $versionModel->getAll([]);
 $approvedActive = $versionModel->getApprovedActive();
 
+// Calculate status counts
+$statusCounts = [];
+foreach ($allHistory as $h) {
+    $status = strtolower($h['status']);
+    $statusCounts[$status] = ($statusCounts[$status] ?? 0) + 1;
+}
+
 $handlerUrl = 'modules/compensation/compensation_versioning_handler.php';
+$pageTitle = 'Compensation Versioning';
+require __DIR__ . '/partials/header.php';
 
 // Build friendly labels for entity types from distinct values in DB (fallback to sensible defaults)
 $typeLabels = [];
@@ -42,275 +51,579 @@ try {
     ];
 }
 ?>
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Compensation Versioning</title>
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
 
-body {
-    background: #f5f5f5;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    color: #1f2937;
-    font-size: 13px;
-    line-height: 1.4;
+<style>
+.page-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
 }
 
-.container { width: 100%; background: #fff; }
-.header { padding: 16px 24px; border-bottom: 1px solid #e5e7eb; }
-.title { font-size: 17px; font-weight: 600; color: #111827; }
+.msg-bar {
+  padding: 12px 24px;
+  margin-bottom: 24px;
+  border-radius: 8px;
+  display: flex;
+  gap: 8px;
+}
 
-.info-row { padding: 8px 24px; color: #6b7280; font-size: 11px; border-bottom: 1px solid #e5e7eb; }
+.msg-bar .msg {
+  background: #d1fae5;
+  color: #065f46;
+  padding: 12px 16px;
+  border-radius: 8px;
+  flex: 1;
+}
 
-.content { max-width: 1080px; }
-.msg-bar { padding: 12px 24px; display: flex; gap: 8px; }
-.msg { background: #d1fae5; border-left: 3px solid #10b981; color: #065f46; padding: 8px 12px; border-radius: 3px; font-size: 12px; flex: 1; }
-.err { background: #fee2e2; border-left: 3px solid #ef4444; color: #991b1b; padding: 8px 12px; border-radius: 3px; font-size: 12px; flex: 1; }
+.msg-bar .err {
+  background: #fee2e2;
+  color: #991b1b;
+  padding: 12px 16px;
+  border-radius: 8px;
+  flex: 1;
+}
 
-.section { padding: 12px 24px; border-bottom: 1px solid #e5e7eb; }
-.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-.section-title { font-size: 14px; font-weight: 600; color: #111827; }
+.page-header {
+  background: white;
+  padding: 24px;
+  margin-bottom: 24px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
 
-.table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 8px; }
-.table th { background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; height: 28px; }
-.table td { padding: 6px 8px; border-bottom: 1px solid #f3f4f6; height: 30px; vertical-align: middle; }
-.table tbody tr:hover { background: #f9fafb; cursor: pointer; }
+.header-content h1 {
+  margin: 0 0 4px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+}
 
-.status-badge { font-size: 10px; padding: 2px 6px; border-radius: 3px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
-.status-active { background: #d1fae5; color: #065f46; }
-.status-scheduled { background: #dbeafe; color: #1e40af; }
-.status-pending { background: #fef3c7; color: #b45309; }
-.status-approved { background: #d1fae5; color: #065f46; }
-.status-inactive { background: #e5e7eb; color: #374151; }
+.header-content p {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+}
 
-.dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
-.dot-active { background: #10b981; }
-.dot-scheduled { background: #3b82f6; }
-.dot-pending { background: #f59e0b; }
+.header-actions button {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
 
-.btn { padding: 6px 12px; font-size: 12px; font-weight: 500; border: 1px solid #d1d5db; background: #fff; color: #374151; border-radius: 4px; cursor: pointer; height: 28px; display: inline-flex; align-items: center; }
-.btn:hover { border-color: #9ca3af; background: #f9fafb; }
-.btn-primary { background: #1e40af; color: #fff; border-color: #1e40af; }
-.btn-primary:hover { background: #1c3aa0; }
-.btn-sm { padding: 4px 8px; font-size: 11px; height: 24px; }
+.header-actions button:hover {
+  background: #2563eb;
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.3);
+}
 
-.empty-state { padding: 24px 8px; color: #9ca3af; font-size: 12px; }
+.search-filters {
+  background: white;
+  padding: 16px 24px;
+  margin-bottom: 24px;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
 
-.add-form { display: none; background: #f9fafb; padding: 12px; border: 1px solid #e5e7eb; border-radius: 4px; margin-bottom: 8px; }
-.add-form.visible { display: block; }
+.search-box {
+  flex: 1;
+  min-width: 250px;
+  position: relative;
+}
 
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-.form-row.full { grid-template-columns: 1fr; }
-.form-group { display: flex; flex-direction: column; gap: 3px; }
-.form-label { font-size: 11px; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.5px; }
-.required { color: #ef4444; }
+.search-box input {
+  width: 100%;
+  padding: 10px 12px 10px 36px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+}
 
-.form-input, .form-select, .form-textarea { padding: 6px 8px; border: 1px solid #d1d5db; border-radius: 3px; font-size: 12px; font-family: inherit; color: #1f2937; height: 30px; }
-.form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: #1e40af; box-shadow: 0 0 0 2px rgba(30, 64, 175, 0.1); }
-.form-textarea { height: auto; min-height: 60px; max-height: 60px; resize: none; }
+.search-box input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
 
-.form-actions { display: flex; gap: 6px; margin-top: 8px; justify-content: flex-end; }
+.search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
 
-.action-icons { display: flex; gap: 4px; }
-.action-icon { cursor: pointer; }
-.action-icon button { background: none; border: none; color: #374151; cursor: pointer; font-size: 14px; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
-.action-icon button:hover { color: #1f2937; }
+.filter-tabs {
+  display: flex;
+  gap: 12px;
+}
 
-.detail-panel { display: none; position: fixed; right: 0; top: 0; width: 400px; height: 100%; background: #fff; border-left: 1px solid #e5e7eb; box-shadow: -2px 0 8px rgba(0,0,0,0.1); z-index: 200; padding: 24px; overflow-y: auto; }
-.detail-panel.visible { display: block; }
-.detail-panel-close { position: absolute; top: 16px; right: 16px; background: none; border: none; font-size: 20px; cursor: pointer; color: #6b7280; }
-.detail-panel h2 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
-.detail-row { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #e5e7eb; }
-.detail-row:last-child { border-bottom: none; }
-.detail-label { font-size: 10px; font-weight: 600; color: #6b7280; text-transform: uppercase; }
-.detail-value { font-size: 12px; color: #1f2937; margin-top: 4px; }
+.filter-btn {
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #6b7280;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
 
-.overlay { display: none; position: fixed; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.1); z-index: 100; }
-.overlay.visible { display: block; }
+.filter-btn:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+  background: #f0f9ff;
+}
 
-@media (max-width: 768px) {
-    .form-row { grid-template-columns: 1fr; }
-    .section { padding: 12px 16px; }
-    .detail-panel { width: 100%; }
+.filter-btn.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.section-card {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.section-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.section-card-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0;
+}
+
+.table-responsive {
+  overflow-x: auto;
+}
+
+.version-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.version-table thead {
+  background: #f9fafb;
+}
+
+.version-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.version-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  color: #1f2937;
+}
+
+.version-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.version-table .code-badge {
+  background: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge.status-approved {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.status-pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-badge.status-scheduled {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.status-badge.status-active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.empty-message {
+  text-align: center;
+  padding: 48px 24px;
+  color: #9ca3af;
+  font-size: 14px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+}
+
+.btn-sm {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.add-form {
+  display: none;
+  background: #f9fafb;
+  padding: 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  margin-top: 20px;
+}
+
+.add-form.visible {
+  display: block;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.form-row.full {
+  grid-template-columns: 1fr;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 13px;
+}
+
+.required {
+  color: #ef4444;
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.info-box {
+  background: #eff6ff;
+  border-left: 4px solid #3b82f6;
+  padding: 12px 16px;
+  border-radius: 4px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: #1e40af;
 }
 </style>
-</head>
-<body>
 
-<div class="container">
+<?php if (!empty($_GET['msg']) || !empty($_GET['err'])): ?>
+<div class="page-container">
+  <div class="msg-bar">
+    <?php if (!empty($_GET['msg'])): ?>
+    <div class="msg"><?php echo htmlspecialchars(urldecode($_GET['msg'])); ?></div>
+    <?php endif; ?>
+    <?php if (!empty($_GET['err'])): ?>
+    <div class="err"><?php echo htmlspecialchars(urldecode($_GET['err'])); ?></div>
+    <?php endif; ?>
+  </div>
+</div>
+<?php endif; ?>
 
-    <!-- Header -->
-    <div class="header">
-        <h1 class="title">Compensation Versioning</h1>
+<div class="page-container">
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1>Compensation Versioning</h1>
+      <p>Track salary structure changes with complete audit trail</p>
+    </div>
+    <div class="header-actions">
+      <button onclick="toggleForm('add-version-form'); return false;">+ Record Version</button>
+    </div>
+  </div>
+
+  <!-- Info Box -->
+  <div class="info-box">
+    <strong>📋 Info:</strong> Payroll reads approved active versions only. All changes audited immutably.
+  </div>
+
+  <!-- Search & Filters -->
+  <div class="search-filters">
+    <div class="search-box">
+      <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+      <input id="comp-search" type="text" placeholder="Search history, entities, reasons..." onkeypress="if(event.key==='Enter') performCompSearch();">
+    </div>
+    <div class="filter-tabs">
+      <button class="filter-btn active" onclick="filterHistory('all'); return false;">All (<?php echo count($allHistory); ?>)</button>
+      <button class="filter-btn" onclick="filterHistory('pending'); return false;">Pending (<?php echo $statusCounts['pending'] ?? 0; ?>)</button>
+      <button class="filter-btn" onclick="filterHistory('approved'); return false;">Approved (<?php echo $statusCounts['approved'] ?? 0; ?>)</button>
+    </div>
+  </div>
+
+  <!-- Approved Active Versions -->
+  <div class="section-card">
+    <div class="section-card-header">
+      <h3 class="section-card-title">Approved Active Versions (Payroll Reference)</h3>
     </div>
 
-    <!-- Info Row -->
-    <div class="info-row">
-        Payroll reads approved active versions only. All changes audited.
-    </div>
-
-    <!-- Messages -->
-    <?php if (!empty($_GET['msg']) || !empty($_GET['err'])): ?>
-    <div class="msg-bar">
-        <?php if (!empty($_GET['msg'])): ?>
-        <div class="msg"><?php echo htmlspecialchars(urldecode($_GET['msg'])); ?></div>
-        <?php endif; ?>
-        <?php if (!empty($_GET['err'])): ?>
-        <div class="err"><?php echo htmlspecialchars(urldecode($_GET['err'])); ?></div>
-        <?php endif; ?>
+    <?php if (empty($approvedActive)): ?>
+    <div class="empty-message">No approved active versions. Only these rows are used by payroll.</div>
+    <?php else: ?>
+    <div class="table-responsive">
+      <table class="version-table">
+        <thead>
+          <tr>
+            <th>Entity</th>
+            <th>Entity ID</th>
+            <th>Version</th>
+            <th>Effective Date</th>
+            <th>Approved By</th>
+            <th>Approved On</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($approvedActive as $v): ?>
+          <tr>
+            <td><?php echo htmlspecialchars($typeLabels[$v['entity_type']] ?? $v['entity_type']); ?></td>
+            <td><span class="code-badge"><?php echo (int)$v['entity_id']; ?></span></td>
+            <td><?php echo (int)$v['version_number']; ?></td>
+            <td><?php echo htmlspecialchars(substr($v['effective_date'], 0, 10)); ?></td>
+            <td><?php echo htmlspecialchars($v['approved_by'] ?? '—'); ?></td>
+            <td><?php echo htmlspecialchars(substr($v['approved_at'] ?? '', 0, 10)); ?></td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
     </div>
     <?php endif; ?>
+  </div>
 
-    <div class="content">
-
-        <!-- 1. APPROVED ACTIVE VERSIONS (Primary Focus) -->
-        <div class="section">
-            <div class="section-header">
-                <div class="section-title">Approved Active Versions</div>
-            </div>
-
-            <?php if (empty($approvedActive)): ?>
-            <div class="empty-state">No approved active versions. Payroll dependency: only these rows are used.</div>
-            <?php else: ?>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Entity</th>
-                        <th>Entity ID</th>
-                        <th>Version</th>
-                        <th>Effective date</th>
-                        <th>Approved by</th>
-                        <th>Approved on</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($approvedActive as $v): ?>
-                    <tr>
-                        <td><?php echo htmlspecialchars($typeLabels[$v['entity_type']] ?? $v['entity_type']); ?></td>
-                        <td><?php echo (int)$v['entity_id']; ?></td>
-                        <td><?php echo (int)$v['version_number']; ?></td>
-                        <td><?php echo htmlspecialchars(substr($v['effective_date'], 0, 10)); ?></td>
-                        <td><?php echo htmlspecialchars($v['approved_by'] ?? '—'); ?></td>
-                        <td><?php echo htmlspecialchars(substr($v['approved_at'] ?? '', 0, 10)); ?></td>
-                        <td>
-                            <span class="status-badge status-<?php echo !empty($v['is_active']) ? 'active' : 'scheduled'; ?>">
-                                <span class="dot dot-<?php echo !empty($v['is_active']) ? 'active' : 'scheduled'; ?>"></span>
-                                <?php echo !empty($v['is_active']) ? 'Active' : 'Scheduled'; ?>
-                            </span>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-            <?php endif; ?>
-        </div>
-
-        <!-- 2. VERSION HISTORY (Secondary Focus) -->
-        <div class="section">
-            <div class="section-header">
-                <div class="section-title">Version History</div>
-            </div>
-
-            <?php if (empty($history)): ?>
-            <div class="empty-state">No version history yet.</div>
-            <?php else: ?>
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Entity</th>
-                        <th>Entity ID</th>
-                        <th>Version</th>
-                        <th>Effective date</th>
-                        <th>Reason</th>
-                        <th>Requested by</th>
-                        <th>Approved by</th>
-                        <th>Status</th>
-                        <th style="width: 40px;"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($history as $h): ?>
-                    <tr>
-                        <td><?php echo htmlspecialchars($typeLabels[$h['entity_type']] ?? $h['entity_type']); ?></td>
-                        <td><?php echo (int)$h['entity_id']; ?></td>
-                        <td><?php echo (int)$h['version_number']; ?></td>
-                        <td><?php echo htmlspecialchars(substr($h['effective_date'], 0, 10)); ?></td>
-                        <td><?php echo htmlspecialchars(mb_substr($h['reason'], 0, 40) . (mb_strlen($h['reason']) > 40 ? '…' : '')); ?></td>
-                        <td><?php echo htmlspecialchars($h['changed_by'] ?? '—'); ?></td>
-                        <td><?php echo htmlspecialchars($h['approved_by'] ?? '—'); ?></td>
-                        <td>
-                            <span class="status-badge status-<?php echo str_replace(' ', '_', $h['status']); ?>">
-                                <span class="dot dot-<?php echo str_replace(' ', '_', $h['status']); ?>" style="background: <?php echo $h['status'] === 'approved' ? '#10b981' : ($h['status'] === 'pending' ? '#f59e0b' : '#3b82f6'); ?>;"></span>
-                                <?php echo htmlspecialchars(ucfirst($h['status'])); ?>
-                            </span>
-                        </td>
-                        <td class="action-icons" onclick="event.stopPropagation();">
-                            <button class="action-icon" type="button" onclick="openDetail(<?php echo (int)$h['id']; ?>)" title="View details">◊</button>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-            <?php endif; ?>
-        </div>
-
-        <!-- 3. RECORD NEW VERSION (Collapsed) -->
-        <div class="section">
-            <div class="section-header">
-                <div class="section-title">Record New Version</div>
-                <button class="btn btn-primary btn-sm" onclick="toggleForm('add-version-form'); return false;">+ Record</button>
-            </div>
-
-            <div id="add-version-form" class="add-form">
-                <form method="post" action="<?php echo htmlspecialchars($handlerUrl); ?>">
-                    <input type="hidden" name="action" value="record_version">
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label class="form-label">Entity type <span class="required">•</span></label>
-                            <select name="entity_type" required class="form-select">
-                                <option value="">Select type</option>
-                                <option value="salary_band">Salary band</option>
-                                <option value="pay_component">Pay component</option>
-                                <option value="policy">Policy</option>
-                                <option value="employee_assignment">Employee assignment</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Entity ID <span class="required">•</span></label>
-                            <input type="number" name="entity_id" required class="form-input" placeholder="Record ID" min="1">
-                        </div>
-                    </div>
-
-                    <div class="form-row full">
-                        <div class="form-group">
-                            <label class="form-label">Effective date <span class="required">•</span></label>
-                            <input type="date" name="effective_date" required class="form-input">
-                        </div>
-                    </div>
-
-                    <div class="form-row full">
-                        <div class="form-group">
-                            <label class="form-label">Reason <span class="required">•</span></label>
-                            <textarea name="reason" required class="form-textarea" placeholder="e.g. Band update per policy change"></textarea>
-                        </div>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary btn-sm">Record. Pending approval</button>
-                        <button type="button" class="btn btn-sm" onclick="toggleForm('add-version-form'); return false;">Cancel</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
+  <!-- Version History -->
+  <div class="section-card">
+    <div class="section-card-header">
+      <h3 class="section-card-title">Version History</h3>
     </div>
 
+    <?php if (empty($allHistory)): ?>
+    <div class="empty-message">No version history. Record a version to get started.</div>
+    <?php else: ?>
+    <div class="table-responsive">
+      <table class="version-table" id="history-table">
+        <thead>
+          <tr>
+            <th>Entity</th>
+            <th>Entity ID</th>
+            <th>Version</th>
+            <th>Effective Date</th>
+            <th>Reason</th>
+            <th>Requested By</th>
+            <th>Approved By</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($allHistory as $h): 
+            $status = strtolower($h['status']);
+          ?>
+          <tr class="history-row" data-status="<?php echo $status; ?>">
+            <td><?php echo htmlspecialchars($typeLabels[$h['entity_type']] ?? $h['entity_type']); ?></td>
+            <td><span class="code-badge"><?php echo (int)$h['entity_id']; ?></span></td>
+            <td><?php echo (int)$h['version_number']; ?></td>
+            <td><?php echo htmlspecialchars(substr($h['effective_date'], 0, 10)); ?></td>
+            <td title="<?php echo htmlspecialchars($h['reason']); ?>"><?php echo htmlspecialchars(mb_substr($h['reason'], 0, 40) . (mb_strlen($h['reason']) > 40 ? '…' : '')); ?></td>
+            <td><?php echo htmlspecialchars($h['changed_by'] ?? '—'); ?></td>
+            <td><?php echo htmlspecialchars($h['approved_by'] ?? '—'); ?></td>
+            <td>
+              <span class="status-badge status-<?php echo $status; ?>">
+                <?php 
+                if ($status === 'pending') echo '⏳ Pending';
+                elseif ($status === 'approved') echo '✓ Approved';
+                else echo '📋 ' . ucfirst($status);
+                ?>
+              </span>
+            </td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+    </div>
+    <?php endif; ?>
+  </div>
+
+  <!-- Record New Version Form -->
+  <div class="section-card">
+    <div id="add-version-form" class="add-form" style="display: none;">
+      <h4 style="margin: 0 0 16px 0; color: #1f2937; font-weight: 600;">Record New Version</h4>
+      <form method="post" action="<?php echo htmlspecialchars($handlerUrl); ?>">
+        <input type="hidden" name="action" value="record_version">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Entity Type <span class="required">*</span></label>
+            <select name="entity_type" required class="form-select">
+              <option value="">Select type</option>
+              <option value="salary_band">Salary Band</option>
+              <option value="pay_component">Pay Component</option>
+              <option value="policy">Policy</option>
+              <option value="employee_assignment">Employee Assignment</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Entity ID <span class="required">*</span></label>
+            <input type="number" name="entity_id" required class="form-input" placeholder="Record ID" min="1">
+          </div>
+        </div>
+
+        <div class="form-row full">
+          <div class="form-group">
+            <label class="form-label">Effective Date <span class="required">*</span></label>
+            <input type="date" name="effective_date" required class="form-input">
+          </div>
+        </div>
+
+        <div class="form-row full">
+          <div class="form-group">
+            <label class="form-label">Reason <span class="required">*</span></label>
+            <textarea name="reason" required class="form-textarea" placeholder="e.g., Band update per policy change, promotion tier adjustment"></textarea>
+          </div>
+        </div>
+
+        <div class="form-actions" style="justify-content: flex-end;">
+          <button type="submit" class="btn btn-primary btn-sm">Record Version (Pending Approval)</button>
+          <button type="button" class="btn btn-sm" onclick="toggleForm('add-version-form'); return false;">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
 </div>
+
+<script>
+function toggleForm(formId) {
+    const form = document.getElementById(formId);
+    if (form) {
+        form.classList.toggle('visible');
+        if (form.classList.contains('visible')) {
+            setTimeout(() => form.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+        }
+    }
+}
+
+function filterHistory(status) {
+    const rows = document.querySelectorAll('.history-row');
+    rows.forEach(row => {
+        const rowStatus = row.dataset.status;
+        if (status === 'all') {
+            row.style.display = '';
+        } else if (status === rowStatus) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+    
+    // Update filter button states
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+function performCompSearch(){
+    var q = document.getElementById('comp-search')?.value || '';
+    var params = new URLSearchParams(window.location.search);
+    if(q) params.set('q', q); else params.delete('q');
+    window.location.search = params.toString();
+}
+</script>
+
+<?php require __DIR__ . '/partials/footer.php'; ?>
+
 
 <!-- Detail Panel -->
 <div id="detail-panel" class="detail-panel">
@@ -321,11 +634,7 @@ body {
 
 <script>
 // Hardcoded history data for demo - replace with PHP data in production
-const historyData = <?php echo json_encode($history); ?>;
-
-function toggleForm(id) {
-    document.getElementById(id).classList.toggle('visible');
-}
+const historyData = <?php echo json_encode($allHistory); ?>;
 
 function openDetail(id) {
     const record = historyData.find(r => r.id == id);
@@ -395,7 +704,33 @@ function closeDetail() {
     document.getElementById('overlay').classList.remove('visible');
 }
 </script>
-
-</body>
-</html>
-
+<script>
+// Compensation table enhancer (per-view)
+;(function(){
+    try {
+        var table = document.querySelector('table.comp-table');
+        if (!table) return;
+        var parent = table.parentElement;
+        if (!parent.classList.contains('list-card')) {
+            var card = document.createElement('div'); card.className='list-card'; parent.insertBefore(card, table); card.appendChild(table); parent = card;
+        }
+        var toolbar = document.createElement('div'); toolbar.className='comp-toolbar';
+        var search = document.createElement('input'); search.type='search'; search.className='comp-search'; search.placeholder='Search table...';
+        var pageSize = document.createElement('select'); pageSize.className='comp-page-size'; [10,25,50,100].forEach(function(n){ var o=document.createElement('option'); o.value=n; o.textContent=n+' / page'; pageSize.appendChild(o); });
+        var pagination = document.createElement('div'); pagination.className='comp-pagination';
+        toolbar.appendChild(search); toolbar.appendChild(pageSize); toolbar.appendChild(pagination);
+        parent.parentElement.insertBefore(toolbar, parent);
+        var tbody = table.tBodies[0]; var rows = Array.prototype.slice.call(tbody.rows); var currentPage=1;
+        function renderPagination(totalPages){ pagination.innerHTML=''; if(totalPages<=1) return; var prev=document.createElement('button'); prev.textContent='Prev'; prev.disabled=currentPage===1; prev.addEventListener('click', function(){ if(currentPage>1){ currentPage--; update(); } }); pagination.appendChild(prev); for(var i=1;i<=totalPages;i++){ (function(p){ var b=document.createElement('button'); b.textContent=p; if(p===currentPage) b.classList.add('active'); b.addEventListener('click', function(){ currentPage=p; update(); }); pagination.appendChild(b); })(i); } var next=document.createElement('button'); next.textContent='Next'; next.disabled=currentPage===totalPages; next.addEventListener('click', function(){ if(currentPage<totalPages){ currentPage++; update(); } }); pagination.appendChild(next); }
+        function update(){ var q=(search.value||'').toLowerCase().trim(); var filtered = rows.filter(function(r){ return r.textContent.toLowerCase().indexOf(q)!==-1; }); var pageSizeVal = parseInt(pageSize.value,10)||10; var totalPages = Math.max(1, Math.ceil(filtered.length/pageSizeVal)); if(currentPage>totalPages) currentPage=totalPages; rows.forEach(function(r){ r.style.display='none'; }); var start=(currentPage-1)*pageSizeVal, end=start+pageSizeVal; filtered.slice(start,end).forEach(function(r){ r.style.display=''; }); renderPagination(totalPages); }
+        search.addEventListener('input', function(){ currentPage=1; update(); }); pageSize.addEventListener('change', function(){ currentPage=1; update(); }); update();
+    } catch (e){ console && console.error('comp table enhancer', e); }
+})();
+function performCompSearch(){
+    var q = document.getElementById('comp-search')?.value || '';
+    var params = new URLSearchParams(window.location.search);
+    if(q) params.set('q', q); else params.delete('q');
+    window.location.search = params.toString();
+}
+</script>
+<?php require __DIR__ . '/partials/footer.php'; ?>
