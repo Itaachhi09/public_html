@@ -252,6 +252,19 @@ try {
             }
             break;
         
+        case 'updateGradeLevel':
+            $id = $_GET['id'] ?? null;
+            $data = json_decode(file_get_contents('php://input'), true) ?? $_POST;
+            
+            if (!$id) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Grade level ID required'];
+            } else {
+                $gradeLevel->update($id, $data);
+                $response = ['success' => true, 'message' => 'Grade level updated'];
+            }
+            break;
+        
         // ==================== SALARY BANDS ====================
         case 'getSalaryBands':
             $bands = $salaryBand->getAllWithDetails();

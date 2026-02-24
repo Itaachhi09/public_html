@@ -159,14 +159,11 @@
         </div>
         <div class="form-group">
           <label class="form-label">Shift Type *</label>
-          <select name="shift_type" class="form-select" required onchange="window.updateShiftDefaults(this.value)">
+          <select name="shift_type" id="shiftTypeSelect" class="form-select" required onchange="window.updateShiftDefaults(this.value)">
             <option value="">Select type...</option>
-            <option value="morning">Morning</option>
-            <option value="afternoon">Afternoon</option>
-            <option value="night">Night</option>
-            <option value="rotating">Rotating</option>
-            <option value="oncall">On Call</option>
-            <option value="ojt">OJT Shift</option>
+            <option value="Regular">Regular</option>
+            <option value="Weekend">Weekend</option>
+            <option value="Special">Special</option>
           </select>
         </div>
         <div class="form-group">
@@ -218,14 +215,11 @@
 
 <script>
   (function() {
-  // Shift Type Presets with defaults
+  // Shift Type Presets with defaults - mapped to database shift types
   window.SHIFT_PRESETS = {
-    morning: { start: '06:00', end: '14:00', break: 60, night_differential: 0, overtime_eligible: 0, is_night: 0, label: 'Morning' },
-    afternoon: { start: '14:00', end: '22:00', break: 60, night_differential: 0, overtime_eligible: 0, is_night: 0, label: 'Afternoon' },
-    night: { start: '22:00', end: '06:00', break: 60, night_differential: 1, overtime_eligible: 0, is_night: 1, label: 'Night' },
-    rotating: { start: '06:00', end: '14:00', break: 60, night_differential: 0, overtime_eligible: 0, is_night: 0, label: 'Rotating' },
-    oncall: { start: '09:00', end: '17:00', break: 60, night_differential: 0, overtime_eligible: 1, is_night: 0, label: 'On Call' },
-    ojt: { start: '08:00', end: '16:00', break: 60, night_differential: 0, overtime_eligible: 0, is_night: 0, label: 'OJT Shift' }
+    'Regular': { start: '06:00', end: '14:00', break: 60, night_differential: 0, overtime_eligible: 1, is_night: 0, label: 'Regular' },
+    'Weekend': { start: '08:00', end: '16:00', break: 60, night_differential: 0, overtime_eligible: 1, is_night: 0, label: 'Weekend' },
+    'Special': { start: '08:00', end: '20:00', break: 60, night_differential: 1, overtime_eligible: 1, is_night: 1, label: 'Special' }
   };
 
   // Load shifts data and populate KPIs
@@ -338,8 +332,14 @@
             <span class="status-badge status-${shift.status || 'active'}">${(shift.status || 'Active').charAt(0).toUpperCase() + (shift.status || 'Active').slice(1)}</span>
           </td>
           <td style="text-align: center; white-space: nowrap;">
-            <button class="btn-icon" onclick="window.editShift(${shift.shift_id})" title="Edit">✎</button>
-            <button class="btn-icon btn-danger" onclick="window.deleteShift(${shift.shift_id})" ${assigned > 0 ? 'disabled title="Has assignments - deactivate instead"' : 'title="Delete"'}>🗑</button>
+            <div style="position: relative; display: inline-block;">
+              <button class="action-menu-btn" onclick="window.toggleActionMenu('shift-${shift.shift_id}')" title="Actions">⋮</button>
+              <div class="action-menu" id="shift-${shift.shift_id}" style="display: none;">
+                <button class="action-menu-item" onclick="window.viewShift(${shift.shift_id})">👁 View</button>
+                <button class="action-menu-item" onclick="window.editShift(${shift.shift_id})">✏️ Edit</button>
+                <button class="action-menu-item action-menu-danger" ${assigned > 0 ? 'disabled' : ''} onclick="window.deleteShift(${shift.shift_id})">🗑 Delete</button>
+              </div>
+            </div>
           </td>
         </tr>
       `;
@@ -359,17 +359,10 @@
     form.night_differential_eligible.checked = preset.night_differential === 1;
     form.overtime_eligible.checked = preset.overtime_eligible === 1;
     form.is_night_shift.checked = preset.is_night === 1;
-
-    // OJT shift: disable night differential and overtime
-    if (shiftType === 'ojt') {
-      form.night_differential_eligible.checked = false;
-      form.night_differential_eligible.disabled = true;
-      form.overtime_eligible.checked = false;
-      form.overtime_eligible.disabled = true;
-    } else {
-      form.night_differential_eligible.disabled = false;
-      form.overtime_eligible.disabled = false;
-    }
+    
+    // Enable all fields for database-driven types
+    form.night_differential_eligible.disabled = false;
+    form.overtime_eligible.disabled = false;
   };
 
   // Open modal for add/edit
@@ -380,10 +373,6 @@
     
     form.reset();
     form.shift_type.value = '';
-    
-    // Reset OJT restrictions
-    form.night_differential_eligible.disabled = false;
-    form.overtime_eligible.disabled = false;
     
     if (shiftId) {
       title.textContent = 'Edit Shift';
@@ -399,11 +388,6 @@
         form.overtime_eligible.checked = shift.overtime_eligible === 1;
         form.is_night_shift.checked = shift.is_night_shift === 1;
         form.description.value = shift.description || '';
-        
-        if (shift.shift_type === 'ojt') {
-          form.night_differential_eligible.disabled = true;
-          form.overtime_eligible.disabled = true;
-        }
       }
     } else {
       title.textContent = 'Add Shift';
@@ -609,7 +593,38 @@
   };
 
   window.attachEventListeners = function() {
-    // Attach any additional event listeners after DOM updates
+    // Close menu when clicking outside
+    document.addEventListener('click', function(event) {
+      if (!event.target.closest('.action-menu-btn') && !event.target.closest('.action-menu')) {
+        document.querySelectorAll('.action-menu').forEach(menu => {
+          menu.style.display = 'none';
+        });
+      }
+    });
+  };
+
+  // Toggle action menu
+  window.toggleActionMenu = function(id) {
+    // Close all other menus
+    document.querySelectorAll('.action-menu').forEach(menu => {
+      if (menu.id !== id) {
+        menu.style.display = 'none';
+      }
+    });
+    
+    // Toggle current menu
+    const menu = document.getElementById(id);
+    if (menu) {
+      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+  };
+
+  // View shift details
+  window.viewShift = function(id) {
+    const shift = window.shiftsData.find(s => s.shift_id === id);
+    if (!shift) return;
+    
+    alert('Shift: ' + shift.shift_name + '\n' + shift.start_time + ' - ' + shift.end_time);
   };
   })();
 </script>
@@ -1274,6 +1289,65 @@
   font-size: 0.95rem;
   color: #6b7280;
   max-width: 500px;
+}
+
+/* Action Menu Styles */
+.action-menu-btn {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #6b7280;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.action-menu-btn:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.action-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 140px;
+}
+
+.action-menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #1f2937;
+  transition: all 0.2s ease;
+}
+
+.action-menu-item:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.action-menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-menu-item.action-menu-danger {
+  color: #ef4444;
+}
+
+.action-menu-item.action-menu-danger:hover {
+  background: #fee2e2;
 }
 
 /* Responsive Adjustments */

@@ -462,17 +462,25 @@ if (!empty($rtypes)) {
 }
 </style>
 
-<?php if (!empty($_GET['msg']) || !empty($_GET['err'])): ?>
+<?php 
+$msg = $_GET['msg'] ?? $_SESSION['compensation_approval_msg'] ?? null;
+$err = $_GET['err'] ?? $_SESSION['compensation_approval_err'] ?? null;
+?>
+<?php if (!empty($msg) || !empty($err)): ?>
 <div class="page-container">
   <div class="msg-bar">
-    <?php if (!empty($_GET['msg'])): ?>
-    <div class="msg"><?php echo htmlspecialchars(urldecode($_GET['msg'])); ?></div>
+    <?php if (!empty($msg)): ?>
+    <div class="msg"><?php echo htmlspecialchars(is_string($msg) && strpos($msg, '%') !== false ? urldecode($msg) : $msg); ?></div>
     <?php endif; ?>
-    <?php if (!empty($_GET['err'])): ?>
-    <div class="err"><?php echo htmlspecialchars(urldecode($_GET['err'])); ?></div>
+    <?php if (!empty($err)): ?>
+    <div class="err"><?php echo htmlspecialchars(is_string($err) && strpos($err, '%') !== false ? urldecode($err) : $err); ?></div>
     <?php endif; ?>
   </div>
 </div>
+<?php
+// Clear session variables after display
+unset($_SESSION['compensation_approval_msg'], $_SESSION['compensation_approval_err']);
+?>
 <?php endif; ?>
 
 <div class="page-container">
@@ -668,10 +676,17 @@ function filterRequests(status) {
 }
 
 function performCompSearch(){
-    var q = document.getElementById('comp-search')?.value || '';
-    var params = new URLSearchParams(window.location.search);
-    if(q) params.set('q', q); else params.delete('q');
-    window.location.search = params.toString();
+    var q = document.getElementById('comp-search')?.value.toLowerCase() || '';
+    var rows = document.querySelectorAll('table.approval-table tbody tr');
+    
+    rows.forEach(row => {
+        var text = row.textContent.toLowerCase();
+        if (q === '' || text.indexOf(q) !== -1) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
 }
 </script>
 

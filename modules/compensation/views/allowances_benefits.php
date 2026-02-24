@@ -16,7 +16,7 @@ $allBenefits = $benefitModel->getAll(false);
 $activeCount = count(array_filter($allBenefits, fn($b) => !empty($b['is_active'])));
 $inactiveCount = count(array_filter($allBenefits, fn($b) => empty($b['is_active'])));
 
-$handlerUrl = 'modules/compensation/allowances_benefits_handler.php';
+$handlerUrl = '/PUBLIC_HTML/modules/compensation/allowances_benefits_handler.php';
 $pageTitle = 'Allowances & Benefits';
 require __DIR__ . '/partials/header.php';
 
@@ -423,17 +423,25 @@ function getEnumOptions($table, $column) {
 }
 </style>
 
-<?php if (!empty($_GET['msg']) || !empty($_GET['err'])): ?>
+<?php 
+$msg = $_GET['msg'] ?? $_SESSION['allowances_benefits_msg'] ?? null;
+$err = $_GET['err'] ?? $_SESSION['allowances_benefits_err'] ?? null;
+?>
+<?php if (!empty($msg) || !empty($err)): ?>
 <div class="page-container">
   <div class="msg-bar">
-    <?php if (!empty($_GET['msg'])): ?>
-    <div class="msg"><?php echo htmlspecialchars(urldecode($_GET['msg'])); ?></div>
+    <?php if (!empty($msg)): ?>
+    <div class="msg"><?php echo htmlspecialchars(is_string($msg) && strpos($msg, '%') !== false ? urldecode($msg) : $msg); ?></div>
     <?php endif; ?>
-    <?php if (!empty($_GET['err'])): ?>
-    <div class="err"><?php echo htmlspecialchars(urldecode($_GET['err'])); ?></div>
+    <?php if (!empty($err)): ?>
+    <div class="err"><?php echo htmlspecialchars(is_string($err) && strpos($err, '%') !== false ? urldecode($err) : $err); ?></div>
     <?php endif; ?>
   </div>
 </div>
+<?php
+// Clear session variables after display
+unset($_SESSION['allowances_benefits_msg'], $_SESSION['allowances_benefits_err']);
+?>
 <?php endif; ?>
 
 <div class="page-container">
@@ -620,6 +628,17 @@ function getEnumOptions($table, $column) {
 </div>
 
 <script>
+function toggleAllowancesBenefitsForm(formId) {
+    const form = document.getElementById(formId);
+    if (form) {
+        form.classList.toggle('visible');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        if (form.style.display !== 'none') {
+            setTimeout(() => form.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+        }
+    }
+}
+
 function toggleForm(formId) {
     const form = document.getElementById(formId);
     if (form) {
@@ -636,7 +655,7 @@ function toggleRoleField() {
     rolesField.style.display = (attachTo === 'duty') ? 'none' : 'flex';
 }
 
-function filterBenefits(status) {
+function filterAllowancesBenefits(status) {
     const rows = document.querySelectorAll('.benefit-row');
     rows.forEach(row => {
         const isActive = row.dataset.active === 'yes';
@@ -656,12 +675,93 @@ function filterBenefits(status) {
     event.target.classList.add('active');
 }
 
-function performCompSearch(){
-    var q = document.getElementById('comp-search')?.value || '';
-    var params = new URLSearchParams(window.location.search);
-    if(q) params.set('q', q); else params.delete('q');
-    window.location.search = params.toString();
+function filterBenefits(status) {
+    filterAllowancesBenefits(status);
 }
+
+function performCompSearch(){
+    var q = document.getElementById('comp-search')?.value.toLowerCase() || '';
+    var rows = document.querySelectorAll('.benefit-row');
+    
+    rows.forEach(row => {
+        var text = row.textContent.toLowerCase();
+        if (q === '' || text.indexOf(q) !== -1) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+// Handle all allowances & benefits forms with AJAX
+document.addEventListener('DOMContentLoaded', function() {
+    const forms = document.querySelectorAll('form[action="<?php echo htmlspecialchars($handlerUrl); ?>"]');
+    
+    forms.forEach(form => {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            try {
+                const response = await fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                // Show message
+                let messageHtml = '';
+                if (data.success) {
+                    messageHtml = `<div style="background: #d1fae5; border: 1px solid #6ee7b7; border-radius: 4px; padding: 12px 16px; margin-bottom: 16px; color: #065f46; display: flex; justify-content: space-between; align-items: center;">
+                        <div><strong>✓ Success:</strong> ${data.message}</div>
+                        <button type="button" onclick="this.closest('div').remove();" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #065f46;">×</button>
+                    </div>`;
+                } else {
+                    messageHtml = `<div style="background: #fee2e2; border: 1px solid #fca5a5; border-radius: 4px; padding: 12px 16px; margin-bottom: 16px; color: #991b1b; display: flex; justify-content: space-between; align-items: center;">
+                        <div><strong>✕ Error:</strong> ${data.message}</div>
+                        <button type="button" onclick="this.closest('div').remove();" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #991b1b;">×</button>
+                    </div>`;
+                }
+                
+                // Insert message at top of page
+                const firstSection = document.querySelector('.section-card');
+                if (firstSection && firstSection.parentNode) {
+                    // Remove old messages
+                    const oldMessages = firstSection.parentNode.querySelectorAll('div[style*="background: #d1fae5"], div[style*="background: #fee2e2"]');
+                    oldMessages.forEach(msg => msg.remove());
+                    
+                    // Insert new message before first section
+                    firstSection.insertAdjacentHTML('beforebegin', messageHtml);
+                    firstSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                
+                // Reset form and hide it on success
+                if (data.success) {
+                    this.reset();
+                    // Hide the form
+                    const formContainer = this.closest('.add-form') || this.closest('.edit-form');
+                    if (formContainer) {
+                        formContainer.style.display = 'none';
+                    }
+                    
+                    // Reload after 2 seconds
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+            }
+        });
+    });
+});
 </script>
 
 <?php require __DIR__ . '/partials/footer.php'; ?>

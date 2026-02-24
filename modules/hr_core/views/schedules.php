@@ -157,11 +157,10 @@
           <label class="form-label">Schedule Type *</label>
           <select name="schedule_type" class="form-select" required onchange="window.updateScheduleDefaults(this.value)">
             <option value="">Select type...</option>
-            <option value="fixed">Fixed Weekly</option>
-            <option value="rotating">Rotating</option>
-            <option value="flexible">Flexible</option>
-            <option value="ojt">OJT Schedule</option>
-            <option value="oncall">On Call</option>
+            <option value="Fixed">Fixed Weekly</option>
+            <option value="Rotating">Rotating</option>
+            <option value="Flexible">Flexible</option>
+            <option value="Part-time">Part-time</option>
           </select>
         </div>
 
@@ -230,13 +229,12 @@
 
 <script>
   (function() {
-  // Schedule Type Presets
+  // Schedule Type Presets - mapped to database schedules
   window.SCHEDULE_PRESETS = {
-    fixed: { hours_per_day: 8, work_days_per_week: 5, shift_pattern: 'M,M,A,A,N,R,R', has_night: 1, is_trainee: 0 },
-    rotating: { hours_per_day: 8, work_days_per_week: 5, shift_pattern: 'Rotating', has_night: 1, is_trainee: 0 },
-    flexible: { hours_per_day: 8, work_days_per_week: 5, shift_pattern: 'Flexible', has_night: 0, is_trainee: 0 },
-    ojt: { hours_per_day: 8, work_days_per_week: 5, shift_pattern: 'M,M,A,A,R,R,R', has_night: 0, is_trainee: 1 },
-    oncall: { hours_per_day: 4, work_days_per_week: 2, shift_pattern: 'On Call', has_night: 1, is_trainee: 0 }
+    'Fixed': { hours_per_day: 8, work_days_per_week: 5, shift_pattern: 'M-F 8hrs', has_night: 0, is_trainee: 0 },
+    'Rotating': { hours_per_day: 8, work_days_per_week: 7, shift_pattern: '3-shift rotation', has_night: 1, is_trainee: 0 },
+    'Flexible': { hours_per_day: 8, work_days_per_week: 5, shift_pattern: 'Flexible', has_night: 0, is_trainee: 0 },
+    'Part-time': { hours_per_day: 4, work_days_per_week: 5, shift_pattern: 'Variable', has_night: 0, is_trainee: 0 }
   };
 
   // Load schedules
@@ -310,8 +308,14 @@
             <span class="status-badge status-${sched.status || 'active'}">${(sched.status || 'Active').charAt(0).toUpperCase() + (sched.status || 'Active').slice(1)}</span>
           </td>
           <td style="text-align: center; white-space: nowrap;">
-            <button class="btn-icon" onclick="window.editSchedule(${sched.id})" title="Edit">✎</button>
-            <button class="btn-icon btn-danger" onclick="window.deleteSchedule(${sched.id})" ${assigned > 0 ? 'disabled title="Has assignments - deactivate instead"' : 'title="Delete"'}>🗑</button>
+            <div style="position: relative; display: inline-block;">
+              <button class="action-menu-btn" onclick="window.toggleActionMenu('schedule-${sched.id}')" title="Actions">⋮</button>
+              <div class="action-menu" id="schedule-${sched.id}" style="display: none;">
+                <button class="action-menu-item" onclick="window.viewSchedule(${sched.id})">👁 View</button>
+                <button class="action-menu-item" onclick="window.editSchedule(${sched.id})">✏️ Edit</button>
+                <button class="action-menu-item action-menu-danger" ${assigned > 0 ? 'disabled' : ''} onclick="window.deleteSchedule(${sched.id})">🗑 Delete</button>
+              </div>
+            </div>
           </td>
         </tr>
       `;
@@ -577,7 +581,38 @@
   };
 
   window.attachEventListeners = function() {
-    // Additional event listeners
+    // Close menu when clicking outside
+    document.addEventListener('click', function(event) {
+      if (!event.target.closest('.action-menu-btn') && !event.target.closest('.action-menu')) {
+        document.querySelectorAll('.action-menu').forEach(menu => {
+          menu.style.display = 'none';
+        });
+      }
+    });
+  };
+
+  // Toggle action menu
+  window.toggleActionMenu = function(id) {
+    // Close all other menus
+    document.querySelectorAll('.action-menu').forEach(menu => {
+      if (menu.id !== id) {
+        menu.style.display = 'none';
+      }
+    });
+    
+    // Toggle current menu
+    const menu = document.getElementById(id);
+    if (menu) {
+      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+  };
+
+  // View schedule details
+  window.viewSchedule = function(id) {
+    const schedule = window.schedulesData.find(s => s.id === id);
+    if (!schedule) return;
+    
+    alert('Schedule: ' + schedule.schedule_name + '\n' + schedule.hours_per_day + 'h/day • ' + schedule.work_days_per_week + 'd/week');
   };
   })();
 </script>
@@ -1091,6 +1126,65 @@
 .schedule-side-action {
   display: flex;
   gap: 0.5rem;
+}
+
+/* Action Menu Styles */
+.action-menu-btn {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #6b7280;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.action-menu-btn:hover {
+  background: #f3f4f6;
+  color: #1f2937;
+}
+
+.action-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  min-width: 140px;
+}
+
+.action-menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #1f2937;
+  transition: all 0.2s ease;
+}
+
+.action-menu-item:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+.action-menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-menu-item.action-menu-danger {
+  color: #ef4444;
+}
+
+.action-menu-item.action-menu-danger:hover {
+  background: #fee2e2;
 }
 
 /* Responsive */

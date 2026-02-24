@@ -699,16 +699,51 @@ document.querySelector('input[name="new_amount"]')?.addEventListener('change', f
 });
 
 function performCompSearch(){
-    var q = document.getElementById('comp-search')?.value || '';
-    var params = new URLSearchParams(window.location.search);
-    if(q) params.set('q', q); else params.delete('q');
-    window.location.search = params.toString();
+    var q = document.getElementById('comp-search')?.value.toLowerCase() || '';
+    var rows = document.querySelectorAll('table.salary-table tbody tr');
+    
+    rows.forEach(row => {
+        var text = row.textContent.toLowerCase();
+        if (q === '' || text.indexOf(q) !== -1) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
 }
 
 window.filterSalaryAdjustments = function(status) {
-    var params = new URLSearchParams(window.location.search);
-    params.set('filter', status);
-    window.location.search = params.toString();
+    // Update active button state
+    var buttons = document.querySelectorAll('.filter-tabs .filter-btn');
+    buttons.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Filter adjustments table client-side
+    var table = document.querySelector('table.salary-table');
+    if (!table) return;
+    
+    var rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        var statusCell = row.querySelector('td:nth-child(6)');
+        if (!statusCell) {
+            row.style.display = 'none';
+            return;
+        }
+        
+        var statusText = statusCell.textContent.toLowerCase();
+        
+        if (status === 'all') {
+            row.style.display = '';
+        } else if (status === 'pending' && statusText.includes('pending')) {
+            row.style.display = '';
+        } else if (status === 'approved' && statusText.includes('approved')) {
+            row.style.display = '';
+        } else if (status === 'rejected' && statusText.includes('rejected')) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
 }
 </script>
 

@@ -156,10 +156,14 @@
           <label class="form-label">Role Category *</label>
           <select name="role_category" class="form-select" required>
             <option value="">Select category...</option>
-            <option value="system">System (Admin roles)</option>
-            <option value="management">Management (HR/Department)</option>
-            <option value="operational">Operational (Payroll/Finance)</option>
-            <option value="enduser">End User (Employee/OJT)</option>
+            <option value="System">System (Admin roles)</option>
+            <option value="Management">Management (HR/Department)</option>
+            <option value="HR">HR</option>
+            <option value="Finance">Finance & Payroll</option>
+            <option value="Medical">Medical</option>
+            <option value="Nursing">Nursing</option>
+            <option value="Technical">Technical Support</option>
+            <option value="Employee">Employee</option>
           </select>
         </div>
         <div class="form-group" style="grid-column: 1 / -1;">
@@ -381,26 +385,26 @@
         if (isSystemRole) {
           // System roles are locked
           actionButtons = `
-            <button class="role-action-btn role-action-view" onclick="window.viewRole(${role.role_id})" title="View (locked)">👁</button>
-            <button class="role-action-btn role-action-lock" title="System role - Edit disabled">🔒</button>
+            <div style="position: relative; display: inline-block;">
+              <button class="action-menu-btn" onclick="window.toggleActionMenu('role-${role.role_id}')" title="Actions">⋮</button>
+              <div class="action-menu" id="role-${role.role_id}" style="display: none;">
+                <button class="action-menu-item" onclick="window.viewRole(${role.role_id})">👁 View (locked)</button>
+              </div>
+            </div>
           `;
         } else {
           // Custom roles
           actionButtons = `
-            <button class="role-action-btn role-action-edit" onclick="window.editRole(${role.role_id})" title="Edit">✏</button>
-            <button class="role-action-btn role-action-duplicate" onclick="window.duplicateRole(${role.role_id})" title="Duplicate">📋</button>
+            <div style="position: relative; display: inline-block;">
+              <button class="action-menu-btn" onclick="window.toggleActionMenu('role-${role.role_id}')" title="Actions">⋮</button>
+              <div class="action-menu" id="role-${role.role_id}" style="display: none;">
+                <button class="action-menu-item" onclick="window.viewRole(${role.role_id})">👁 View</button>
+                <button class="action-menu-item" onclick="window.editRole(${role.role_id})">✏️ Edit</button>
+                <button class="action-menu-item" onclick="window.duplicateRole(${role.role_id})">📋 Duplicate</button>
+                ${userCount === 0 ? `<button class="action-menu-item action-menu-danger" onclick="window.deleteRole(${role.role_id})">🗑 Delete</button>` : `<button class="action-menu-item" onclick="window.deactivateRole(${role.role_id})">🔒 Deactivate</button>`}
+              </div>
+            </div>
           `;
-          
-          // Delete guard - disable if users assigned
-          if (userCount === 0) {
-            actionButtons += `
-              <button class="role-action-btn role-action-delete" onclick="window.deleteRole(${role.role_id})" title="Delete">🗑</button>
-            `;
-          } else {
-            actionButtons += `
-              <button class="role-action-btn role-action-deactivate" onclick="window.deactivateRole(${role.role_id})" title="Deactivate instead of delete">🔒</button>
-            `;
-          }
         }
 
         const row = `
@@ -710,6 +714,44 @@
         });
       }
     }
+
+    // Toggle action menu
+    window.toggleActionMenu = function(id) {
+      // Close all other menus
+      document.querySelectorAll('.action-menu').forEach(menu => {
+        if (menu.id !== id) {
+          menu.style.display = 'none';
+        }
+      });
+      
+      // Toggle current menu
+      const menu = document.getElementById(id);
+      if (menu) {
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+      }
+    };
+
+    // Close menu when clicking outside
+    document.addEventListener('click', function(event) {
+      if (!event.target.closest('.action-menu-btn') && !event.target.closest('.action-menu')) {
+        document.querySelectorAll('.action-menu').forEach(menu => {
+          menu.style.display = 'none';
+        });
+      }
+    });
+
+    // View role details
+    window.viewRole = function(id) {
+      fetch(`modules/hr_core/api.php?action=getRoleById&id=${id}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            const role = data.data;
+            alert('Role: ' + role.role_name + '\nCategory: ' + role.role_category);
+          }
+        })
+        .catch(error => console.error('Error:', error));
+    };
 
     document.addEventListener('DOMContentLoaded', () => {
       window.loadRoles();
@@ -1366,6 +1408,65 @@
     .role-kpi-card .kpi-value {
       font-size: 20px;
     }
+  }
+
+  /* Action Menu Styles */
+  .action-menu-btn {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: #6b7280;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+  }
+
+  .action-menu-btn:hover {
+    background: #f3f4f6;
+    color: #1f2937;
+  }
+
+  .action-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    min-width: 140px;
+  }
+
+  .action-menu-item {
+    display: block;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #1f2937;
+    transition: all 0.2s ease;
+  }
+
+  .action-menu-item:hover:not(:disabled) {
+    background: #f3f4f6;
+  }
+
+  .action-menu-item:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .action-menu-item.action-menu-danger {
+    color: #ef4444;
+  }
+
+  .action-menu-item.action-menu-danger:hover {
+    background: #fee2e2;
   }
 </style>
 </div>

@@ -20,7 +20,7 @@ $payGrades = $payGradeModel->getAllWithBands(false);
 $gradeLevels = $gradeLevelModel->getAllWithGrade(false);
 $bands = $salaryBandModel->getAllWithDetails(false);
 
-$handlerUrl = 'modules/compensation/salary_planning_handler.php';
+$handlerUrl = '/PUBLIC_HTML/modules/compensation/salary_planning_handler.php';
 $expandGrade = $_GET['expand_grade'] ?? '';
 $pageTitle = 'Salary Planning';
 require __DIR__ . '/partials/header.php';
@@ -79,7 +79,7 @@ require __DIR__ . '/partials/header.php';
                         <td><?php echo htmlspecialchars($pg['name']); ?></td>
                         <td><?php echo (int) ($pg['band_count'] ?? 0); ?></td>
                         <td><?php echo htmlspecialchars($pg['range_summary'] ?? '—'); ?></td>
-                        <td class="action-cell"></td>
+                        <td class="action-cell"><button class="btn btn-sm btn-outline">✎ Edit</button></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -135,7 +135,7 @@ require __DIR__ . '/partials/header.php';
                         <td><span class="code"><?php echo htmlspecialchars($gl['pay_grade_code']); ?></span></td>
                         <td><span class="code"><?php echo htmlspecialchars($gl['code']); ?></span></td>
                         <td><?php echo htmlspecialchars($gl['name']); ?></td>
-                        <td class="action-cell"></td>
+                        <td class="action-cell"><button class="btn btn-sm btn-outline">✎ Edit</button></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -204,7 +204,7 @@ require __DIR__ . '/partials/header.php';
                         <td class="num"><?php echo format_currency($b['midpoint_salary'], 0); ?></td>
                         <td class="num"><?php echo format_currency($b['max_salary'], 0); ?></td>
                         <td><span class="badge badge-<?php echo $b['status'] === 'Active' ? 'active' : 'inactive'; ?>"><?php echo $b['status']; ?></span></td>
-                        <td class="action-cell"></td>
+                        <td class="action-cell"><button class="btn btn-sm btn-outline">✎ Edit</button></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -295,6 +295,19 @@ require __DIR__ . '/partials/header.php';
 </div>
 
 <script>
+// Toggle form visibility
+function toggleForm(formId) {
+    const form = document.getElementById(formId);
+    if (form) {
+        form.classList.toggle('visible');
+        if (form.classList.contains('visible')) {
+            setTimeout(() => {
+                form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        }
+    }
+}
+
 // Compensation table enhancer (per-view)
 ;(function(){
     try {
@@ -317,10 +330,17 @@ require __DIR__ . '/partials/header.php';
     } catch (e){ console && console.error('comp table enhancer', e); }
 })();
 function performCompSearch(){
-    var q = document.getElementById('comp-search')?.value || '';
-    var params = new URLSearchParams(window.location.search);
-    if(q) params.set('q', q); else params.delete('q');
-    window.location.search = params.toString();
+    var q = document.getElementById('comp-search')?.value.toLowerCase() || '';
+    var rows = document.querySelectorAll('table.comp-table tbody tr');
+    
+    rows.forEach(row => {
+        var text = row.textContent.toLowerCase();
+        if (q === '' || text.indexOf(q) !== -1) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
 }
 </script>
 <?php require __DIR__ . '/partials/footer.php'; ?>

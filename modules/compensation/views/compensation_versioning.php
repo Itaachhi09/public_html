@@ -613,13 +613,6 @@ function filterHistory(status) {
     document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
     event.target.classList.add('active');
 }
-
-function performCompSearch(){
-    var q = document.getElementById('comp-search')?.value || '';
-    var params = new URLSearchParams(window.location.search);
-    if(q) params.set('q', q); else params.delete('q');
-    window.location.search = params.toString();
-}
 </script>
 
 <?php require __DIR__ . '/partials/footer.php'; ?>
@@ -727,10 +720,17 @@ function closeDetail() {
     } catch (e){ console && console.error('comp table enhancer', e); }
 })();
 function performCompSearch(){
-    var q = document.getElementById('comp-search')?.value || '';
-    var params = new URLSearchParams(window.location.search);
-    if(q) params.set('q', q); else params.delete('q');
-    window.location.search = params.toString();
+    var q = document.getElementById('comp-search')?.value.toLowerCase() || '';
+    var rows = document.querySelectorAll('table.version-table tbody tr');
+    
+    rows.forEach(row => {
+        var text = row.textContent.toLowerCase();
+        if (q === '' || text.indexOf(q) !== -1) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
 }
 </script>
 <?php require __DIR__ . '/partials/footer.php'; ?>

@@ -1415,18 +1415,7 @@ $notifications = 3;
             <span>Pay Bonds & Contracts</span>
           </a>
           <?php endif; ?>
-          <?php if (canAccessMenuItem('compensation', 'compensation_approval')): ?>
-          <a href="#" onclick="loadCompensationPage(event, 'compensation_approval')" class="nav-subitem">
-            <i class='bx bx-check-circle'></i>
-            <span>Approval Workflow</span>
-          </a>
-          <?php endif; ?>
-          <?php if (canAccessMenuItem('compensation', 'compensation_versioning')): ?>
-          <a href="#" onclick="loadCompensationPage(event, 'compensation_versioning')" class="nav-subitem">
-            <i class='bx bx-history'></i>
-            <span>Version History</span>
-          </a>
-          <?php endif; ?>
+
         </div>
       </div>
 
@@ -1735,8 +1724,7 @@ $notifications = 3;
         allowances_benefits: 'Allowances & Benefits',
         incentives_bonus: 'Incentives & Bonus',
         pay_bonds_contracts: 'Pay Bonds & Contracts',
-        compensation_approval: 'Approval Workflow',
-        compensation_versioning: 'Version History',
+        // Approval Workflow and Version History removed
         // HMO
         providers: 'HMO Providers',
         plans: 'HMO Plans & Coverage',

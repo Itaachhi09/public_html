@@ -322,6 +322,25 @@ function getEnumOptions($table, $column) {
 </style>
 
 <main class="setup-container">
+  <!-- Messages from session -->
+  <?php
+  $msg = $_SESSION['compensation_msg'] ?? null;
+  $err = $_SESSION['compensation_err'] ?? null;
+  ?>
+  <?php if ($msg): ?>
+    <div style="background: #d1fae5; border: 1px solid #6ee7b7; border-radius: 4px; padding: 12px 16px; margin-bottom: 16px; color: #065f46;">
+      <strong>✓ Success:</strong> <?php echo htmlspecialchars($msg); ?>
+    </div>
+    <?php unset($_SESSION['compensation_msg']); ?>
+  <?php endif; ?>
+  
+  <?php if ($err): ?>
+    <div style="background: #fee2e2; border: 1px solid #fca5a5; border-radius: 4px; padding: 12px 16px; margin-bottom: 16px; color: #991b1b;">
+      <strong>✕ Error:</strong> <?php echo htmlspecialchars($err); ?>
+    </div>
+    <?php unset($_SESSION['compensation_err']); ?>
+  <?php endif; ?>
+
   <!-- KPI Cards -->
   <div class="kpi-grid">
     <div class="kpi-card salary">
@@ -660,6 +679,76 @@ window.switchTab = function(event, tabName) {
         selectedContent.classList.add('active');
     }
 };
+
+// Handle all compensation structure forms with AJAX
+document.addEventListener('DOMContentLoaded', function() {
+    const forms = document.querySelectorAll('form[action="<?php echo htmlspecialchars($handlerUrl); ?>"]');
+    
+    forms.forEach(form => {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            try {
+                const response = await fetch(this.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                // Show message
+                let messageHtml = '';
+                if (data.success) {
+                    messageHtml = `<div style="background: #d1fae5; border: 1px solid #6ee7b7; border-radius: 4px; padding: 12px 16px; margin-bottom: 16px; color: #065f46; display: flex; justify-content: space-between; align-items: center;">
+                        <div><strong>✓ Success:</strong> ${data.message}</div>
+                        <button type="button" onclick="this.closest('div').remove();" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #065f46;">×</button>
+                    </div>`;
+                } else {
+                    messageHtml = `<div style="background: #fee2e2; border: 1px solid #fca5a5; border-radius: 4px; padding: 12px 16px; margin-bottom: 16px; color: #991b1b; display: flex; justify-content: space-between; align-items: center;">
+                        <div><strong>✕ Error:</strong> ${data.message}</div>
+                        <button type="button" onclick="this.closest('div').remove();" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #991b1b;">×</button>
+                    </div>`;
+                }
+                
+                // Insert message at top of main
+                const main = document.querySelector('main.setup-container');
+                if (main) {
+                    // Remove old messages
+                    const oldMessages = main.querySelectorAll('div[style*="background: #d1fae5"], div[style*="background: #fee2e2"]');
+                    oldMessages.forEach(msg => msg.remove());
+                    
+                    // Insert new message
+                    main.insertAdjacentHTML('afterbegin', messageHtml);
+                    main.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                
+                // Reset form and hide it on success
+                if (data.success) {
+                    this.reset();
+                    // Hide the form
+                    const formContainer = this.closest('.add-form');
+                    if (formContainer) {
+                        formContainer.classList.remove('visible');
+                    }
+                    
+                    // Optionally reload page after 2 seconds to refresh the data
+                    setTimeout(() => {
+                        location.reload();
+                    }, 2000);
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred. Please try again.');
+            }
+        });
+    });
+});
 </script>
 
 <?php require __DIR__ . '/partials/footer.php'; ?>

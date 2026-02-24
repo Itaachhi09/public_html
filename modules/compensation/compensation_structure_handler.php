@@ -13,7 +13,17 @@
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
+
+// Detect AJAX requests upfront
+$isAjaxRequest = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
 if (empty($_SESSION['token'])) {
+    if ($isAjaxRequest) {
+        header('Content-Type: application/json');
+        http_response_code(401);
+        echo json_encode(['success' => false, 'message' => 'Not authenticated']);
+        exit;
+    }
     header('Location: ../../index.php');
     exit;
 }
@@ -261,8 +271,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$params = ['ref' => 'compensation', 'page' => 'compensation_structure'];
-if ($msg) $params['msg'] = urlencode($msg);
-if ($err) $params['err'] = urlencode($err);
-header('Location: ../../dashboard.php?' . http_build_query($params));
+// If AJAX, return JSON response instead of redirect
+if ($isAjaxRequest) {
+    header('Content-Type: application/json');
+    http_response_code(empty($err) ? 200 : 400);
+    echo json_encode([
+        'success' => empty($err),
+        'message' => $err ?: $msg,
+        'error' => $err,
+    ]);
+    exit;
+}
+
+// For traditional form submission, redirect back to the compensation structure view
+if ($msg) $_SESSION['compensation_msg'] = $msg;
+if ($err) $_SESSION['compensation_err'] = $err;
+
+header('Location: ../../dashboard.php?ref=compensation&page=compensation_structure');
 exit; 

@@ -1,7 +1,8 @@
 <?php
 /**
- * Salary Planning - Enhanced Professional Design
+ * Salary Planning - Comprehensive Design
  * Pay Grades > Grade Levels > Salary Bands
+ * Merged from salary_planning.php, salary_planning_modern.php, and salary_planning_old.php
  */
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -25,8 +26,9 @@ $activeBands = count(array_filter($bands, fn($b) => $b['status'] === 'Active'));
 $inactiveBands = count(array_filter($bands, fn($b) => $b['status'] !== 'Active'));
 $totalBands = count($bands);
 
-$handlerUrl = 'modules/compensation/salary_planning_handler.php';
+$handlerUrl = '/PUBLIC_HTML/modules/compensation/salary_planning_handler.php';
 $filterStatus = $_GET['filter'] ?? 'all';
+$expandGrade = $_GET['expand_grade'] ?? '';
 $pageTitle = 'Salary Planning';
 require __DIR__ . '/partials/header.php';
 ?>
@@ -149,6 +151,7 @@ html, body { margin: 0; padding: 0; }
 .filter-tabs {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .filter-btn {
@@ -327,6 +330,16 @@ html, body { margin: 0; padding: 0; }
   font-size: 13px;
 }
 
+.btn-outline {
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #6b7280;
+}
+
+.btn-outline:hover {
+  background: #f9fafb;
+}
+
 .add-form {
   display: none;
   background: #f9fafb;
@@ -403,6 +416,47 @@ html, body { margin: 0; padding: 0; }
   color: #1e40af;
 }
 
+.callout {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+.callout-info {
+  background: #eff6ff;
+  border-left: 4px solid #3b82f6;
+  color: #1e40af;
+}
+
+.callout-warning {
+  background: #fef3c7;
+  border-left: 4px solid #f59e0b;
+  color: #92400e;
+}
+
+.callout-success {
+  background: #d1fae5;
+  border-left: 4px solid #10b981;
+  color: #065f46;
+}
+
+.callout-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.callout-text {
+  flex: 1;
+}
+
+.callout-text strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -434,6 +488,206 @@ html, body { margin: 0; padding: 0; }
   font-size: 13px;
   color: #6b7280;
 }
+
+.code {
+  background: #f3f4f6;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.comp-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 8px;
+  background: #f9fafb;
+  border-radius: 6px;
+}
+
+.comp-search {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.comp-page-size {
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.comp-pagination {
+  display: flex;
+  gap: 4px;
+}
+
+.comp-pagination button {
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.comp-pagination button.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.comp-pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal-dialog {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.15);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  color: #1f2937;
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.modal-form-group {
+  margin-bottom: 16px;
+}
+
+.modal-form-group label {
+  display: block;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.modal-form-group input,
+.modal-form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.modal-form-group input:focus,
+.modal-form-group select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.modal-info-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-info-item {
+  background: #f9fafb;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.modal-info-label {
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modal-info-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-top: 4px;
+}
 </style>
 
 <?php if (!empty($_GET['msg']) || !empty($_GET['err'])): ?>
@@ -458,7 +712,7 @@ html, body { margin: 0; padding: 0; }
       <p>Configure pay grades, salary bands, and grade levels</p>
     </div>
     <div class="header-actions">
-      <button onclick="toggleForm('add-band-form'); return false;">+ New Band</button>
+      <button onclick="window.toggleSalaryPlanningForm('add-band-form'); return false;">+ New Band</button>
     </div>
   </div>
 
@@ -466,23 +720,24 @@ html, body { margin: 0; padding: 0; }
   <div class="search-filters">
     <div class="search-box">
       <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
-      <input id="comp-search" type="text" placeholder="Search pay grades, bands, levels..." onkeypress="if(event.key==='Enter') performCompSearch();">
+      <input id="comp-search" type="text" placeholder="Search pay grades, bands, levels..." onkeypress="if(event.key==='Enter') window.performCompSearch();">
     </div>
     <div class="filter-tabs">
-      <button class="filter-btn <?php echo $filterStatus === 'all' ? 'active' : ''; ?>" onclick="filterBands('all'); return false;">All Status</button>
-      <button class="filter-btn <?php echo $filterStatus === 'active' ? 'active' : ''; ?>" onclick="filterBands('active'); return false;">Active (<?php echo $activeBands; ?>)</button>
-      <button class="filter-btn <?php echo $filterStatus === 'inactive' ? 'active' : ''; ?>" onclick="filterBands('inactive'); return false;">Inactive (<?php echo $inactiveBands; ?>)</button>
+      <button class="filter-btn <?php echo $filterStatus === 'all' ? 'active' : ''; ?>" onclick="window.filterBands('all'); return false;">All Status (<?php echo $totalBands; ?>)</button>
+      <button class="filter-btn <?php echo $filterStatus === 'active' ? 'active' : ''; ?>" onclick="window.filterBands('active'); return false;">Active (<?php echo $activeBands; ?>)</button>
+      <button class="filter-btn <?php echo $filterStatus === 'inactive' ? 'active' : ''; ?>" onclick="window.filterBands('inactive'); return false;">Inactive (<?php echo $inactiveBands; ?>)</button>
     </div>
   </div>
 
   <!-- 3. SALARY BANDS (Main Section) -->
   <div class="section-card">
     <div class="section-card-header">
-      <h3 class="section-card-title">Salary Bands</h3>
+      <h3 class="section-card-title">3. Salary Bands</h3>
     </div>
 
-    <div class="rules-notice">
-      <strong>📋 Rules:</strong> Assignments outside band require approval. Min ≤ Mid ≤ Max.
+    <div class="callout callout-warning">
+      <div class="callout-icon">⚠</div>
+      <div class="callout-text"><strong>Critical:</strong> Salary bands define compensation ranges. Min ≤ Mid ≤ Max must be maintained. Assignments outside bands require approval. This is the foundation of salary equity.</div>
     </div>
 
     <!-- Add Form -->
@@ -528,7 +783,7 @@ html, body { margin: 0; padding: 0; }
         </div>
         <div class="form-actions" style="justify-content: flex-end;">
           <button type="submit" class="btn btn-primary btn-sm">Create Band</button>
-          <button type="button" class="btn btn-sm" onclick="toggleForm('add-band-form'); return false;">Cancel</button>
+          <button type="button" class="btn btn-sm" onclick="window.toggleSalaryPlanningForm('add-band-form'); return false;">Cancel</button>
         </div>
       </form>
     </div>
@@ -547,7 +802,7 @@ html, body { margin: 0; padding: 0; }
     <div class="empty-message">No salary bands found. Add one to get started.</div>
     <?php else: ?>
     <div class="table-responsive">
-      <table class="salary-table">
+      <table class="salary-table comp-table">
         <thead>
           <tr>
             <th>Pay Grade</th>
@@ -573,7 +828,7 @@ html, body { margin: 0; padding: 0; }
               </span>
             </td>
             <td class="action-buttons">
-              <button class="action-btn">✎ Edit</button>
+              <button class="btn btn-sm btn-outline" onclick="window.editSalaryBand(<?php echo (int) $b['id']; ?>, <?php echo (float) $b['min_salary']; ?>, <?php echo (float) $b['midpoint_salary']; ?>, <?php echo (float) $b['max_salary']; ?>, '<?php echo htmlspecialchars($b['pay_grade_id']); ?>'); return false;">✎ Edit</button>
             </td>
           </tr>
           <?php endforeach; ?>
@@ -586,15 +841,20 @@ html, body { margin: 0; padding: 0; }
   <!-- 1. PAY GRADES -->
   <div class="section-card">
     <div class="section-card-header">
-      <h3 class="section-card-title">Pay Grades</h3>
-      <button class="btn btn-primary btn-sm" onclick="toggleForm('add-paygrade-form'); return false;">+ Add</button>
+      <h3 class="section-card-title">1. Pay Grades</h3>
+      <button class="btn btn-primary btn-sm" onclick="window.toggleSalaryPlanningForm('add-paygrade-form'); return false;">+ Add</button>
+    </div>
+
+    <div class="callout callout-info">
+      <div class="callout-icon">ℹ</div>
+      <div class="callout-text"><strong>Pay Grades</strong> group positions by salary level. Each grade can have multiple bands and levels. Required to set up salary structure.</div>
     </div>
 
     <?php if (empty($payGrades)): ?>
     <div class="empty-message">No pay grades yet. Add one to get started.</div>
     <?php else: ?>
     <div class="table-responsive">
-      <table class="salary-table">
+      <table class="salary-table comp-table">
         <thead>
           <tr>
             <th>Code</th>
@@ -612,7 +872,7 @@ html, body { margin: 0; padding: 0; }
             <td><strong><?php echo (int) ($pg['band_count'] ?? 0); ?></strong></td>
             <td><?php echo htmlspecialchars($pg['range_summary'] ?? '—'); ?></td>
             <td class="action-buttons">
-              <button class="action-btn">✎ Edit</button>
+              <button class="btn btn-sm btn-outline" onclick="window.editPayGrade(<?php echo (int) $pg['id']; ?>, '<?php echo htmlspecialchars($pg['code']); ?>', '<?php echo htmlspecialchars($pg['name']); ?>'); return false;">✎ Edit</button>
             </td>
           </tr>
           <?php endforeach; ?>
@@ -638,7 +898,7 @@ html, body { margin: 0; padding: 0; }
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn-primary btn-sm">Create</button>
-          <button type="button" class="btn btn-sm" onclick="toggleForm('add-paygrade-form'); return false;">Cancel</button>
+          <button type="button" class="btn btn-sm" onclick="window.toggleSalaryPlanningForm('add-paygrade-form'); return false;">Cancel</button>
         </div>
       </form>
     </div>
@@ -647,15 +907,20 @@ html, body { margin: 0; padding: 0; }
   <!-- 2. GRADE LEVELS -->
   <div class="section-card">
     <div class="section-card-header">
-      <h3 class="section-card-title">Grade Levels</h3>
-      <button class="btn btn-primary btn-sm" onclick="toggleForm('add-gradelevel-form'); return false;">+ Add</button>
+      <h3 class="section-card-title">2. Grade Levels</h3>
+      <button class="btn btn-primary btn-sm" onclick="window.toggleSalaryPlanningForm('add-gradelevel-form'); return false;">+ Add</button>
+    </div>
+
+    <div class="callout callout-info">
+      <div class="callout-icon">ℹ</div>
+      <div class="callout-text"><strong>Grade Levels</strong> represent steps within a pay grade (e.g., Junior, Senior, Lead). Optional but recommended for career progression.</div>
     </div>
 
     <?php if (empty($gradeLevels)): ?>
     <div class="empty-message">No grade levels yet. Add one to get started.</div>
     <?php else: ?>
     <div class="table-responsive">
-      <table class="salary-table">
+      <table class="salary-table comp-table">
         <thead>
           <tr>
             <th>Pay Grade</th>
@@ -671,7 +936,7 @@ html, body { margin: 0; padding: 0; }
             <td><span class="code-badge"><?php echo htmlspecialchars($gl['code']); ?></span></td>
             <td><?php echo htmlspecialchars($gl['name']); ?></td>
             <td class="action-buttons">
-              <button class="action-btn">✎ Edit</button>
+              <button class="btn btn-sm btn-outline" onclick="window.editGradeLevel(<?php echo (int) $gl['id']; ?>, <?php echo (int) $gl['pay_grade_id']; ?>, '<?php echo htmlspecialchars($gl['code']); ?>', '<?php echo htmlspecialchars($gl['name']); ?>'); return false;">✎ Edit</button>
             </td>
           </tr>
           <?php endforeach; ?>
@@ -708,7 +973,7 @@ html, body { margin: 0; padding: 0; }
         </div>
         <div class="form-actions">
           <button type="submit" class="btn btn-primary btn-sm">Create</button>
-          <button type="button" class="btn btn-sm" onclick="toggleForm('add-gradelevel-form'); return false;">Cancel</button>
+          <button type="button" class="btn btn-sm" onclick="window.toggleSalaryPlanningForm('add-gradelevel-form'); return false;">Cancel</button>
         </div>
       </form>
     </div>
@@ -717,7 +982,12 @@ html, body { margin: 0; padding: 0; }
   <!-- 4. VALIDATED SALARY STRUCTURE -->
   <div class="section-card">
     <div class="section-card-header">
-      <h3 class="section-card-title">Validated Salary Structure</h3>
+      <h3 class="section-card-title">4. Validated Salary Structure</h3>
+    </div>
+
+    <div class="callout callout-success">
+      <div class="callout-icon">✓</div>
+      <div class="callout-text"><strong>Structure Status:</strong> All sections must be configured to enable employee compensation management. Use the checklist below.</div>
     </div>
 
     <div class="summary-grid">
@@ -753,29 +1023,484 @@ html, body { margin: 0; padding: 0; }
 
 </div>
 
+<!-- Edit Salary Band Modal -->
+<div id="editBandModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h2>Edit Salary Band</h2>
+      <button class="modal-close" onclick="window.closeEditModal(); return false;">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-info-row">
+        <div class="modal-info-item">
+          <div class="modal-info-label">Pay Grade</div>
+          <div class="modal-info-value" id="bandPayGrade">—</div>
+        </div>
+        <div class="modal-info-item">
+          <div class="modal-info-label">Grade Level</div>
+          <div class="modal-info-value" id="bandGradeLevel">—</div>
+        </div>
+        <div class="modal-info-item">
+          <div class="modal-info-label">Status</div>
+          <div class="modal-info-value" id="bandStatus">Active</div>
+        </div>
+      </div>
+      
+      <form id="editBandForm">
+        <input type="hidden" id="bandId" name="id" value="">
+        <input type="hidden" id="bandPayGradeId" name="pay_grade_id" value="">
+        
+        <div class="modal-form-group">
+          <label>Minimum Salary <span class="required">*</span></label>
+          <input type="number" id="bandMinSalary" name="min_salary" required step="1" min="0">
+        </div>
+        
+        <div class="modal-form-group">
+          <label>Midpoint Salary <span class="required">*</span></label>
+          <input type="number" id="bandMidSalary" name="midpoint_salary" required step="1" min="0">
+        </div>
+        
+        <div class="modal-form-group">
+          <label>Maximum Salary <span class="required">*</span></label>
+          <input type="number" id="bandMaxSalary" name="max_salary" required step="1" min="0">
+        </div>
+        
+        <div style="background: #eff6ff; border-left: 4px solid #3b82f6; padding: 12px; border-radius: 4px; font-size: 13px; color: #1e40af; margin-top: 16px;">
+          <strong>Rule:</strong> Minimum ≤ Midpoint ≤ Maximum must be maintained
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-sm" onclick="window.closeEditModal(); return false;">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="window.submitBandEdit(); return false;">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Pay Grade Modal -->
+<div id="editPayGradeModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h2>Edit Pay Grade</h2>
+      <button class="modal-close" onclick="window.closePayGradeModal(); return false;">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="editPayGradeForm">
+        <input type="hidden" id="payGradeId" name="id" value="">
+        
+        <div class="modal-form-group">
+          <label>Code <span class="required">*</span></label>
+          <input type="text" id="payGradeCode" name="code" required maxlength="50" placeholder="e.g., STAFF_NURSE">
+        </div>
+        
+        <div class="modal-form-group">
+          <label>Name <span class="required">*</span></label>
+          <input type="text" id="payGradeName" name="name" required maxlength="255" placeholder="e.g., Staff Nurse">
+        </div>
+        
+        <div class="modal-form-group">
+          <label>Description</label>
+          <textarea id="payGradeDescription" name="description" rows="3" placeholder="Description of this pay grade..." style="padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; font-family: inherit; width: 100%;"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-sm" onclick="window.closePayGradeModal(); return false;">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="window.submitPayGradeEdit(); return false;">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Grade Level Modal -->
+<div id="editGradeLevelModal" class="modal-overlay">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h2>Edit Grade Level</h2>
+      <button class="modal-close" onclick="window.closeGradeLevelModal(); return false;">✕</button>
+    </div>
+    <div class="modal-body">
+      <form id="editGradeLevelForm">
+        <input type="hidden" id="gradeLevelId" name="id" value="">
+        <input type="hidden" id="gradeLevelPayGradeId" name="pay_grade_id" value="">
+        
+        <div class="modal-form-group">
+          <label>Code <span class="required">*</span></label>
+          <input type="text" id="gradeLevelCode" name="code" required maxlength="50" placeholder="e.g., SN01">
+        </div>
+        
+        <div class="modal-form-group">
+          <label>Name <span class="required">*</span></label>
+          <input type="text" id="gradeLevelName" name="name" required maxlength="255" placeholder="e.g., Junior Staff Nurse">
+        </div>
+        
+        <div class="modal-form-group">
+          <label>Sort Order</label>
+          <input type="number" id="gradeLevelOrder" name="sort_order" value="0" min="0">
+        </div>
+        
+        <div class="modal-form-group">
+          <label>Description</label>
+          <textarea id="gradeLevelDescription" name="description" rows="3" placeholder="Description of this grade level..." style="padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; font-family: inherit; width: 100%;"></textarea>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-sm" onclick="window.closeGradeLevelModal(); return false;">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="window.submitGradeLevelEdit(); return false;">Save Changes</button>
+    </div>
+  </div>
+</div>
+
 <script>
-function toggleForm(formId) {
+// Toggle form visibility - namespaced to window
+window.toggleSalaryPlanningForm = function(formId) {
     const form = document.getElementById(formId);
     if (form) {
         form.classList.toggle('visible');
         if (form.classList.contains('visible')) {
-            setTimeout(() => form.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+            setTimeout(() => {
+                form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
         }
     }
-}
+};
 
-function performCompSearch(){
-    var q = document.getElementById('comp-search')?.value || '';
-    var params = new URLSearchParams(window.location.search);
-    if(q) params.set('q', q); else params.delete('q');
-    window.location.search = params.toString();
-}
+// Legacy function name for backward compatibility
+window.toggleForm = function(formId) {
+    window.toggleSalaryPlanningForm(formId);
+};
 
-function filterBands(status) {
-    var params = new URLSearchParams(window.location.search);
-    params.set('filter', status);
-    window.location.search = params.toString();
-}
+// Modal control functions
+window.closeEditModal = function() {
+    const modal = document.getElementById('editBandModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+};
+
+window.submitBandEdit = function() {
+    const form = document.getElementById('editBandForm');
+    const minSalary = parseFloat(document.getElementById('bandMinSalary').value);
+    const midSalary = parseFloat(document.getElementById('bandMidSalary').value);
+    const maxSalary = parseFloat(document.getElementById('bandMaxSalary').value);
+    
+    // Validate band order
+    if (!(minSalary <= midSalary && midSalary <= maxSalary)) {
+        alert('Error: Minimum ≤ Midpoint ≤ Maximum must be maintained');
+        return;
+    }
+    
+    // Submit form
+    var submitForm = document.createElement('form');
+    submitForm.method = 'POST';
+    submitForm.action = '<?php echo htmlspecialchars($handlerUrl); ?>';
+    submitForm.innerHTML = '<input type="hidden" name="action" value="update_band">' +
+                          '<input type="hidden" name="id" value="' + document.getElementById('bandId').value + '">' +
+                          '<input type="hidden" name="min_salary" value="' + minSalary + '">' +
+                          '<input type="hidden" name="midpoint_salary" value="' + midSalary + '">' +
+                          '<input type="hidden" name="max_salary" value="' + maxSalary + '">';
+    document.body.appendChild(submitForm);
+    submitForm.submit();
+};
+
+// Edit functions for salary planning items
+window.editSalaryBand = function(id, minSalary, midpoint, maxSalary, payGradeId) {
+    const modal = document.getElementById('editBandModal');
+    if (!modal) return;
+    
+    // Populate modal with current values
+    document.getElementById('bandId').value = id;
+    document.getElementById('bandPayGradeId').value = payGradeId;
+    document.getElementById('bandMinSalary').value = minSalary;
+    document.getElementById('bandMidSalary').value = midpoint;
+    document.getElementById('bandMaxSalary').value = maxSalary;
+    
+    // Get the row data for display
+    const row = event.target.closest('tr');
+    if (row) {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 2) {
+            document.getElementById('bandPayGrade').textContent = cells[0].textContent.trim();
+            document.getElementById('bandGradeLevel').textContent = cells[1].textContent.trim() || '—';
+        }
+    }
+    
+    // Show modal
+    modal.classList.add('active');
+    
+    // Focus on first input
+    setTimeout(() => {
+        document.getElementById('bandMinSalary').focus();
+    }, 100);
+};
+
+// Pay Grade Modal Functions
+window.closePayGradeModal = function() {
+    const modal = document.getElementById('editPayGradeModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+};
+
+window.editPayGrade = function(id, code, name) {
+    // Fetch pay grade details from API
+    fetch(`/PUBLIC_HTML/modules/compensation/api.php?action=getPayGradeDetail&id=${id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.data) {
+                const grade = data.data;
+                document.getElementById('payGradeId').value = grade.id;
+                document.getElementById('payGradeCode').value = grade.code || '';
+                document.getElementById('payGradeName').value = grade.name || '';
+                document.getElementById('payGradeDescription').value = grade.description || '';
+                
+                const modal = document.getElementById('editPayGradeModal');
+                if (modal) {
+                    modal.classList.add('active');
+                    setTimeout(() => {
+                        document.getElementById('payGradeName').focus();
+                    }, 100);
+                }
+            } else {
+                alert('Error loading pay grade details');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading pay grade details');
+        });
+};
+
+window.submitPayGradeEdit = function() {
+    const form = document.getElementById('editPayGradeForm');
+    const id = document.getElementById('payGradeId').value;
+    const code = document.getElementById('payGradeCode').value;
+    const name = document.getElementById('payGradeName').value;
+    const description = document.getElementById('payGradeDescription').value;
+    
+    if (!code || !name) {
+        alert('Code and name are required');
+        return;
+    }
+    
+    // Submit via API
+    fetch('/PUBLIC_HTML/modules/compensation/api.php?action=updatePayGrade', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            id: id,
+            code: code,
+            name: name,
+            description: description
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Pay grade updated successfully');
+            window.closePayGradeModal();
+            // Reload the page to refresh data
+            location.reload();
+        } else {
+            alert('Error: ' + (data.message || 'Failed to update pay grade'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating pay grade');
+    });
+};
+
+// Grade Level Modal Functions
+window.closeGradeLevelModal = function() {
+    const modal = document.getElementById('editGradeLevelModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+};
+
+window.editGradeLevel = function(id, payGradeId, code, name) {
+    // Fetch grade level details from API
+    fetch(`/PUBLIC_HTML/modules/compensation/api.php?action=getGradeLevelDetail&id=${id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.data) {
+                const level = data.data;
+                document.getElementById('gradeLevelId').value = level.id;
+                document.getElementById('gradeLevelPayGradeId').value = level.pay_grade_id || payGradeId;
+                document.getElementById('gradeLevelCode').value = level.code || '';
+                document.getElementById('gradeLevelName').value = level.name || '';
+                document.getElementById('gradeLevelOrder').value = level.sort_order || 0;
+                document.getElementById('gradeLevelDescription').value = level.description || '';
+                
+                const modal = document.getElementById('editGradeLevelModal');
+                if (modal) {
+                    modal.classList.add('active');
+                    setTimeout(() => {
+                        document.getElementById('gradeLevelName').focus();
+                    }, 100);
+                }
+            } else {
+                alert('Error loading grade level details');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error loading grade level details');
+        });
+};
+
+window.submitGradeLevelEdit = function() {
+    const form = document.getElementById('editGradeLevelForm');
+    const id = document.getElementById('gradeLevelId').value;
+    const payGradeId = document.getElementById('gradeLevelPayGradeId').value;
+    const code = document.getElementById('gradeLevelCode').value;
+    const name = document.getElementById('gradeLevelName').value;
+    const sortOrder = document.getElementById('gradeLevelOrder').value;
+    const description = document.getElementById('gradeLevelDescription').value;
+    
+    if (!code || !name) {
+        alert('Code and name are required');
+        return;
+    }
+    
+    // Submit via API
+    fetch('/PUBLIC_HTML/modules/compensation/api.php?action=updateGradeLevel', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            id: id,
+            pay_grade_id: payGradeId,
+            code: code,
+            name: name,
+            sort_order: sortOrder,
+            description: description
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Grade level updated successfully');
+            window.closeGradeLevelModal();
+            // Reload the page to refresh data
+            location.reload();
+        } else {
+            alert('Error: ' + (data.message || 'Failed to update grade level'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating grade level');
+    });
+};
+
+window.performCompSearch = function() {
+    var q = document.getElementById('comp-search')?.value.toLowerCase() || '';
+    var tables = document.querySelectorAll('table.comp-table');
+    
+    tables.forEach(table => {
+        var rows = table.querySelectorAll('tbody tr');
+        rows.forEach(row => {
+            var text = row.textContent.toLowerCase();
+            if (q === '' || text.indexOf(q) !== -1) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+};
+
+window.filterBands = function(status) {
+    // Update active button state
+    var buttons = document.querySelectorAll('.filter-tabs .filter-btn');
+    buttons.forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    
+    // Filter bands table client-side
+    var table = document.querySelector('table.comp-table');
+    if (!table) return;
+    
+    var rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        var statusCell = row.querySelector('td:nth-child(6)');
+        if (!statusCell) {
+            row.style.display = 'none';
+            return;
+        }
+        
+        var statusText = statusCell.textContent.toLowerCase();
+        
+        if (status === 'all') {
+            row.style.display = '';
+        } else if (status === 'active' && statusText.includes('active')) {
+            row.style.display = '';
+        } else if (status === 'inactive' && !statusText.includes('active')) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+};
+
+// Initialize table enhancements
+;(function() {
+    try {
+        var tables = document.querySelectorAll('table.comp-table');
+        tables.forEach(function(table) {
+            var parent = table.parentElement;
+            if (!parent.classList.contains('list-card')) {
+                var card = document.createElement('div');
+                card.className = 'list-card';
+                parent.insertBefore(card, table);
+                card.appendChild(table);
+            }
+        });
+    } catch (e) {
+        console && console.error('Table enhancement error:', e);
+    }
+})();
+
+// Close modal when clicking outside dialog
+document.getElementById('editBandModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        window.closeEditModal();
+    }
+});
+
+document.getElementById('editPayGradeModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        window.closePayGradeModal();
+    }
+});
+
+document.getElementById('editGradeLevelModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        window.closeGradeLevelModal();
+    }
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const bandModal = document.getElementById('editBandModal');
+        if (bandModal && bandModal.classList.contains('active')) {
+            window.closeEditModal();
+        }
+        const pgModal = document.getElementById('editPayGradeModal');
+        if (pgModal && pgModal.classList.contains('active')) {
+            window.closePayGradeModal();
+        }
+        const glModal = document.getElementById('editGradeLevelModal');
+        if (glModal && glModal.classList.contains('active')) {
+            window.closeGradeLevelModal();
+        }
+    }
+});
 </script>
 
 <?php require __DIR__ . '/partials/footer.php'; ?>
