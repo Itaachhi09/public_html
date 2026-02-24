@@ -1,0 +1,51 @@
+
+# Enable Rewrite Engine
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Set the RewriteBase based on the installation path
+    RewriteBase /
+    
+    # Allow direct access to physical files and directories
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+    
+    # Route all requests to index.php for the login/dashboard flow
+    # This allows clean URLs to work properly
+    RewriteRule ^(.*)$ index.php [QSA,L]
+</IfModule>
+
+# Ensure PHP files are handled correctly
+<IfModule mod_php.c>
+    php_flag display_errors On
+    php_flag display_startup_errors On
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+</IfModule>
+
+# Compress text files for faster delivery
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+# Set proper mime types
+AddType application/json .json
+AddType text/javascript .js
+AddType text/css .css
+
+# Disable directory listing
+<FilesMatch "^$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Prevent access to sensitive files
+<FilesMatch "\.(env|lock|sql|md|txt)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
