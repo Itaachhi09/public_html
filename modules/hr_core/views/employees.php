@@ -621,6 +621,7 @@
               alert('Employee deleted successfully');
               window.closeModal();
               window.loadEmployees();
+              window.updateArchiveCount();  // Update archive badge
             } else {
               alert('Error: ' + (data.message || 'Failed to delete employee'));
             }

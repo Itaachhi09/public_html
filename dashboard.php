@@ -1277,26 +1277,28 @@ $notifications = 3;
             <i class='bx bx-building'></i>
             <span>Departments</span>
           </a>
-          <a href="#" onclick="loadHRCorePage(event, 'onboarding')" class="nav-subitem" data-page="onboarding">
-            <i class='bx bx-rocket'></i>
-            <span>Onboarding</span>
-          </a>
 
-          <div style="padding: 0.5rem 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 0.5rem 0;"></div>
-          <span class="nav-section-title" style="margin-left: 1rem;">Master Data</span>
+          <div style="padding: 0.5rem 0; border-top: 1px solid rgba(255,255,255,0.1); margin: 0.5rem 0; display: none;"></div>
+          <span class="nav-section-title" style="margin-left: 1rem; display: none;">Master Data</span>
 
-          <?php if (canAccessMenuItem('hr_core', 'job_titles')): ?>
-          <a href="#" onclick="loadHRCorePage(event, 'job_titles')" class="nav-subitem" data-page="job_titles">
-            <i class='bx bx-briefcase'></i>
-            <span>Job Titles</span>
-          </a>
-          <?php endif; ?>
+          <!-- Master Data section hidden -->
+          <div style="display: none;">
           <?php if (canAccessMenuItem('hr_core', 'employment_types')): ?>
           <a href="#" onclick="loadHRCorePage(event, 'employment_types')" class="nav-subitem" data-page="employment_types">
             <i class='bx bx-id-card'></i>
             <span>Employment Types</span>
           </a>
           <?php endif; ?>
+          <?php if (canAccessMenuItem('hr_core', 'job_titles')): ?>
+          <a href="#" onclick="loadHRCorePage(event, 'job_titles')" class="nav-subitem" data-page="job_titles">
+            <i class='bx bx-briefcase'></i>
+            <span>Job Titles</span>
+          </a>
+          <?php endif; ?>
+          <a href="#" onclick="loadHRCorePage(event, 'onboarding')" class="nav-subitem" data-page="onboarding">
+            <i class='bx bx-rocket'></i>
+            <span>Onboarding</span>
+          </a>
           <?php if (canAccessMenuItem('hr_core', 'locations')): ?>
           <a href="#" onclick="loadHRCorePage(event, 'locations')" class="nav-subitem" data-page="locations">
             <i class='bx bx-map'></i>
@@ -1317,6 +1319,7 @@ $notifications = 3;
             <i class='bx bx-calendar'></i>
             <span>Schedules</span>
           </a>
+          </div>
         </div>
       </div>
 
@@ -1329,55 +1332,26 @@ $notifications = 3;
           <i class='bx bx-chevron-down'></i>
         </div>
         <div class="nav-submenu">
-          <?php if (canAccessMenuItem('payroll', 'setup_configuration')): ?>
-          <a href="#" onclick="loadPayrollPage(event, 'setup_configuration')" class="nav-subitem">
-            <i class='bx bx-cog'></i>
-            <span>Setup & Configuration</span>
+          <a href="#" onclick="loadPayrollPage(event, 'payroll_runs')" class="nav-subitem">
+            <i class='bx bx-calendar-check'></i>
+            <span>Payroll Runs</span>
           </a>
-          <?php endif; ?>
-          <a href="#" onclick="loadPayrollPage(event, 'employee_payroll_profile')" class="nav-subitem">
-            <i class='bx bx-user'></i>
-            <span>Employee Payroll Profile</span>
+          <a href="#" onclick="loadPayrollPage(event, 'salaries')" class="nav-subitem">
+            <i class='bx bx-money'></i>
+            <span>Salaries</span>
           </a>
-          <a href="#" onclick="loadPayrollPage(event, 'earnings_management')" class="nav-subitem">
-            <i class='bx bx-trending-up'></i>
-            <span>Earnings Management</span>
+          <a href="#" onclick="loadPayrollPage(event, 'bonuses_incentives')" class="nav-subitem">
+            <i class='bx bx-star'></i>
+            <span>Bonuses & Incentives</span>
           </a>
-          <a href="#" onclick="loadPayrollPage(event, 'deductions_management')" class="nav-subitem">
+          <a href="#" onclick="loadPayrollPage(event, 'deductions')" class="nav-subitem">
             <i class='bx bx-trending-down'></i>
-            <span>Deductions Management</span>
+            <span>Deductions</span>
           </a>
-          <?php if (canAccessMenuItem('payroll', 'tax_contributions_engine')): ?>
-          <a href="#" onclick="loadPayrollPage(event, 'tax_contributions_engine')" class="nav-subitem">
-            <i class='bx bx-calculator'></i>
-            <span>Tax & Contributions Engine</span>
-          </a>
-          <?php endif; ?>
-          <a href="#" onclick="loadPayrollPage(event, 'payroll_processing_approval')" class="nav-subitem">
-            <i class='bx bx-check-circle'></i>
-            <span>Processing & Approval</span>
-          </a>
-          <a href="#" onclick="loadPayrollPage(event, 'payslip_management')" class="nav-subitem">
+          <a href="#" onclick="loadPayrollPage(event, 'view_payslips')" class="nav-subitem">
             <i class='bx bx-file-blank'></i>
-            <span>Payslip Management</span>
+            <span>View Payslips</span>
           </a>
-          <?php if (canAccessMenuItem('payroll', 'disbursement_bank_files')): ?>
-          <a href="#" onclick="loadPayrollPage(event, 'disbursement_bank_files')" class="nav-subitem">
-            <i class='bx bx-bank'></i>
-            <span>Disbursement & Bank Files</span>
-          </a>
-          <?php endif; ?>
-          <?php if (canAccessMenuItem('payroll', 'government_reports_compliance')): ?>
-          <a href="#" onclick="loadPayrollPage(event, 'government_reports_compliance')" class="nav-subitem">
-            <i class='bx bx-clipboard'></i>
-            <span>Government Reports & Compliance</span>
-          </a>
-          <?php endif; ?>
-          <a href="#" onclick="loadPayrollPage(event, 'payroll_adjustments_special_pay')" class="nav-subitem">
-            <i class='bx bx-adjust'></i>
-            <span>Adjustments & Special Pay</span>
-          </a>
-          <!-- Security & Audit Trail removed -->
         </div>
       </div>
 
@@ -1706,17 +1680,11 @@ $notifications = 3;
         shifts: 'Shift Management',
         schedules: 'Work Schedules',
         // Payroll
-        setup_configuration: 'Setup & Configuration',
-        employee_payroll_profile: 'Employee Payroll Profile',
-        earnings_management: 'Earnings Management',
-        deductions_management: 'Deductions Management',
-        tax_contributions_engine: 'Tax & Contributions Engine',
-        payroll_processing_approval: 'Processing & Approval',
-        payslip_management: 'Payslip Management',
-        disbursement_bank_files: 'Disbursement & Bank Files',
-        government_reports_compliance: 'Government Reports & Compliance',
-        payroll_adjustments_special_pay: 'Adjustments & Special Pay',
-        // security_audit_trail: 'Security & Audit Trail', (removed)
+        payroll_runs: 'Payroll Runs',
+        salaries: 'Salaries',
+        bonuses_incentives: 'Bonuses & Incentives',
+        deductions: 'Deductions',
+        view_payslips: 'View Payslips',
         // Compensation
         compensation_structure: 'Compensation Structure',
         salary_planning: 'Salary Planning',

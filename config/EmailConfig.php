@@ -14,11 +14,11 @@ class EmailConfig {
     public static $smtp_encryption = 'tls'; // tls or ssl
     
     // Email Credentials
-    public static $smtp_username = 'kingmaster6748@gmail.com';
-    public static $smtp_password = 'jjawfunaxozmtxih';
+    public static $smtp_username = 'johnpaulaustria321@gmail.com';
+    public static $smtp_password = 'ctjqbakfltyrffly'; // Get this from Google Account settings
     
     // Sender Information
-    public static $from_email = 'kingmaster6748@gmail.com';
+    public static $from_email = 'johnpaulaustria321@gmail.com';
     public static $from_name = 'Hospital HR System';
     
     // OTP Configuration

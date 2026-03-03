@@ -1431,6 +1431,24 @@ CREATE TABLE `payroll_anomalies` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `bonus_incentives`
+--
+
+CREATE TABLE `bonus_incentives` (
+  `id` int(11) NOT NULL,
+  `employee_id` int(11) NOT NULL,
+  `payroll_run_id` int(11) DEFAULT NULL,
+  `type` varchar(100) NOT NULL,
+  `amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `description` text DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `payroll_approvals`
 --
 
@@ -1574,7 +1592,7 @@ CREATE TABLE `payroll_runs` (
   `start_date` date NOT NULL,
   `end_date` date NOT NULL,
   `pay_date` date NOT NULL,
-  `status` enum('Draft','Processed','Closed') NOT NULL DEFAULT 'Draft',
+  `status` enum('Draft','Processed','Closed','Archived') NOT NULL DEFAULT 'Draft',
   `created_by` int(11) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
@@ -1640,6 +1658,24 @@ INSERT INTO `payroll_run_employees` (`id`, `payroll_run_id`, `employee_id`, `bas
 (16, 3, 1, 42500.00, 4500.00, 47000.00, 7050.00, 39950.00, 2500.00, 1800.00, 1250.00, 100.00, 'HVL-PS-2026-02-001', 'Processed', '2026-02-01 00:00:00', '2026-02-01 00:00:00'),
 (17, 3, 2, 32500.00, 2500.00, 35000.00, 5250.00, 29750.00, 1800.00, 1500.00, 900.00, 100.00, 'HVL-PS-2026-02-002', 'Processed', '2026-02-01 00:00:00', '2026-02-01 00:00:00'),
 (18, 3, 3, 22500.00, 2000.00, 24500.00, 3675.00, 20825.00, 1000.00, 1200.00, 650.00, 100.00, 'HVL-PS-2026-02-003', 'Processed', '2026-02-01 00:00:00', '2026-02-01 00:00:00');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `deductions`
+--
+
+CREATE TABLE `deductions` (
+  `id` int(11) NOT NULL,
+  `employee_id` int(11) NOT NULL,
+  `payroll_run_id` int(11) DEFAULT NULL,
+  `type` varchar(100) NOT NULL,
+  `amount` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `description` text DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
 
@@ -2607,6 +2643,16 @@ ALTER TABLE `payroll_anomalies`
   ADD KEY `idx_severity` (`severity`);
 
 --
+-- Indexes for table `bonus_incentives`
+--
+ALTER TABLE `bonus_incentives`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_employee_id` (`employee_id`),
+  ADD KEY `idx_payroll_run_id` (`payroll_run_id`),
+  ADD KEY `idx_type` (`type`),
+  ADD KEY `idx_created_by` (`created_by`);
+
+--
 -- Indexes for table `payroll_approvals`
 --
 ALTER TABLE `payroll_approvals`
@@ -2670,6 +2716,16 @@ ALTER TABLE `payroll_run_employees`
   ADD UNIQUE KEY `uk_run_employee` (`payroll_run_id`,`employee_id`),
   ADD KEY `idx_payroll_run_id` (`payroll_run_id`),
   ADD KEY `idx_employee_id` (`employee_id`);
+
+--
+-- Indexes for table `deductions`
+--
+ALTER TABLE `deductions`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_employee_id` (`employee_id`),
+  ADD KEY `idx_payroll_run_id` (`payroll_run_id`),
+  ADD KEY `idx_type` (`type`),
+  ADD KEY `idx_created_by` (`created_by`);
 
 --
 -- Indexes for table `payslip_email_logs`
@@ -3092,6 +3148,12 @@ ALTER TABLE `payroll_anomalies`
   MODIFY `anomaly_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT for table `bonus_incentives`
+--
+ALTER TABLE `bonus_incentives`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
 -- AUTO_INCREMENT for table `payroll_approvals`
 --
 ALTER TABLE `payroll_approvals`
@@ -3132,6 +3194,12 @@ ALTER TABLE `payroll_runs`
 --
 ALTER TABLE `payroll_run_employees`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+
+--
+-- AUTO_INCREMENT for table `deductions`
+--
+ALTER TABLE `deductions`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `payslip_email_logs`
@@ -3445,6 +3513,22 @@ ALTER TABLE `payroll_forecasts`
 ALTER TABLE `payroll_run_employees`
   ADD CONSTRAINT `payroll_run_employees_ibfk_1` FOREIGN KEY (`payroll_run_id`) REFERENCES `payroll_runs` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `payroll_run_employees_ibfk_2` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`employee_id`) ON DELETE CASCADE;
+
+--
+-- Constraints for table `bonus_incentives`
+--
+ALTER TABLE `bonus_incentives`
+  ADD CONSTRAINT `bonus_incentives_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`employee_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `bonus_incentives_ibfk_2` FOREIGN KEY (`payroll_run_id`) REFERENCES `payroll_runs` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `bonus_incentives_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
+
+--
+-- Constraints for table `deductions`
+--
+ALTER TABLE `deductions`
+  ADD CONSTRAINT `deductions_ibfk_1` FOREIGN KEY (`employee_id`) REFERENCES `employees` (`employee_id`) ON DELETE CASCADE,
+  ADD CONSTRAINT `deductions_ibfk_2` FOREIGN KEY (`payroll_run_id`) REFERENCES `payroll_runs` (`id`) ON DELETE SET NULL,
+  ADD CONSTRAINT `deductions_ibfk_3` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE SET NULL;
 
 --
 -- Constraints for table `payslip_email_logs`

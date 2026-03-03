@@ -4,6 +4,8 @@
  * Abstract base class for all models
  */
 
+require_once __DIR__ . '/Database.php';
+
 abstract class BaseModel {
     protected $db;
     protected $table;
@@ -13,7 +15,7 @@ abstract class BaseModel {
 
     public function __construct() {
         $database = new Database();
-        $this->db = $database->connect();
+        $this->db = $database->getConnection();
     }
 
     /**

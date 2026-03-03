@@ -1,53 +1,39 @@
 <?php
 /**
- * Payroll Module Router
+ * Payroll Module Index Router
  */
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-require_once dirname(__DIR__, 2) . '/config/Database.php';
-require_once dirname(__DIR__, 2) . '/config/BaseModel.php';
-require_once dirname(__DIR__, 2) . '/config/BaseController.php';
-require_once dirname(__DIR__, 2) . '/config/Response.php';
-require_once dirname(__DIR__, 2) . '/config/Auth.php';
+// Verify user is authenticated
+if (empty($_SESSION['token'])) {
+    header('Location: ../../index.php');
+    exit;
+}
 
-require_once __DIR__ . '/models/PayrollComponentModel.php';
-require_once __DIR__ . '/models/EmployeeSalaryModel.php';
-require_once __DIR__ . '/controllers/PayrollComponentController.php';
-require_once __DIR__ . '/controllers/EmployeeSalaryController.php';
+require_once __DIR__ . '/../../config/BaseConfig.php';
+require_once __DIR__ . '/../../config/Database.php';
+require_once __DIR__ . '/../../config/Auth.php';
 
 $action = $_GET['action'] ?? 'list';
-$entity = $_GET['entity'] ?? 'component';
+$page = $_GET['page'] ?? 'payroll_runs';
 
-try {
-    switch ($action) {
-        case 'list':
-            $controller = ($entity === 'salary') ? new EmployeeSalaryController() : new PayrollComponentController();
-            $controller->list();
-            break;
-        case 'get':
-            $id = $_GET['id'] ?? null;
-            $controller = ($entity === 'salary') ? new EmployeeSalaryController() : new PayrollComponentController();
-            $controller->get($id);
-            break;
-        case 'create':
-            $controller = ($entity === 'salary') ? new EmployeeSalaryController() : new PayrollComponentController();
-            $controller->create();
-            break;
-        case 'update':
-            $id = $_POST['id'] ?? $_GET['id'] ?? null;
-            $controller = ($entity === 'salary') ? new EmployeeSalaryController() : new PayrollComponentController();
-            $controller->update($id);
-            break;
-        case 'delete':
-            $id = $_POST['id'] ?? $_GET['id'] ?? null;
-            $controller = ($entity === 'salary') ? new EmployeeSalaryController() : new PayrollComponentController();
-            $controller->delete($id);
-            break;
-        default:
-            Response::error('Invalid action', 400);
-    }
-} catch (Exception $e) {
-    Response::error($e->getMessage(), 500);
+// Route to appropriate view based on page parameter
+$views = [
+    'payroll_runs' => 'payroll_runs.php',
+    'salaries' => 'salaries.php',
+    'bonuses_incentives' => 'bonuses_incentives.php',
+    'deductions' => 'deductions.php',
+    'view_payslips' => 'view_payslips.php'
+];
+
+if (isset($views[$page])) {
+    define('SYSTEM_INIT', true);
+    require_once __DIR__ . '/views/' . $views[$page];
+} else {
+    http_response_code(404);
+    echo 'Page not found';
 }
 ?>

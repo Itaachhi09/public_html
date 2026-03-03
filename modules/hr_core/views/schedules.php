@@ -229,6 +229,9 @@
 
 <script>
   (function() {
+  // Initialize global variables
+  window.schedulesData = [];
+  
   // Schedule Type Presets - mapped to database schedules
   window.SCHEDULE_PRESETS = {
     'Fixed': { hours_per_day: 8, work_days_per_week: 5, shift_pattern: 'M-F 8hrs', has_night: 0, is_trainee: 0 },
@@ -362,11 +365,15 @@
   window.openScheduleModal = function(scheduleId = null) {
     const modal = document.getElementById('scheduleModal');
     const form = document.getElementById('scheduleForm');
-    const title = document.querySelector('.modal-title');
+    
+    if (!modal || !form) return;
     
     form.reset();
     form.schedule_type.value = '';
     form.is_active.checked = true;
+    
+    const title = modal.querySelector('.modal-title');
+    if (!title) return;
     
     if (scheduleId) {
       title.textContent = 'Edit Schedule';
@@ -609,10 +616,11 @@
 
   // View schedule details
   window.viewSchedule = function(id) {
-    const schedule = window.schedulesData.find(s => s.id === id);
-    if (!schedule) return;
-    
-    alert('Schedule: ' + schedule.schedule_name + '\n' + schedule.hours_per_day + 'h/day • ' + schedule.work_days_per_week + 'd/week');
+    if (!window.schedulesData || !Array.isArray(window.schedulesData)) {
+      console.error('Schedules data not loaded');
+      return;
+    }
+    window.openScheduleModal(id);
   };
   })();
 </script>

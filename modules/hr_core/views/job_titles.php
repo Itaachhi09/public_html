@@ -315,15 +315,24 @@
         let actionButtons = '';
         if (vacant > 0) {
           actionButtons = `
-            <button class="jt-action-btn jt-action-hire" onclick="window.editJobTitle(${title.id})" title="Assign/Hire">💼</button>
-            <button class="jt-action-btn jt-action-edit" onclick="window.editJobTitle(${title.id})" title="Edit">✏</button>
-            <button class="jt-action-btn jt-action-more" onclick="alert('More options')" title="More">⋯</button>
+            <div style="position: relative; display: inline-block;">
+              <button class="action-menu-btn" onclick="window.toggleActionMenu('jobtitle-${title.id}')" title="Actions">⋮</button>
+              <div class="action-menu" id="jobtitle-${title.id}" style="display: none;">
+                <button class="action-menu-item" onclick="window.viewJobTitle(${title.id})">👁 View</button>
+                <button class="action-menu-item" onclick="window.editJobTitle(${title.id})">✏️ Edit</button>
+                <button class="action-menu-item" onclick="window.hireForTitle(${title.id})">💼 Hire</button>
+              </div>
+            </div>
           `;
         } else {
           actionButtons = `
-            <button class="jt-action-btn jt-action-view" onclick="window.viewJobTitle(${title.id})" title="View">👁</button>
-            <button class="jt-action-btn jt-action-edit" onclick="window.editJobTitle(${title.id})" title="Edit">✏</button>
-            <button class="jt-action-btn jt-action-more" onclick="alert('More options')" title="More">⋯</button>
+            <div style="position: relative; display: inline-block;">
+              <button class="action-menu-btn" onclick="window.toggleActionMenu('jobtitle-${title.id}')" title="Actions">⋮</button>
+              <div class="action-menu" id="jobtitle-${title.id}" style="display: none;">
+                <button class="action-menu-item" onclick="window.viewJobTitle(${title.id})">👁 View</button>
+                <button class="action-menu-item" onclick="window.editJobTitle(${title.id})">✏️ Edit</button>
+              </div>
+            </div>
           `;
         }
 
@@ -526,6 +535,33 @@
         });
       }
     }
+
+    window.toggleActionMenu = function(menuId) {
+      const menu = document.getElementById(menuId);
+      if (!menu) return;
+      
+      // Close all other menus
+      document.querySelectorAll('.action-menu').forEach(m => {
+        if (m.id !== menuId) m.style.display = 'none';
+      });
+      
+      // Toggle this menu
+      menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    };
+
+    window.hireForTitle = function(titleId) {
+      alert('Opening hiring interface for job title ' + titleId);
+      // Implementation for hiring workflow
+    };
+
+    // Close menus when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.action-menu-btn') && !e.target.closest('.action-menu')) {
+        document.querySelectorAll('.action-menu').forEach(menu => {
+          menu.style.display = 'none';
+        });
+      }
+    });
 
     // Attach listeners on page load
     document.addEventListener('DOMContentLoaded', () => {
@@ -1105,5 +1141,69 @@
     background: var(--bg-light);
     padding: 2px 4px;
     border-radius: 3px;
+  }
+
+  .action-menu-btn {
+    background: 0;
+    border: 0;
+    cursor: pointer;
+    padding: 0.5rem;
+    font-size: 1.2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-light);
+    transition: color 0.2s;
+  }
+
+  .action-menu-btn:hover {
+    color: var(--primary);
+  }
+
+  .action-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--bg-light);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    z-index: 100;
+    min-width: 120px;
+    display: none;
+  }
+
+  .action-menu-item {
+    display: block;
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: 0;
+    border: 0;
+    border-bottom: 1px solid var(--border-light);
+    cursor: pointer;
+    text-align: left;
+    font-size: 0.875rem;
+    color: var(--text-dark);
+    transition: background 0.2s;
+  }
+
+  .action-menu-item:last-child {
+    border-bottom: 0;
+  }
+
+  .action-menu-item:hover {
+    background: var(--bg-lighter);
+    color: var(--primary);
+  }
+
+  .action-menu-item:disabled {
+    color: var(--text-light);
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .action-menu-item:disabled:hover {
+    background: transparent;
+    color: var(--text-light);
   }
 </style>

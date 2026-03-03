@@ -4,6 +4,10 @@
  * Abstract base class for all controllers
  */
 
+require_once __DIR__ . '/Auth.php';
+require_once __DIR__ . '/Request.php';
+require_once __DIR__ . '/BaseModel.php';
+
 abstract class BaseController {
     protected $auth;
     protected $request;
@@ -23,33 +27,40 @@ abstract class BaseController {
      */
     protected function checkAuth() {
         $token = $this->auth->getBearerToken();
+        $hasValidAuth = false;
         
-        if (!$token) {
+        // Check bearer token authentication
+        if ($token) {
+            $verified = $this->auth->verifyToken($token);
+            
+            if ($verified) {
+                $this->user = isset($verified['data']) && is_array($verified['data']) ? $verified['data'] : [];
+                // Payroll/audit expect user_id; JWT payload uses id
+                if (isset($this->user['id']) && !isset($this->user['user_id'])) {
+                    $this->user['user_id'] = $this->user['id'];
+                }
+                $hasValidAuth = true;
+            }
+        }
+        
+        // Check session-based authentication
+        if (!$hasValidAuth && !empty($_SESSION) && isset($_SESSION['user_id'])) {
+            $this->user = [
+                'id' => $_SESSION['user_id'],
+                'user_id' => $_SESSION['user_id'],
+                'email' => $_SESSION['email'] ?? null,
+                'role' => $_SESSION['role'] ?? null
+            ];
+            $hasValidAuth = true;
+        }
+        
+        if (!$hasValidAuth) {
             if (class_exists('Response')) {
-                Response::unauthorized('No token provided');
+                Response::unauthorized('Not authenticated');
             } else {
                 // If Response class doesn't exist, just set empty user
                 $this->user = [];
-                return;
             }
-        }
-
-        $verified = $this->auth->verifyToken($token);
-        
-        if (!$verified) {
-            if (class_exists('Response')) {
-                Response::unauthorized('Invalid token');
-            } else {
-                // If Response class doesn't exist, just set empty user
-                $this->user = [];
-                return;
-            }
-        }
-
-        $this->user = isset($verified['data']) && is_array($verified['data']) ? $verified['data'] : [];
-        // Payroll/audit expect user_id; JWT payload uses id
-        if (isset($this->user['id']) && !isset($this->user['user_id'])) {
-            $this->user['user_id'] = $this->user['id'];
         }
     }
 

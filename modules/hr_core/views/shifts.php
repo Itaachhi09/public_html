@@ -215,6 +215,9 @@
 
 <script>
   (function() {
+  // Initialize global variables
+  window.shiftsData = [];
+  
   // Shift Type Presets with defaults - mapped to database shift types
   window.SHIFT_PRESETS = {
     'Regular': { start: '06:00', end: '14:00', break: 60, night_differential: 0, overtime_eligible: 1, is_night: 0, label: 'Regular' },
@@ -369,14 +372,18 @@
   window.openShiftModal = function(shiftId = null) {
     const modal = document.getElementById('shiftModal');
     const form = document.getElementById('shiftForm');
-    const title = document.querySelector('.modal-title');
+    
+    if (!modal || !form) return;
     
     form.reset();
     form.shift_type.value = '';
     
+    const title = modal.querySelector('.modal-title');
+    if (!title) return;
+    
     if (shiftId) {
       title.textContent = 'Edit Shift';
-      const shift = window.shiftsData.find(s => s.id === shiftId);
+      const shift = window.shiftsData.find(s => s.shift_id === shiftId);
       if (shift) {
         form.shift_name.value = shift.shift_name;
         form.shift_type.value = shift.shift_type || '';
@@ -621,10 +628,7 @@
 
   // View shift details
   window.viewShift = function(id) {
-    const shift = window.shiftsData.find(s => s.shift_id === id);
-    if (!shift) return;
-    
-    alert('Shift: ' + shift.shift_name + '\n' + shift.start_time + ' - ' + shift.end_time);
+    window.openShiftModal(id);
   };
   })();
 </script>

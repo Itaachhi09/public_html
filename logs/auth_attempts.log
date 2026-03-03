@@ -234,3 +234,16 @@
 [2026-02-24 02:35:22] [login_success] [otp_verified] Email: johnpaulaustria321@gmail.com | IP: ::1
 [2026-02-24 10:05:00] [otp_sent] [success] Email: johnpaulaustria321@gmail.com | IP: ::1
 [2026-02-24 10:05:37] [login_success] [otp_verified] Email: johnpaulaustria321@gmail.com | IP: ::1
+[2026-02-24 17:47:26] [otp_sent] [success] Email: johnpaulaustria321@gmail.com | IP: ::1
+[2026-02-24 17:47:34] [otp_sent] [success] Email: johnpaulaustria321@gmail.com | IP: ::1
+[2026-02-24 17:47:44] [otp_sent] [success] Email: johnpaulaustria321@gmail.com | IP: ::1
+[2026-02-24 17:48:18] [login_success] [otp_verified] Email: johnpaulaustria321@gmail.com | IP: ::1
+[2026-02-28 12:03:33] [otp_sent] [success] Email: johnpaulaustria321@gmail.com | IP: ::1
+[2026-02-28 12:03:38] [otp_sent] [success] Email: johnpaulaustria321@gmail.com | IP: ::1
+[2026-02-28 12:05:06] [otp_resent] [success] Email: johnpaulaustria321@gmail.com | IP: ::1
+[2026-02-28 12:10:00] [otp_verification_failed] [incorrect_otp] Email: johnpaulaustria321@gmail.com | IP: ::1
+[2026-02-28 12:10:07] [otp_resent] [success] Email: johnpaulaustria321@gmail.com | IP: ::1
+[2026-02-28 12:11:45] [login_success] [otp_verified] Email: johnpaulaustria321@gmail.com | IP: ::1
+[2026-03-03 12:55:16] [login_failed] [password_mismatch] Email: johnpaulaustria321@gmail.com | IP: ::1
+[2026-03-03 12:55:28] [otp_sent] [success] Email: johnpaulaustria321@gmail.com | IP: ::1
+[2026-03-03 12:55:48] [login_success] [otp_verified] Email: johnpaulaustria321@gmail.com | IP: ::1

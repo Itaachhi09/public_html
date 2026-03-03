@@ -17,6 +17,13 @@ class Database {
     private static $instance = null;
 
     /**
+     * Constructor - Initialize database connection
+     */
+    public function __construct() {
+        $this->connect();
+    }
+
+    /**
      * Singleton pattern - Get instance of Database
      */
     public static function getInstance() {
@@ -67,6 +74,9 @@ class Database {
      */
     public function query($sql, $params = []) {
         try {
+            if ($this->conn === null) {
+                $this->connect();
+            }
             $stmt = $this->conn->prepare($sql);
             if (!empty($params)) {
                 $stmt->execute($params);
