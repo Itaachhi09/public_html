@@ -1499,7 +1499,7 @@ $employmentType = $_GET['employmentType'] ?? '';
 
         function loadFilterDropdowns() {
             // Load departments
-            fetch('/public_html/modules/analytics/api.php?action=getDashboardData')
+            fetch('/modules/analytics/api.php?action=getDashboardData')
                 .then(response => response.json())
                 .then(data => {
                     if (data.departments) {
@@ -1544,7 +1544,7 @@ $employmentType = $_GET['employmentType'] ?? '';
             const employmentType = document.getElementById('report-employment-type-filter')?.value || '';
             
             // Build API URL - use full path
-            let url = '/public_html/modules/analytics/api.php?action=getReportData&reportId=' + encodeURIComponent(window.selectedReportId);
+            let url = '/modules/analytics/api.php?action=getReportData&reportId=' + encodeURIComponent(window.selectedReportId);
             url += '&limit=20&offset=0';
             if (department) url += '&department=' + encodeURIComponent(department);
             if (employmentType) url += '&employmentType=' + encodeURIComponent(employmentType);

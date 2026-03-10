@@ -914,7 +914,7 @@ $employmentType = $_GET['employmentType'] ?? '';
             const employmentType = document.getElementById('employment-type-filter')?.value || '';
 
             // Build URL using lowercase public_html to match dashboard convention
-            const apiUrl = '/public_html/modules/analytics/api.php?action=getMetrics&dateRange=' + encodeURIComponent(dateRange) + 
+            const apiUrl = '/modules/analytics/api.php?action=getMetrics&dateRange=' + encodeURIComponent(dateRange) + 
                           '&department=' + encodeURIComponent(department) + 
                           '&employmentType=' + encodeURIComponent(employmentType);
             

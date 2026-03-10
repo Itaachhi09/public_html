@@ -369,7 +369,7 @@ if (empty($_SESSION['token']) && (!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || $
             const dateRange = document.getElementById('dateRangeFilter')?.value || '30';
             
             try {
-                const response = await fetch(`/public_html/modules/analytics/api.php?action=getPayrollTrends&department=${department}&dateRange=${dateRange}`, {
+                const response = await fetch(`/modules/analytics/api.php?action=getPayrollTrends&department=${department}&dateRange=${dateRange}`, {
                     credentials: 'same-origin',
                     headers: {'X-Requested-With': 'XMLHttpRequest'}
                 });
@@ -514,7 +514,7 @@ if (empty($_SESSION['token']) && (!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || $
 
         async function loadDepartments() {
             try {
-                const response = await fetch('/public_html/modules/analytics/api.php?action=getDashboardData');
+                const response = await fetch('/modules/analytics/api.php?action=getDashboardData');
                 const result = await response.json();
                 
                 if (result.success) {
@@ -533,7 +533,7 @@ if (empty($_SESSION['token']) && (!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || $
 
         async function exportReport(reportType, format) {
             try {
-                const response = await fetch(`/public_html/modules/analytics/api.php?action=exportAnalytics&reportType=${reportType}&format=${format}`);
+                const response = await fetch(`/modules/analytics/api.php?action=exportAnalytics&reportType=${reportType}&format=${format}`);
                 const result = await response.json();
                 
                 if (result.success) {
