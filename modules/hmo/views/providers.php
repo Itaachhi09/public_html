@@ -1119,17 +1119,22 @@
     currentTab = tabName;
     
     // Hide all tabs
-    document.getElementById('all-tab').style.display = 'none';
-    document.getElementById('active-tab').style.display = 'none';
-    document.getElementById('expiring-tab').style.display = 'none';
-    document.getElementById('expired-tab').style.display = 'none';
+    const allTab = document.getElementById('all-tab');
+    const activeTab = document.getElementById('active-tab');
+    const expiringTab = document.getElementById('expiring-tab');
+    const expiredTab = document.getElementById('expired-tab');
+    if (allTab) allTab.style.display = 'none';
+    if (activeTab) activeTab.style.display = 'none';
+    if (expiringTab) expiringTab.style.display = 'none';
+    if (expiredTab) expiredTab.style.display = 'none';
 
     // Remove active class from all buttons
     document.querySelectorAll('.segment-btn').forEach(btn => btn.classList.remove('active'));
 
     // Show selected tab and mark button as active
-    document.getElementById(tabName + '-tab').style.display = 'block';
-    event.target.classList.add('active');
+    const selectedTab = document.getElementById(tabName + '-tab');
+    if (selectedTab) selectedTab.style.display = 'block';
+    if (event && event.target) event.target.classList.add('active');
 
     // Load data for the selected tab
     if (tabName === 'all') {
@@ -1144,7 +1149,8 @@
   }
 
   function getInitials(name) {
-    return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    const validName = (name || '').toString();
+    return validName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'HP';
   }
 
   function getProviderTypeBadge(type) {

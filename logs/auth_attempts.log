@@ -252,3 +252,9 @@
 [2026-03-08 09:48:55] [login_success] [otp_verified] Email: lipejuje@gmail.com | IP: 192.168.1.24
 [2026-03-08 10:25:34] [otp_sent] [success] Email: lipejuje@gmail.com | IP: ::1
 [2026-03-08 10:25:58] [login_success] [otp_verified] Email: lipejuje@gmail.com | IP: ::1
+[2026-03-09 14:56:27] [otp_sent] [success] Email: lipejuje@gmail.com | IP: ::1
+[2026-03-09 14:57:01] [login_success] [otp_verified] Email: lipejuje@gmail.com | IP: ::1
+[2026-03-10 09:36:47] [otp_sent] [success] Email: lipejuje@gmail.com | IP: ::1
+[2026-03-10 09:37:11] [login_success] [otp_verified] Email: lipejuje@gmail.com | IP: ::1
+[2026-03-10 13:09:12] [otp_sent] [success] Email: lipejuje@gmail.com | IP: ::1
+[2026-03-10 13:09:40] [login_success] [otp_verified] Email: lipejuje@gmail.com | IP: ::1

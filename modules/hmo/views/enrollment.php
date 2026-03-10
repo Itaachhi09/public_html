@@ -1231,7 +1231,10 @@
    * Generate initials from first and last name
    */
   function getInitials(firstName, lastName) {
-    return ((firstName || '')[0] + (lastName || '')[0]).toUpperCase();
+    firstName = firstName || '';
+    lastName = lastName || '';
+    const initials = (firstName[0] || '') + (lastName[0] || '');
+    return initials.toUpperCase() || '--';
   }
 
   /**
@@ -1339,94 +1342,128 @@
   function loadActiveEnrollments() {
     console.log('Loading active enrollments...');
     fetch('modules/hmo/api.php?action=getActiveEnrollments')
-      .then(response => response.json())
-      .then(data => {
-        console.log('Enrollment data received:', data);
-        if (data.success && data.data) {
-          allEnrollments.active = data.data || [];
-          console.log('Rendering', allEnrollments.active.length, 'enrollments');
-          renderTable(allEnrollments.active, 'active-tbody', 'active');
-          updateCounts();
-        } else {
-          console.log('No success or empty data:', data);
-          showErrorState('active-tbody', 'Failed to load active enrollments');
+      .then(response => {
+        console.log('Response status:', response.status);
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.text();
+      })
+      .then(text => {
+        console.log('Raw response text:', text);
+        try {
+          const data = JSON.parse(text);
+          console.log('Enrollment data received:', data);
+          if (data.success && data.data) {
+            allEnrollments.active = data.data || [];
+            console.log('Rendering', allEnrollments.active.length, 'enrollments');
+            renderTable(allEnrollments.active, 'active-tbody', 'active');
+            updateCounts();
+          } else {
+            console.log('No success or empty data:', data);
+            showErrorState('active-tbody', data.error || 'Failed to load active enrollments');
+          }
+        } catch (parseError) {
+          console.error('JSON parse error:', parseError);
+          console.error('Text that failed to parse:', text);
+          showErrorState('active-tbody', 'Invalid server response format');
         }
       })
       .catch(error => {
-        console.error('Error:', error);
-        showErrorState('active-tbody', 'Error loading active enrollments');
+        console.error('Fetch error:', error);
+        showErrorState('active-tbody', 'Error loading active enrollments: ' + error.message);
       });
   }
 
   function loadPendingEnrollments() {
+    console.log('Loading pending enrollments...');
     fetch('modules/hmo/api.php?action=getPendingEnrollments')
-      .then(response => response.json())
-      .then(data => {
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.text();
+      })
+      .then(text => {
+        const data = JSON.parse(text);
         if (data.success) {
           allEnrollments.pending = data.data || [];
           renderTable(allEnrollments.pending, 'pending-tbody', 'pending');
           updateCounts();
         } else {
-          showErrorState('pending-tbody', 'Failed to load pending enrollments');
+          showErrorState('pending-tbody', data.error || 'Failed to load pending enrollments');
         }
       })
       .catch(error => {
-        console.error('Error:', error);
-        showErrorState('pending-tbody', 'Error loading pending enrollments');
+        console.error('Error loading pending enrollments:', error);
+        showErrorState('pending-tbody', 'Error: ' + error.message);
       });
   }
 
   function loadWaitingEnrollments() {
+    console.log('Loading waiting enrollments...');
     fetch('modules/hmo/api.php?action=getWaitingPeriodEnrollments')
-      .then(response => response.json())
-      .then(data => {
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.text();
+      })
+      .then(text => {
+        const data = JSON.parse(text);
         if (data.success) {
           allEnrollments.waiting = data.data || [];
           renderTable(allEnrollments.waiting, 'waiting-tbody', 'waiting');
           updateCounts();
         } else {
-          showErrorState('waiting-tbody', 'Failed to load waiting enrollments');
+          showErrorState('waiting-tbody', data.error || 'Failed to load waiting enrollments');
         }
       })
       .catch(error => {
-        console.error('Error:', error);
-        showErrorState('waiting-tbody', 'Error loading waiting enrollments');
+        console.error('Error loading waiting enrollments:', error);
+        showErrorState('waiting-tbody', 'Error: ' + error.message);
       });
   }
 
   function loadSuspendedEnrollments() {
+    console.log('Loading suspended enrollments...');
     fetch('modules/hmo/api.php?action=getSuspendedEnrollments')
-      .then(response => response.json())
-      .then(data => {
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.text();
+      })
+      .then(text => {
+        const data = JSON.parse(text);
         if (data.success) {
           allEnrollments.suspended = data.data || [];
           renderTable(allEnrollments.suspended, 'suspended-tbody', 'suspended');
           updateCounts();
         } else {
-          showErrorState('suspended-tbody', 'Failed to load suspended enrollments');
+          showErrorState('suspended-tbody', data.error || 'Failed to load suspended enrollments');
         }
       })
       .catch(error => {
-        console.error('Error:', error);
-        showErrorState('suspended-tbody', 'Error loading suspended enrollments');
+        console.error('Error loading suspended enrollments:', error);
+        showErrorState('suspended-tbody', 'Error: ' + error.message);
       });
   }
 
   function loadTerminatedEnrollments() {
+    console.log('Loading terminated enrollments...');
     fetch('modules/hmo/api.php?action=getTerminatedEnrollments')
-      .then(response => response.json())
-      .then(data => {
+      .then(response => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.text();
+      })
+      .then(text => {
+        const data = JSON.parse(text);
         if (data.success) {
           allEnrollments.terminated = data.data || [];
           renderTable(allEnrollments.terminated, 'terminated-tbody', 'terminated');
           updateCounts();
         } else {
-          showErrorState('terminated-tbody', 'Failed to load terminated enrollments');
+          showErrorState('terminated-tbody', data.error || 'Failed to load terminated enrollments');
         }
       })
       .catch(error => {
-        console.error('Error:', error);
-        showErrorState('terminated-tbody', 'Error loading terminated enrollments');
+        console.error('Error loading terminated enrollments:', error);
+        showErrorState('terminated-tbody', 'Error: ' + error.message);
       });
   }
 
@@ -1869,6 +1906,10 @@
 
   function showErrorState(tbodyId, message) {
     const tbody = document.getElementById(tbodyId);
+    if (!tbody) {
+      console.error('tbody element not found:', tbodyId);
+      return;
+    }
     tbody.innerHTML = `
       <tr>
         <td colspan="7">
@@ -1876,6 +1917,7 @@
             <div class="error-title">⚠️ Error loading data</div>
             <div class="error-message">${message}</div>
             <div class="load-time">Last updated: ${new Date().toLocaleTimeString()}</div>
+            <div style="font-size: 12px; color: #999; margin-top: 8px;">Check browser console (F12) for details</div>
           </div>
         </td>
       </tr>

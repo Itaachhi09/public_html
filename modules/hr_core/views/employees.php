@@ -850,7 +850,8 @@
         // Close action menu on outside click
         document.addEventListener('click', function(e) {
           if (!e.target.closest('.action-btn-primary')) {
-            document.getElementById('actionMenu').style.display = 'none';
+            const actionMenu = document.getElementById('actionMenu');
+            if (actionMenu) actionMenu.style.display = 'none';
           }
         });
       }

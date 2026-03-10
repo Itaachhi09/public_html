@@ -728,10 +728,13 @@
     const tabContents = document.querySelectorAll('.tab-content');
 
     tabBtns.forEach(btn => btn.classList.remove('active'));
-    tabContents.forEach(content => content.style.display = 'none');
+    tabContents.forEach(content => {
+      if (content) content.style.display = 'none';
+    });
 
-    event.target.closest('.tab-btn').classList.add('active');
-    document.getElementById(tabName + '-tab').style.display = 'block';
+    if (event && event.target) event.target.closest('.tab-btn').classList.add('active');
+    const selectedTab = document.getElementById(tabName + '-tab');
+    if (selectedTab) selectedTab.style.display = 'block';
   }
 
   // ============================================

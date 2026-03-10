@@ -112,6 +112,8 @@ try {
 
         case 'getMetrics':
             $metricsData = [
+                'departments' => $service->getDepartmentsList(),
+                'employment_types' => $service->getEmploymentTypesList(),
                 'hrcore' => [
                     'headcount_by_dept' => $service->getHeadcountByDepartment(),
                     'employment_type_dist' => $service->getEmploymentTypeDistribution(),

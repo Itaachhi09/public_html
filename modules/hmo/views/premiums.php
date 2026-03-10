@@ -947,8 +947,9 @@
       btn.classList.remove('active');
     });
 
-    document.getElementById(tabName + '-tab').style.display = 'block';
-    event.target.closest('.tab-btn').classList.add('active');
+    const selectedTab = document.getElementById(tabName + '-tab');
+    if (selectedTab) selectedTab.style.display = 'block';
+    if (event && event.target) event.target.closest('.tab-btn').classList.add('active');
 
     localStorage.setItem('selectedTab-premium', tabName);
     currentTab = tabName;

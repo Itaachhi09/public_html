@@ -1431,6 +1431,12 @@ $userRole = $_SESSION['role'] ?? 'hr';
 
         // ===== CHART LOADING FUNCTIONS =====
         function loadHeadcountTrendChart() {
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js not loaded yet, retrying...');
+                setTimeout(() => loadHeadcountTrendChart(), 100);
+                return;
+            }
+            
             const ctx = document.getElementById('headcount-trend-chart').getContext('2d');
             
             // Sample data - replace with API call
@@ -1526,6 +1532,12 @@ $userRole = $_SESSION['role'] ?? 'hr';
         }
 
         function loadPayrollBreakdownChart() {
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js not loaded yet, retrying...');
+                setTimeout(() => loadPayrollBreakdownChart(), 100);
+                return;
+            }
+            
             const ctx = document.getElementById('payroll-breakdown-chart').getContext('2d');
             
             const data = {
@@ -1598,6 +1610,12 @@ $userRole = $_SESSION['role'] ?? 'hr';
         }
 
         function loadHMODonutChart() {
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js not loaded yet, retrying...');
+                setTimeout(() => loadHMODonutChart(), 100);
+                return;
+            }
+            
             const ctx = document.getElementById('hmo-donut-chart').getContext('2d');
             
             if (hmoDonutChart) {
@@ -1633,6 +1651,12 @@ $userRole = $_SESSION['role'] ?? 'hr';
         }
 
         function loadOvertimeChart() {
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js not loaded yet, retrying...');
+                setTimeout(() => loadOvertimeChart(), 100);
+                return;
+            }
+            
             const ctx = document.getElementById('overtime-chart').getContext('2d');
             
             if (overtimeChart) {
@@ -1673,6 +1697,12 @@ $userRole = $_SESSION['role'] ?? 'hr';
         }
 
         function loadAttendanceRingChart() {
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js not loaded yet, retrying...');
+                setTimeout(() => loadAttendanceRingChart(), 100);
+                return;
+            }
+            
             const ctx = document.getElementById('attendance-ring').getContext('2d');
             
             if (attendanceRingChart) {

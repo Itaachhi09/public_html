@@ -126,6 +126,24 @@ class PayslipController extends BaseController {
             ];
         }
     }
+
+    /**
+     * Static route method for dashboard integration
+     */
+    public static function route() {
+        $controller = new self();
+        $action = $_POST['action'] ?? $_GET['action'] ?? null;
+        
+        // Route to appropriate method based on action
+        $result = [];
+        if (method_exists($controller, $action)) {
+            $result = $controller->$action();
+        } else {
+            $result = ['success' => false, 'error' => 'Unknown action: ' . $action];
+        }
+        
+        return $result;
+    }
 }
 ?>
 

@@ -1417,16 +1417,20 @@
     event.preventDefault();
     
     // Hide all tabs
-    document.getElementById('active-tab').style.display = 'none';
-    document.getElementById('by-provider-tab').style.display = 'none';
-    document.getElementById('by-coverage-tab').style.display = 'none';
+    const activeTab = document.getElementById('active-tab');
+    const byProviderTab = document.getElementById('by-provider-tab');
+    const byCoverageTab = document.getElementById('by-coverage-tab');
+    if (activeTab) activeTab.style.display = 'none';
+    if (byProviderTab) byProviderTab.style.display = 'none';
+    if (byCoverageTab) byCoverageTab.style.display = 'none';
 
     // Remove active class from all buttons
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
 
     // Show selected tab and mark button as active
-    document.getElementById(tabName + '-tab').style.display = 'block';
-    event.target.classList.add('active');
+    const selectedTab = document.getElementById(tabName + '-tab');
+    if (selectedTab) selectedTab.style.display = 'block';
+    if (event && event.target) event.target.classList.add('active');
 
     // Persist tab selection
     localStorage.setItem('selectedPlanTab', tabName);
@@ -2266,15 +2270,19 @@
     const savedTab = localStorage.getItem('selectedPlanTab') || 'by-provider';
     
     // Hide all tabs first
-    document.getElementById('active-tab').style.display = 'none';
-    document.getElementById('by-provider-tab').style.display = 'none';
-    document.getElementById('by-coverage-tab').style.display = 'none';
+    const activeTab = document.getElementById('active-tab');
+    const byProviderTab = document.getElementById('by-provider-tab');
+    const byCoverageTab = document.getElementById('by-coverage-tab');
+    if (activeTab) activeTab.style.display = 'none';
+    if (byProviderTab) byProviderTab.style.display = 'none';
+    if (byCoverageTab) byCoverageTab.style.display = 'none';
     
     // Remove active class from all buttons
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     
     // Show selected tab
-    document.getElementById(savedTab + '-tab').style.display = 'block';
+    const selectedTab = document.getElementById(savedTab + '-tab');
+    if (selectedTab) selectedTab.style.display = 'block';
     const tabBtn = document.querySelector(`.tab-btn[onclick="switchPlanTab(event, '${savedTab}')"]`);
     if (tabBtn) tabBtn.classList.add('active');
     

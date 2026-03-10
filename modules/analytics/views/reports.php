@@ -1009,11 +1009,15 @@ $employmentType = $_GET['employmentType'] ?? '';
             event.target.closest('.option-btn').classList.add('selected');
 
             if (type === 'period') {
-                document.getElementById('period-comparison').style.display = 'block';
-                document.getElementById('department-comparison').style.display = 'none';
+                const periodComparison = document.getElementById('period-comparison');
+                const deptComparison = document.getElementById('department-comparison');
+                if (periodComparison) periodComparison.style.display = 'block';
+                if (deptComparison) deptComparison.style.display = 'none';
             } else {
-                document.getElementById('period-comparison').style.display = 'none';
-                document.getElementById('department-comparison').style.display = 'block';
+                const periodComparison = document.getElementById('period-comparison');
+                const deptComparison = document.getElementById('department-comparison');
+                if (periodComparison) periodComparison.style.display = 'none';
+                if (deptComparison) deptComparison.style.display = 'block';
             }
         }
 

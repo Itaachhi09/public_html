@@ -454,7 +454,8 @@ function viewPayslip(id) {
             document.getElementById('modalNetPay').textContent = '₱' + parseFloat(payslip.net_pay).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
             
             // Show modal
-            document.getElementById('payslipModal').style.display = 'flex';
+            const payslipModal = document.getElementById('payslipModal');
+            if (payslipModal) payslipModal.style.display = 'flex';
         } else {
             alert('Error: ' + (data.error || 'Failed to load payslip details'));
         }
@@ -468,7 +469,8 @@ function viewPayslip(id) {
 
 
 function closePayslipModal() {
-    document.getElementById('payslipModal').style.display = 'none';
+    const payslipModal = document.getElementById('payslipModal');
+    if (payslipModal) payslipModal.style.display = 'none';
     currentPayslipId = null;
 }
 

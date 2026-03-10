@@ -207,17 +207,42 @@ class HMOController extends BaseController {
                       AND e.effective_date <= NOW() 
                       AND (e.termination_date IS NULL OR e.termination_date > NOW()) 
                       ORDER BY e.employee_id ASC";
+            
+            if (!$this->db) {
+                error_log('Database connection is null in getActiveEnrollments');
+                return [
+                    'success' => false,
+                    'error' => 'Database connection failed'
+                ];
+            }
+            
             $stmt = $this->db->prepare($query);
-            $stmt->execute();
+            if (!$stmt) {
+                error_log('Failed to prepare statement: ' . print_r($this->db->errorInfo(), true));
+                return [
+                    'success' => false,
+                    'error' => 'Database preparation error: ' . $this->db->errorInfo()[2]
+                ];
+            }
+            
+            $result = $stmt->execute();
+            if (!$result) {
+                error_log('Query execution failed: ' . print_r($stmt->errorInfo(), true));
+                return [
+                    'success' => false,
+                    'error' => 'Query execution error: ' . $stmt->errorInfo()[2]
+                ];
+            }
             
             return [
                 'success' => true,
                 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)
             ];
         } catch (Exception $e) {
+            error_log('Exception in getActiveEnrollments: ' . $e->getMessage());
             return [
                 'success' => false,
-                'error' => $e->getMessage()
+                'error' => 'Exception: ' . $e->getMessage()
             ];
         }
     }
@@ -234,18 +259,28 @@ class HMOController extends BaseController {
                       LEFT JOIN employees emp ON e.employee_id = emp.employee_id 
                       WHERE e.enrollment_status = 'pending' 
                       ORDER BY e.enrollment_date DESC";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute();
             
-            return [
-                'success' => true,
-                'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)
-            ];
+            if (!$this->db) {
+                error_log('Database connection is null in getPendingEnrollments');
+                return ['success' => false, 'error' => 'Database connection failed'];
+            }
+            
+            $stmt = $this->db->prepare($query);
+            if (!$stmt) {
+                error_log('Failed to prepare statement in getPendingEnrollments: ' . print_r($this->db->errorInfo(), true));
+                return ['success' => false, 'error' => 'Database preparation error'];
+            }
+            
+            $result = $stmt->execute();
+            if (!$result) {
+                error_log('Query execution failed in getPendingEnrollments: ' . print_r($stmt->errorInfo(), true));
+                return ['success' => false, 'error' => 'Query execution error'];
+            }
+            
+            return ['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)];
         } catch (Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
+            error_log('Exception in getPendingEnrollments: ' . $e->getMessage());
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 
@@ -261,18 +296,28 @@ class HMOController extends BaseController {
                       LEFT JOIN employees emp ON e.employee_id = emp.employee_id 
                       WHERE e.enrollment_status = 'waiting_period' 
                       ORDER BY e.waiting_period_end_date ASC";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute();
             
-            return [
-                'success' => true,
-                'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)
-            ];
+            if (!$this->db) {
+                error_log('Database connection is null in getWaitingPeriodEnrollments');
+                return ['success' => false, 'error' => 'Database connection failed'];
+            }
+            
+            $stmt = $this->db->prepare($query);
+            if (!$stmt) {
+                error_log('Failed to prepare statement in getWaitingPeriodEnrollments: ' . print_r($this->db->errorInfo(), true));
+                return ['success' => false, 'error' => 'Database preparation error'];
+            }
+            
+            $result = $stmt->execute();
+            if (!$result) {
+                error_log('Query execution failed in getWaitingPeriodEnrollments: ' . print_r($stmt->errorInfo(), true));
+                return ['success' => false, 'error' => 'Query execution error'];
+            }
+            
+            return ['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)];
         } catch (Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
+            error_log('Exception in getWaitingPeriodEnrollments: ' . $e->getMessage());
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 
@@ -288,18 +333,28 @@ class HMOController extends BaseController {
                       LEFT JOIN employees emp ON e.employee_id = emp.employee_id 
                       WHERE e.enrollment_status = 'suspended' 
                       ORDER BY e.updated_at DESC";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute();
             
-            return [
-                'success' => true,
-                'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)
-            ];
+            if (!$this->db) {
+                error_log('Database connection is null in getSuspendedEnrollments');
+                return ['success' => false, 'error' => 'Database connection failed'];
+            }
+            
+            $stmt = $this->db->prepare($query);
+            if (!$stmt) {
+                error_log('Failed to prepare statement in getSuspendedEnrollments: ' . print_r($this->db->errorInfo(), true));
+                return ['success' => false, 'error' => 'Database preparation error'];
+            }
+            
+            $result = $stmt->execute();
+            if (!$result) {
+                error_log('Query execution failed in getSuspendedEnrollments: ' . print_r($stmt->errorInfo(), true));
+                return ['success' => false, 'error' => 'Query execution error'];
+            }
+            
+            return ['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)];
         } catch (Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
+            error_log('Exception in getSuspendedEnrollments: ' . $e->getMessage());
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 
@@ -315,18 +370,28 @@ class HMOController extends BaseController {
                       LEFT JOIN employees emp ON e.employee_id = emp.employee_id 
                       WHERE e.enrollment_status = 'terminated' 
                       ORDER BY e.termination_date DESC";
-            $stmt = $this->db->prepare($query);
-            $stmt->execute();
             
-            return [
-                'success' => true,
-                'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)
-            ];
+            if (!$this->db) {
+                error_log('Database connection is null in getTerminatedEnrollments');
+                return ['success' => false, 'error' => 'Database connection failed'];
+            }
+            
+            $stmt = $this->db->prepare($query);
+            if (!$stmt) {
+                error_log('Failed to prepare statement in getTerminatedEnrollments: ' . print_r($this->db->errorInfo(), true));
+                return ['success' => false, 'error' => 'Database preparation error'];
+            }
+            
+            $result = $stmt->execute();
+            if (!$result) {
+                error_log('Query execution failed in getTerminatedEnrollments: ' . print_r($stmt->errorInfo(), true));
+                return ['success' => false, 'error' => 'Query execution error'];
+            }
+            
+            return ['success' => true, 'data' => $stmt->fetchAll(PDO::FETCH_ASSOC)];
         } catch (Exception $e) {
-            return [
-                'success' => false,
-                'error' => $e->getMessage()
-            ];
+            error_log('Exception in getTerminatedEnrollments: ' . $e->getMessage());
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 

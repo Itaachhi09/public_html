@@ -180,6 +180,7 @@ $notifications = 3;
   <title>Healthcare HR - Management System</title>
   <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
   <link rel="stylesheet" href="assets/css/dashboard.css?v=3.0">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -1744,23 +1745,25 @@ $notifications = 3;
           return response.text();
         })
         .then(html => {
-          // Extract scripts BEFORE parsing
-          const scriptRegex = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi;
-          const scripts = [];
-          let match;
-          const execRegex = new RegExp(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi);
-          while ((match = execRegex.exec(html)) !== null) {
-            const scriptTag = match[0];
-            const scriptContent = scriptTag.replace(/<script[^>]*>/i, '').replace(/<\/script>/i, '');
-            scripts.push(scriptContent);
-          }
-          
-          // Remove scripts from HTML before parsing
-          const htmlWithoutScripts = html.replace(scriptRegex, '');
-          
-          // Parse HTML without scripts
+          // Parse HTML with DOMParser for reliable script/style extraction
           const parser = new DOMParser();
-          const doc = parser.parseFromString(htmlWithoutScripts, 'text/html');
+          const doc = parser.parseFromString(html, 'text/html');
+          
+          // Extract scripts from parsed DOM (avoids regex issues with script end tags in strings)
+          const scripts = [];
+          doc.querySelectorAll('script').forEach(scriptEl => {
+            if (scriptEl.src) {
+              scripts.push({ src: scriptEl.src });
+            } else {
+              const content = (scriptEl.textContent || '').trim();
+              if (content.length > 0) {
+                scripts.push({ inline: content });
+              }
+            }
+          });
+          
+          // Remove script elements so they are not duplicated when injecting content
+          doc.querySelectorAll('script').forEach(el => el.remove());
           
           // Get all styles and inject them
           const styles = doc.querySelectorAll('style');
@@ -1797,12 +1800,29 @@ $notifications = 3;
           
           // Execute scripts in order
           setTimeout(() => {
-            scripts.forEach((scriptContent, idx) => {
+            scripts.forEach((item) => {
               try {
-                const scriptEl = document.createElement('script');
-                scriptEl.textContent = scriptContent;
-                document.body.appendChild(scriptEl);
-                scriptEl.parentNode.removeChild(scriptEl);
+                if (item.src) {
+                  const alreadyLoaded = Array.from(document.querySelectorAll('script[src]')).some(s => s.src === item.src);
+                  if (!alreadyLoaded) {
+                    const scriptEl = document.createElement('script');
+                    scriptEl.src = item.src;
+                    scriptEl.async = false;
+                    document.body.appendChild(scriptEl);
+                  }
+                } else if (item.inline && item.inline.trim()) {
+                  // Validate syntax before executing to avoid "Unexpected end of input" from truncated scripts
+                  try {
+                    new Function(item.inline);
+                  } catch (parseErr) {
+                    console.warn('Skipping script with parse error:', parseErr.message);
+                    return;
+                  }
+                  const scriptEl = document.createElement('script');
+                  scriptEl.textContent = item.inline;
+                  document.body.appendChild(scriptEl);
+                  scriptEl.parentNode.removeChild(scriptEl);
+                }
               } catch (e) {
                 console.error('Error executing script:', e);
               }
@@ -1862,8 +1882,9 @@ $notifications = 3;
             }
           }, 200);
           
-          if (document.getElementById('content-loader')) {
-            document.getElementById('content-loader').style.display = 'none';
+          const contentLoader = document.getElementById('content-loader');
+          if (contentLoader) {
+            contentLoader.style.display = 'none';
           }
         })
         .catch(error => {
@@ -1872,8 +1893,9 @@ $notifications = 3;
           if (contentArea) {
             contentArea.innerHTML = '<div class="card"><p style="color: #ef4444;">Error: ' + error.message + '</p></div>';
           }
-          if (document.getElementById('content-loader')) {
-            document.getElementById('content-loader').style.display = 'none';
+          const contentLoader = document.getElementById('content-loader');
+          if (contentLoader) {
+            contentLoader.style.display = 'none';
           }
         });
     }
@@ -2211,11 +2233,15 @@ $notifications = 3;
             const stats = data.data;
             
             // Update Total Employees
-            document.getElementById('stat-total-employees').textContent = stats.totalEmployees.toLocaleString();
+            const statTotalEmployees = document.getElementById('stat-total-employees');
+            const statEmployeeChange = document.getElementById('stat-employee-change');
+            if (statTotalEmployees) statTotalEmployees.textContent = stats.totalEmployees.toLocaleString();
             const changeClass = stats.percentChange >= 0 ? 'var(--success)' : 'var(--danger)';
             const changeSymbol = stats.percentChange >= 0 ? '↑' : '↓';
-            document.getElementById('stat-employee-change').textContent = `${changeSymbol} ${Math.abs(stats.percentChange)}% from last month`;
-            document.getElementById('stat-employee-change').style.color = stats.percentChange >= 0 ? 'var(--success)' : 'var(--danger)';
+            if (statEmployeeChange) {
+              statEmployeeChange.textContent = `${changeSymbol} ${Math.abs(stats.percentChange)}% from last month`;
+              statEmployeeChange.style.color = stats.percentChange >= 0 ? 'var(--success)' : 'var(--danger)';
+            }
             
             // Update New Hires This Month
             document.getElementById('stat-new-hires').textContent = stats.newHiresThisMonth.toLocaleString();

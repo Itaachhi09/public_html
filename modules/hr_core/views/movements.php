@@ -497,9 +497,12 @@
         });
       });
       
-      document.getElementById('movementModal').style.display = 'flex';
-      document.getElementById('movementModal').style.alignItems = 'center';
-      document.getElementById('movementModal').style.justifyContent = 'center';
+      const movementModal = document.getElementById('movementModal');
+      if (movementModal) {
+        movementModal.style.display = 'flex';
+        movementModal.style.alignItems = 'center';
+        movementModal.style.justifyContent = 'center';
+      }
     };
 
     window.closeMovementModal = function() {
@@ -577,9 +580,11 @@
             if (modalContent) {
               modalContent.innerHTML = viewContent;
               const modal = document.getElementById('movementModal');
-              modal.style.display = 'flex';
-              modal.style.alignItems = 'center';
-              modal.style.justifyContent = 'center';
+              if (modal) {
+                modal.style.display = 'flex';
+                modal.style.alignItems = 'center';
+                modal.style.justifyContent = 'center';
+              }
             } else {
               console.error('Modal content element not found');
             }

@@ -903,7 +903,9 @@
   // ============================================
   
   function getInitials(firstName, lastName) {
-    return ((firstName || '')[0] + (lastName || '')[0]).toUpperCase();
+    const first = (firstName || '').toString().charAt(0) || 'E';
+    const last = (lastName || '').toString().charAt(0) || 'M';
+    return (first + last).toUpperCase();
   }
 
   function formatCurrency(amount) {
@@ -1080,7 +1082,8 @@
     }
 
     tbody.innerHTML = employees.map(emp => {
-      const initials = getInitials(emp.employee_name.split(' ')[0], emp.employee_name.split(' ')[1] || '');
+      const names = (emp.employee_name || '').split(' ');
+      const initials = getInitials(names[0], names[1] || '');
       const utilizationColor = emp.utilization_percent >= 100 ? '#ef4444' : emp.utilization_percent >= 90 ? '#f59e0b' : '#3b82f6';
 
       return `

@@ -629,15 +629,19 @@
       `).join('');
       
       preview.style.display = 'block';
-      document.getElementById('globalBulkSubmitBtn').style.display = 'block';
+      const globalBulkSubmitBtn = document.getElementById('globalBulkSubmitBtn');
+      if (globalBulkSubmitBtn) globalBulkSubmitBtn.style.display = 'block';
     };
 
     window.removeGlobalDoc = function(idx) {
       window.globalUploadFiles.splice(idx, 1);
       if (window.globalUploadFiles.length === 0) {
-        document.getElementById('globalDocPreview').style.display = 'none';
-        document.getElementById('globalBulkSubmitBtn').style.display = 'none';
-        document.getElementById('globalDocFiles').value = '';
+        const globalDocPreview = document.getElementById('globalDocPreview');
+        const globalBulkSubmitBtn = document.getElementById('globalBulkSubmitBtn');
+        const globalDocFiles = document.getElementById('globalDocFiles');
+        if (globalDocPreview) globalDocPreview.style.display = 'none';
+        if (globalBulkSubmitBtn) globalBulkSubmitBtn.style.display = 'none';
+        if (globalDocFiles) globalDocFiles.value = '';
       } else {
         window.processGlobalDocFiles(window.globalUploadFiles);
       }
@@ -785,15 +789,19 @@
       `).join('');
       
       preview.style.display = 'block';
-      document.getElementById('employeeBulkSubmitBtn').style.display = 'block';
+      const employeeBulkSubmitBtn = document.getElementById('employeeBulkSubmitBtn');
+      if (employeeBulkSubmitBtn) employeeBulkSubmitBtn.style.display = 'block';
     };
 
     window.removeEmployeeDoc = function(idx) {
       window.employeeUploadFiles.splice(idx, 1);
       if (window.employeeUploadFiles.length === 0) {
-        document.getElementById('employeeDocPreview').style.display = 'none';
-        document.getElementById('employeeBulkSubmitBtn').style.display = 'none';
-        document.getElementById('employeeDocFiles').value = '';
+        const employeeDocPreview = document.getElementById('employeeDocPreview');
+        const employeeBulkSubmitBtn = document.getElementById('employeeBulkSubmitBtn');
+        const employeeDocFiles = document.getElementById('employeeDocFiles');
+        if (employeeDocPreview) employeeDocPreview.style.display = 'none';
+        if (employeeBulkSubmitBtn) employeeBulkSubmitBtn.style.display = 'none';
+        if (employeeDocFiles) employeeDocFiles.value = '';
       } else {
         window.processEmployeeDocFiles(window.employeeUploadFiles);
       }
@@ -969,7 +977,8 @@
           </tr>
         `).join('');
         preview.style.display = 'block';
-        document.getElementById('bulkUploadBtn').style.display = 'block';
+        const bulkUploadBtn = document.getElementById('bulkUploadBtn');
+        if (bulkUploadBtn) bulkUploadBtn.style.display = 'block';
       };
       reader.readAsText(file);
     };
@@ -981,7 +990,8 @@
           type: 'zip',
           file: files[0]
         };
-        document.getElementById('bulkUploadBtn').style.display = 'block';
+        const bulkUploadBtn = document.getElementById('bulkUploadBtn');
+        if (bulkUploadBtn) bulkUploadBtn.style.display = 'block';
       }
     };
 
@@ -991,7 +1001,8 @@
           type: 'zip',
           file: e.target.files[0]
         };
-        document.getElementById('bulkUploadBtn').style.display = 'block';
+        const bulkUploadBtn = document.getElementById('bulkUploadBtn');
+        if (bulkUploadBtn) bulkUploadBtn.style.display = 'block';
       }
     };
 

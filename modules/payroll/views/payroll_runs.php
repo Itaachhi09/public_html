@@ -290,7 +290,7 @@ let currentPayrollRunId = null;
 
 function toggleCreateForm() {
     const form = document.getElementById('createFormDiv');
-    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+    if (form) form.style.display = form.style.display === 'none' ? 'block' : 'none';
 }
 
 function submitCreatePayrollForm() {
@@ -365,11 +365,13 @@ function viewPayrollRun(id, periodName, empCount, grossPay, deductions, netPay, 
     statusDiv.textContent = status;
     
     // Show modal
-    document.getElementById('viewModal').style.display = 'flex';
+    const viewModal = document.getElementById('viewModal');
+    if (viewModal) viewModal.style.display = 'flex';
 }
 
 function closeModal() {
-    document.getElementById('viewModal').style.display = 'none';
+    const viewModal = document.getElementById('viewModal');
+    if (viewModal) viewModal.style.display = 'none';
 }
 
 function printPayrollReport() {
@@ -528,12 +530,14 @@ function permanentlyDeletePayrollRun(id, name) {
 
 // Archive Modal Functions
 function openArchiveModal() {
-    document.getElementById('archiveModal').style.display = 'flex';
+    const archiveModal = document.getElementById('archiveModal');
+    if (archiveModal) archiveModal.style.display = 'flex';
     loadArchivedPayrollRuns();
 }
 
 function closeArchiveModal() {
-    document.getElementById('archiveModal').style.display = 'none';
+    const archiveModal = document.getElementById('archiveModal');
+    if (archiveModal) archiveModal.style.display = 'none';
 }
 
 function loadArchivedPayrollRuns() {
@@ -604,12 +608,14 @@ document.getElementById('archiveModal').addEventListener('click', function(e) {
 
 // Apply print styles when printing
 window.addEventListener('beforeprint', function() {
-    document.getElementById('printSection').style.display = 'block';
+    const printSection = document.getElementById('printSection');
+    if (printSection) printSection.style.display = 'block';
     document.querySelectorAll('body > *:not(#printSection)').forEach(el => el.style.display = 'none');
 });
 
 window.addEventListener('afterprint', function() {
-    document.getElementById('printSection').style.display = 'none';
+    const printSection = document.getElementById('printSection');
+    if (printSection) printSection.style.display = 'none';
     document.querySelectorAll('body > *:not(#printSection)').forEach(el => el.style.display = '');
 });
 </script>

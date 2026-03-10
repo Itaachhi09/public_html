@@ -878,18 +878,9 @@ $employmentType = $_GET['employmentType'] ?? '';
 
         // ===== DRILL DOWN =====
         window.drillToReport = function(reportType) {
-            const dateRange = document.getElementById('date-range')?.value || '30';
-            const department = document.getElementById('department-filter')?.value || '';
-            const employmentType = document.getElementById('employment-type-filter')?.value || '';
-            
-            console.log('Drilling to:', reportType, { dateRange, department, employmentType });
-            
-            // When in dashboard, open in new tab instead
-            const url = 'reports.php?report=' + reportType + 
-                       '&dateRange=' + dateRange + 
-                       '&department=' + department + 
-                       '&employmentType=' + employmentType;
-            window.open(url, '_blank');
+            // Intentionally do nothing when metric cards are clicked
+            // (navigation is disabled per requirements)
+            console.log('Metric card click ignored for report type:', reportType);
         }
 
         window.goToDashboard = function() {
@@ -899,6 +890,8 @@ $employmentType = $_GET['employmentType'] ?? '';
 
         function switchHeadcountView(event, view) {
             event.preventDefault();
+            // Prevent click from bubbling to the metric card container (which opens a report in a new tab)
+            event.stopPropagation();
             event.target.parentElement.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
             loadHeadcountTrendChart(view);
@@ -968,6 +961,28 @@ $employmentType = $_GET['employmentType'] ?? '';
             
             console.log('populateMetrics: Received data with keys:', Object.keys(data));
             
+            // Populate department dropdown
+            if (data.departments && Array.isArray(data.departments) && data.departments.length > 0) {
+                const deptFilter = document.getElementById('department-filter');
+                if (deptFilter) {
+                    const currentValue = deptFilter.value;
+                    deptFilter.innerHTML = '<option value="">All Departments</option>' +
+                        data.departments.map(d => '<option value="' + (d.id || d.department_id) + '">' + (d.name || d.department_name || 'Unknown') + '</option>').join('');
+                    deptFilter.value = currentValue || '';
+                }
+            }
+            
+            // Populate employment type dropdown
+            if (data.employment_types && Array.isArray(data.employment_types) && data.employment_types.length > 0) {
+                const empTypeFilter = document.getElementById('employment-type-filter');
+                if (empTypeFilter) {
+                    const currentValue = empTypeFilter.value;
+                    empTypeFilter.innerHTML = '<option value="">All Types</option>' +
+                        data.employment_types.map(et => '<option value="' + (et.id || et.employment_type_id) + '">' + (et.name || et.type_name || 'Unknown') + '</option>').join('');
+                    empTypeFilter.value = currentValue || '';
+                }
+            }
+            
             const hrcore = data.hrcore || {};
             const payroll = data.payroll || {};
             const compensation = data.compensation || {};
@@ -994,20 +1009,34 @@ $employmentType = $_GET['employmentType'] ?? '';
             document.getElementById('contracts-60').textContent = (contractExpiry.days_60 || 0).toLocaleString();
             document.getElementById('contracts-90').textContent = (contractExpiry.days_90 || 0).toLocaleString();
 
-            // Payroll Metrics - Extract from summary
+            // Payroll Metrics - Extract from summary (support both old and new field names)
             const payrollSummary = payroll.summary || {};
-            const gross = payrollSummary.gross_total || 0;
-            const net = payrollSummary.net_total || 0;
-            const deductions = payrollSummary.total_deductions || 0;
+            const gross = payrollSummary.gross_total ?? payrollSummary.gross ?? 0;
+            const net = payrollSummary.net_total ?? payrollSummary.net ?? 0;
+            const deductions = payrollSummary.total_deductions ?? payrollSummary.deductions ?? 0;
             
             document.getElementById('gross-payroll').textContent = 'PHP ' + gross.toLocaleString('en-PH', {minimumFractionDigits: 2});
             document.getElementById('net-payroll').textContent = 'PHP ' + net.toLocaleString('en-PH', {minimumFractionDigits: 2});
             document.getElementById('total-deductions').textContent = 'PHP ' + deductions.toLocaleString('en-PH', {minimumFractionDigits: 2});
             
-            // Tax & Contributions
-            const taxContrib = payroll.tax_contributions || [];
-            const totalTax = taxContrib.reduce((sum, t) => sum + (t.amount || 0), 0);
-            document.getElementById('total-contributions').textContent = 'PHP ' + totalTax.toLocaleString('en-PH', {minimumFractionDigits: 2});
+            // Tax & Contributions - service currently returns an object summary, not an array
+            const rawTaxContrib = payroll.tax_contributions || {};
+            let totalTax = 0;
+            if (typeof rawTaxContrib === 'number') {
+                totalTax = rawTaxContrib;
+            } else if (rawTaxContrib && typeof rawTaxContrib === 'object') {
+                if (typeof rawTaxContrib.total === 'number') {
+                    totalTax = rawTaxContrib.total;
+                } else {
+                    const parts = ['tax', 'sss', 'philhealth', 'pagibig'];
+                    totalTax = parts.reduce((sum, key) => {
+                        const val = Number(rawTaxContrib[key] || 0);
+                        return sum + (Number.isFinite(val) ? val : 0);
+                    }, 0);
+                }
+            }
+            document.getElementById('total-contributions').textContent =
+                'PHP ' + totalTax.toLocaleString('en-PH', { minimumFractionDigits: 2 });
             
             // Overtime
             const overtimeSummary = payroll.overtime || {};
@@ -1015,24 +1044,25 @@ $employmentType = $_GET['employmentType'] ?? '';
             document.getElementById('overtime-cost').textContent = 'PHP ' + (overtimeSummary.total_cost || 0).toLocaleString('en-PH', {minimumFractionDigits: 2});
 
             // Compensation Metrics
-            const avgSalary = compensation.average_salary || [];
-            const avgSalaryValue = avgSalary.length > 0 ? avgSalary[0].average || 0 : 0;
+            const avgSalary = compensation.average_salary || {};
+            const avgSalaryValue = typeof avgSalary.average === 'number' ? avgSalary.average : 0;
             document.getElementById('salary-penetration').textContent = '95%';
             document.getElementById('pay-grade-total').textContent = ((avgSalaryValue / 1000) || 0).toFixed(0) + 'K';
             
-            const incentives = compensation.incentives || [];
-            const totalIncentives = incentives.reduce((sum, i) => sum + (i.amount || 0), 0);
+            const incentives = compensation.incentives || {};
+            // Handle both array format and object format from API
+            const totalIncentives = Array.isArray(incentives) 
+                ? incentives.reduce((sum, i) => sum + (i.amount || 0), 0)
+                : (incentives.total || 0);
             document.getElementById('total-incentives').textContent = 'PHP ' + totalIncentives.toLocaleString('en-PH', {minimumFractionDigits: 2});
             document.getElementById('budget-variance').textContent = '+PHP 125000';
 
             // HMO Metrics
-            const hmoEnrollment = hmo.enrollment_rate || [];
-            const enrollmentRate = hmoEnrollment.length > 0 ? hmoEnrollment[0].enrollment_rate || 0 : 0;
-            document.getElementById('hmo-enrollment-pct').textContent = enrollmentRate.toFixed(1) + '%';
+            const hmoEnrollment = typeof hmo.enrollment_rate === 'number' ? hmo.enrollment_rate : 0;
+            document.getElementById('hmo-enrollment-pct').textContent = hmoEnrollment.toFixed(1) + '%';
             
-            const hmoCost = hmo.cost_per_employee || [];
-            const costPerEmp = hmoCost.length > 0 ? hmoCost[0].cost || 0 : 0;
-            document.getElementById('avg-hmo-cost').textContent = 'PHP ' + costPerEmp.toLocaleString('en-PH', {minimumFractionDigits: 2});
+            const hmoCost = typeof hmo.cost_per_employee === 'number' ? hmo.cost_per_employee : 0;
+            document.getElementById('avg-hmo-cost').textContent = 'PHP ' + hmoCost.toLocaleString('en-PH', {minimumFractionDigits: 2});
             
             document.getElementById('claims-premium-ratio').textContent = '78.5%';
             document.getElementById('avg-dependents').textContent = '2.1';
@@ -1263,25 +1293,36 @@ $employmentType = $_GET['employmentType'] ?? '';
             const ctx30 = document.getElementById('contracts-30-chart')?.getContext('2d');
             if (ctx30 && !window.chartsCache['contracts-30']) {
                 window.chartsCache['contracts-30'] = new Chart(ctx30, {
-                type: 'bar',
-                data: {
-                    labels: ['Admin', 'Nursing', 'IT'],
-                    datasets: [{ data: [4, 5, 3], backgroundColor: '#ef4444', borderRadius: 2 }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, display: false } } }
-            });
+                    type: 'bar',
+                    data: {
+                        labels: ['Admin', 'Nursing', 'IT'],
+                        datasets: [{ data: [4, 5, 3], backgroundColor: '#ef4444', borderRadius: 2 }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true, display: false } }
+                    }
+                });
+            }
 
             // 60 days
             const ctx60 = document.getElementById('contracts-60-chart')?.getContext('2d');
             if (ctx60 && !window.chartsCache['contracts-60']) {
                 window.chartsCache['contracts-60'] = new Chart(ctx60, {
-                type: 'bar',
-                data: {
-                    labels: ['Admin', 'Nursing'],
-                    datasets: [{ data: [3, 5], backgroundColor: '#f59e0b', borderRadius: 2 }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, display: false } } }
-            });
+                    type: 'bar',
+                    data: {
+                        labels: ['Admin', 'Nursing'],
+                        datasets: [{ data: [3, 5], backgroundColor: '#f59e0b', borderRadius: 2 }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true, display: false } }
+                    }
+                });
             }
 
             // 90 days
@@ -1311,10 +1352,15 @@ $employmentType = $_GET['employmentType'] ?? '';
             if (window.chartsCache['gross-net']) window.chartsCache['gross-net'].destroy();
             
             // Extract gross and net from data if available (single record), otherwise use placeholder
-            const gross = Array.isArray(data) && data[0] ? data[0].gross_total : 
-                         (data && data.gross_total ? data.gross_total : null);
-            const net = Array.isArray(data) && data[0] ? data[0].net_total : 
-                       (data && data.net_total ? data.net_total : null);
+            let gross = null;
+            let net = null;
+            if (Array.isArray(data) && data[0]) {
+                gross = data[0].gross_total ?? data[0].gross ?? null;
+                net = data[0].net_total ?? data[0].net ?? null;
+            } else if (data && typeof data === 'object') {
+                gross = data.gross_total ?? data.gross ?? null;
+                net = data.net_total ?? data.net ?? null;
+            }
             
             // If we have actual data, use it for current month
             const grossData = gross ? [gross] : [6800000, 6850000, 6900000, 6750000, 6950000, 7000000];
@@ -1361,8 +1407,11 @@ $employmentType = $_GET['employmentType'] ?? '';
             if (window.chartsCache['deductions']) window.chartsCache['deductions'].destroy();
             
             // Extract deduction data if available
-            const totalDeductions = Array.isArray(data) && data[0] ? data[0].total_deductions : 
-                                   (data && data.total_deductions ? data.total_deductions : null);
+            const totalDeductions = Array.isArray(data) && data[0]
+                ? (data[0].total_deductions ?? data[0].deductions ?? null)
+                : (data && typeof data === 'object'
+                    ? (data.total_deductions ?? data.deductions ?? null)
+                    : null);
             
             const deductionData = totalDeductions ? 
                 [totalDeductions * 0.6, totalDeductions * 0.25, totalDeductions * 0.15] :

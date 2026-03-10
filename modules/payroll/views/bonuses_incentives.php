@@ -200,7 +200,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     alert(data.message || 'Bonus/Incentive added successfully');
                     form.reset();
-                    document.getElementById('addFormDiv').style.display = 'none';
+                    const addFormDiv = document.getElementById('addFormDiv');
+                    if (addFormDiv) addFormDiv.style.display = 'none';
                     
                     // Reload the bonuses view content without leaving the module
                     reloadBonusesView();
