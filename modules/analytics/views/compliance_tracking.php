@@ -303,7 +303,7 @@ if (empty($_SESSION['token']) && (!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || $
     <script>
         async function loadData() {
             try {
-                const response = await fetch('/public_html/modules/analytics/api.php?action=getComplianceTracking');
+                const response = await fetch('/modules/analytics/api.php?action=getComplianceTracking');
                 const result = await response.json();
 
                 if (result.success) {

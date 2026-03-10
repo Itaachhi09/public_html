@@ -1011,9 +1011,9 @@ $userRole = $_SESSION['role'] ?? 'hr';
             // Determine the correct fetch URL based on current context
             let fetchUrl = phpFile;
             
-            // Add /public_html/ prefix if not already present
-            if (!fetchUrl.startsWith('/public_html/')) {
-                fetchUrl = '/public_html/' + (fetchUrl.startsWith('/') ? fetchUrl.substring(1) : fetchUrl);
+            // Use the path as-is (relative to domain root)
+            if (!fetchUrl.startsWith('/')) {
+                fetchUrl = '/' + fetchUrl;
             }
             
             console.log('Loading tab from:', fetchUrl);
@@ -1034,12 +1034,12 @@ $userRole = $_SESSION['role'] ?? 'hr';
                 .then(html => {
                     // Comprehensive path fixing before parsing
                     // Handle all variations: ../api.php, ./api.php, /modules/analytics/api.php
-                    html = html.replace(/fetch\(\s*[`'"](\.\.\/|\/modules\/analytics\/)?api\.php/g, 'fetch(`/public_html/modules/analytics/api.php');
-                    html = html.replace(/fetch\(\s*[`'"](\.\.\/|\/modules\/analytics\/)?dashboard_handler\.php/g, 'fetch(`/public_html/modules/analytics/dashboard_handler.php');
+                    html = html.replace(/fetch\(\s*[`'"](\.\.\/|\/modules\/analytics\/)?api\.php/g, 'fetch(`/modules/analytics/api.php');
+                    html = html.replace(/fetch\(\s*[`'"](\.\.\/|\/modules\/analytics\/)?dashboard_handler\.php/g, 'fetch(`/modules/analytics/dashboard_handler.php');
                     
                     // Handle string replacements
-                    html = html.replace(/[`'\"](\.\.\/|\/modules\/analytics\/)?api\.php/g, '`/public_html/modules/analytics/api.php');
-                    html = html.replace(/[`'\"](\.\.\/|\/modules\/analytics\/)?dashboard_handler\.php/g, '`/public_html/modules/analytics/dashboard_handler.php');
+                    html = html.replace(/[`'\"](\.\.\/|\/modules\/analytics\/)?api\.php/g, '`/modules/analytics/api.php');
+                    html = html.replace(/[`'\"](\.\.\/|\/modules\/analytics\/)?dashboard_handler\.php/g, '`/modules/analytics/dashboard_handler.php');
                     
                     // Parse the HTML response
                     const parser = new DOMParser();
@@ -1094,18 +1094,18 @@ $userRole = $_SESSION['role'] ?? 'hr';
                         if (script.textContent && script.textContent.length > 0) {
                             // Rewrite relative paths in script content
                             let scriptContent = script.textContent;
-                            scriptContent = scriptContent.replace(/fetch\(['"]\.\.\/api\.php/g, 'fetch(\'/public_html/modules/analytics/api.php');
-                            scriptContent = scriptContent.replace(/fetch\(`\.\.\/api\.php/g, 'fetch(`/public_html/modules/analytics/api.php');
-                            scriptContent = scriptContent.replace(/fetch\(['"]\.\.\/dashboard_handler\.php/g, 'fetch(\'/public_html/modules/analytics/dashboard_handler.php');
-                            scriptContent = scriptContent.replace(/'\.\.\/api\.php/g, '\'/public_html/modules/analytics/api.php');
-                            scriptContent = scriptContent.replace(/`\.\.\/api\.php/g, '`/public_html/modules/analytics/api.php');
-                            scriptContent = scriptContent.replace(/"\.\.\/api\.php/g, '"/public_html/modules/analytics/api.php');
+                            scriptContent = scriptContent.replace(/fetch\(['"]\.\.\/api\.php/g, 'fetch(\'/modules/analytics/api.php');
+                            scriptContent = scriptContent.replace(/fetch\(`\.\.\/api\.php/g, 'fetch(`/modules/analytics/api.php');
+                            scriptContent = scriptContent.replace(/fetch\(['"]\.\.\/dashboard_handler\.php/g, 'fetch(\'/modules/analytics/dashboard_handler.php');
+                            scriptContent = scriptContent.replace(/'\.\.\/api\.php/g, '\'/modules/analytics/api.php');
+                            scriptContent = scriptContent.replace(/`\.\.\/api\.php/g, '`/modules/analytics/api.php');
+                            scriptContent = scriptContent.replace(/"\.\.\/api\.php/g, '"/modules/analytics/api.php');
                             
                             // Also handle ./api.php and /modules/analytics/api.php variations
-                            scriptContent = scriptContent.replace(/fetch\(['"]\.\/api\.php/g, 'fetch(\'/public_html/modules/analytics/api.php');
-                            scriptContent = scriptContent.replace(/fetch\(`\.\/api\.php/g, 'fetch(`/public_html/modules/analytics/api.php');
-                            scriptContent = scriptContent.replace(/fetch\(['"]\/modules\/analytics\/api\.php/g, 'fetch(\'/public_html/modules/analytics/api.php');
-                            scriptContent = scriptContent.replace(/fetch\(`\/modules\/analytics\/api\.php/g, 'fetch(`/public_html/modules/analytics/api.php');
+                            scriptContent = scriptContent.replace(/fetch\(['"]\.\/api\.php/g, 'fetch(\'/modules/analytics/api.php');
+                            scriptContent = scriptContent.replace(/fetch\(`\.\/api\.php/g, 'fetch(`/modules/analytics/api.php');
+                            scriptContent = scriptContent.replace(/fetch\(['"]\/modules\/analytics\/api\.php/g, 'fetch(\'/modules/analytics/api.php');
+                            scriptContent = scriptContent.replace(/fetch\(`\/modules\/analytics\/api\.php/g, 'fetch(`/modules/analytics/api.php');
                             
                             // Skip scripts that contain redirect logic
                             if (!scriptContent.includes('location.href') && 
@@ -1270,8 +1270,8 @@ $userRole = $_SESSION['role'] ?? 'hr';
             const department = document.getElementById('department-filter').value;
             const employmentType = document.getElementById('employment-type-filter').value;
             
-            // Build query string - use absolute path with public_html
-            let url = '/public_html/modules/analytics/api.php?action=getDashboardData&dateRange=' + encodeURIComponent(dateRange);
+            // Build query string - use absolute path
+            let url = '/modules/analytics/api.php?action=getDashboardData&dateRange=' + encodeURIComponent(dateRange);
             if (department && department !== '') {
                 url += '&department=' + encodeURIComponent(department);
             }

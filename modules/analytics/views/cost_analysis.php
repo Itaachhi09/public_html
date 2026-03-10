@@ -210,7 +210,7 @@ if (empty($_SESSION['token']) && (!isset($_SERVER['HTTP_X_REQUESTED_WITH']) || $
 
         async function loadData() {
             try {
-                const response = await fetch('/public_html/modules/analytics/api.php?action=getCostAnalysis');
+                const response = await fetch('/modules/analytics/api.php?action=getCostAnalysis');
                 const result = await response.json();
 
                 if (result.success) {
