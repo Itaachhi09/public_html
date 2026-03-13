@@ -169,6 +169,21 @@ try {
             }
             break;
 
+        case 'updateProviderStatus':
+            $provider_id = $_GET['id'] ?? null;
+            $status = $_GET['status'] ?? null;
+            
+            if (!$provider_id) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Provider ID required'];
+            } elseif (!$status) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Status required'];
+            } else {
+                $response = $controller->updateProviderStatus($provider_id, $status);
+            }
+            break;
+
         // Plan endpoints
         case 'getPlans':
             $response = $controller->getPlans();
@@ -272,7 +287,7 @@ try {
         
         case 'createEnrollment':
             $request = json_decode(file_get_contents('php://input'), true) ?? $_POST;
-            $required = ['employee_id', 'plan_id', 'enrollment_date'];
+            $required = ['employee_id', 'plan_id', 'effective_date'];
             $missing = array_filter($required, fn($field) => empty($request[$field]));
             
             if ($missing) {
@@ -602,6 +617,20 @@ try {
                 $response = ['success' => false, 'error' => 'Plan ID required'];
             } else {
                 $response = $controller->togglePremium($plan_id);
+            }
+            break;
+
+        case 'getEmployees':
+            $response = $controller->getEmployees();
+            break;
+
+        case 'searchEmployees':
+            $search = $_GET['search'] ?? '';
+            if (strlen($search) < 2) {
+                http_response_code(400);
+                $response = ['success' => false, 'error' => 'Search term must be at least 2 characters'];
+            } else {
+                $response = $controller->searchEmployees($search);
             }
             break;
         

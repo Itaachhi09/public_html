@@ -122,7 +122,7 @@
           <button onclick="window.openDepartmentModal()" style="padding: 0.75rem; background: var(--primary); color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
             <span>➕</span> Add Department
           </button>
-          <button onclick="alert('Assign managers feature coming soon')" style="padding: 0.75rem; background: white; color: var(--text-dark); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+          <button onclick="window.openAssignManagerModal()" style="padding: 0.75rem; background: white; color: var(--text-dark); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
             <span>👤</span> Assign Manager
           </button>
         </div>
@@ -187,7 +187,45 @@
     </form>
   </div>
 </div>
-</main>
+
+<!-- Assign Manager Modal -->
+<div id="assignManagerModal" class="modal" style="position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.4); display: none;">
+  <div class="modal-content" style="max-width: 600px;">
+    <div class="modal-header">
+      <h2 class="modal-title">🎯 Assign Manager</h2>
+      <button class="modal-close" onclick="window.closeAssignManagerModal()">&times;</button>
+    </div>
+    <form id="assignManagerForm">
+      <div style="padding: 1.5rem;">
+        <div class="form-group">
+          <label class="form-label">Select Department *</label>
+          <select id="assignDepartmentSelect" class="form-select" required>
+            <option value="">-- Choose Department --</option>
+          </select>
+          <small style="color: var(--text-light); margin-top: 0.5rem; display: block;">Choose the department that needs a manager</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Select Manager *</label>
+          <select id="assignManagerSelect" class="form-select" required>
+            <option value="">-- Choose Manager --</option>
+          </select>
+          <small style="color: var(--text-light); margin-top: 0.5rem; display: block;">Choose from available staff members</small>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Assignment Notes</label>
+          <textarea name="assignment_notes" class="form-input" placeholder="Why is this manager being assigned? Any special notes..." style="min-height: 100px;"></textarea>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" onclick="window.closeAssignManagerModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Assign Manager</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <script>
   (function() {
@@ -452,6 +490,159 @@
         modal.style.display = 'none';
       }
     };
+
+    // ===== ASSIGN MANAGER MODAL FUNCTIONS =====
+    window.openAssignManagerModal = function() {
+      const modal = document.getElementById('assignManagerModal');
+      const form = document.getElementById('assignManagerForm');
+      
+      if (form) form.reset();
+      
+      // Load departments that need managers
+      loadDepartmentsForAssignment();
+      
+      // Load available managers
+      loadManagersForAssignment();
+      
+      if (modal) {
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+      }
+    };
+
+    window.closeAssignManagerModal = function() {
+      const modal = document.getElementById('assignManagerModal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    };
+
+    function loadDepartmentsForAssignment() {
+      // Fetch all departments
+      fetch('modules/hr_core/api.php?action=getDepartments')
+        .then(res => res.json())
+        .then(data => {
+          const select = document.getElementById('assignDepartmentSelect');
+          if (select && data.success && data.data.departments) {
+            select.innerHTML = '<option value="">-- Choose Department --</option>';
+            
+            // Prioritize departments without managers
+            const deptsByManager = data.data.departments.sort((a, b) => {
+              const aHasManager = a.head_name || a.manager_id;
+              const bHasManager = b.head_name || b.manager_id;
+              return aHasManager ? 1 : -1;
+            });
+            
+            deptsByManager.forEach(dept => {
+              const hasManager = dept.head_name || dept.manager_id;
+              const label = hasManager 
+                ? `${dept.name} (${dept.code}) - Currently: ${dept.head_name}`
+                : `${dept.name} (${dept.code}) - ⚠️ No Manager`;
+              const option = document.createElement('option');
+              option.value = dept.id;
+              option.textContent = label;
+              if (!hasManager) option.style.fontWeight = 'bold';
+              select.appendChild(option);
+            });
+          }
+        })
+        .catch(error => console.error('Error loading departments:', error));
+    }
+
+    function loadManagersForAssignment() {
+      // Fetch all employees to use as managers
+      fetch('modules/hr_core/api.php?action=getAllEmployees')
+        .then(res => res.json())
+        .then(data => {
+          const select = document.getElementById('assignManagerSelect');
+          if (select && data.success && data.data.employees) {
+            select.innerHTML = '<option value="">-- Choose Manager --</option>';
+            data.data.employees.forEach(emp => {
+              const option = document.createElement('option');
+              option.value = emp.employee_id;
+              option.textContent = emp.first_name + ' ' + emp.last_name + ' (' + emp.employee_code + ')';
+              select.appendChild(option);
+            });
+          }
+        })
+        .catch(error => console.error('Error loading employees:', error));
+    }
+
+    // Handle assign manager form submission
+    function setupAssignManagerForm() {
+      const form = document.getElementById('assignManagerForm');
+      if (form) {
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          const deptId = document.getElementById('assignDepartmentSelect')?.value;
+          const managerId = document.getElementById('assignManagerSelect')?.value;
+          const notes = document.querySelector('#assignManagerForm textarea[name="assignment_notes"]')?.value || '';
+          
+          if (!deptId) {
+            alert('Please select a department');
+            return;
+          }
+          if (!managerId) {
+            alert('Please select a manager');
+            return;
+          }
+          
+          // Get manager name for confirmation
+          const managerSelect = document.getElementById('assignManagerSelect');
+          const managerName = managerSelect.options[managerSelect.selectedIndex]?.text;
+          
+          const deptSelect = document.getElementById('assignDepartmentSelect');
+          const deptName = deptSelect.options[deptSelect.selectedIndex]?.text.split('(')[0].trim();
+          
+          // First, fetch the department details
+          fetch(`modules/hr_core/api.php?action=getDepartmentById&id=${deptId}`)
+            .then(res => res.json())
+            .then(data => {
+              if (!data.success) {
+                alert('Error loading department details');
+                return;
+              }
+              
+              const dept = data.data;
+              
+              // Now update the department with the new manager
+              return fetch('modules/hr_core/api.php?action=updateDepartment', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                  id: deptId,
+                  name: dept.name,
+                  code: dept.code,
+                  description: dept.description,
+                  manager_id: managerId,
+                  notes: notes
+                })
+              });
+            })
+            .then(response => response.json())
+            .then(result => {
+              if (result.success) {
+                alert('✓ Manager assigned successfully!\n\n' + managerName + ' → ' + deptName);
+                window.closeAssignManagerModal();
+                window.loadDepartments();
+              } else {
+                alert('Error: ' + (result.message || 'Failed to assign manager'));
+              }
+            })
+            .catch(error => {
+              console.error('Error:', error);
+              alert('Error: ' + error.message);
+            });
+        });
+      }
+    }
+
+    // Call setup on first run
+    setTimeout(() => {
+      setupAssignManagerForm();
+    }, 100);
 
     window.loadNoManagerDepartments = function(depts) {
       const list = document.getElementById('noManagerList');

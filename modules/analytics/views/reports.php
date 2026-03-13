@@ -705,6 +705,77 @@ $employmentType = $_GET['employmentType'] ?? '';
             text-align: center;
             color: var(--text-light);
         }
+
+        /* ===== ACTION COLUMN ===== */
+        .action-column {
+            white-space: nowrap;
+            text-align: center;
+        }
+
+        .action-buttons-cell {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn-icon {
+            padding: 0.4rem 0.6rem;
+            border: 1px solid var(--border);
+            background: white;
+            color: var(--text-dark);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            width: 32px;
+            height: 32px;
+        }
+
+        .btn-icon:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(30, 64, 175, 0.05);
+        }
+
+        .btn-icon.edit {
+            color: #059669;
+        }
+
+        .btn-icon.edit:hover {
+            border-color: #059669;
+            background: rgba(5, 150, 105, 0.1);
+        }
+
+        .btn-icon.view {
+            color: #1e40af;
+        }
+
+        .btn-icon.view:hover {
+            border-color: #1e40af;
+            background: rgba(30, 64, 175, 0.1);
+        }
+
+        .btn-icon.delete {
+            color: #dc2626;
+        }
+
+        .btn-icon.delete:hover {
+            border-color: #dc2626;
+            background: rgba(220, 38, 38, 0.1);
+        }
+
+        .btn-icon.assign {
+            color: #7c3aed;
+        }
+
+        .btn-icon.assign:hover {
+            border-color: #7c3aed;
+            background: rgba(124, 58, 237, 0.1);
+        }
     </style>
 </head>
 <body>
@@ -889,6 +960,44 @@ $employmentType = $_GET['employmentType'] ?? '';
                 <button class="btn-cancel" onclick="closeModal('comparison-modal')">Cancel</button>
                 <button class="btn-primary" onclick="runComparison()">
                     <i class='bx bx-check'></i> Compare
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT RECORD MODAL -->
+    <div class="modal" id="edit-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Record</h3>
+                <button class="modal-close" onclick="closeModal('edit-modal')"><i class='bx bx-x'></i></button>
+            </div>
+            <div id="edit-form-container">
+                <!-- Form fields will be generated dynamically -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('edit-modal')">Cancel</button>
+                <button class="btn-primary" onclick="saveEditRecord()">
+                    <i class='bx bx-check'></i> Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ASSIGN MANAGER MODAL -->
+    <div class="modal" id="assign-manager-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">Assign Manager</h3>
+                <button class="modal-close" onclick="closeModal('assign-manager-modal')"><i class='bx bx-x'></i></button>
+            </div>
+            <div id="assign-manager-form-container">
+                <!-- Fields will be generated dynamically -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal('assign-manager-modal')">Cancel</button>
+                <button class="btn-primary" onclick="saveManagerAssignment()">
+                    <i class='bx bx-check'></i> Assign Manager
                 </button>
             </div>
         </div>
@@ -1608,14 +1717,32 @@ $employmentType = $_GET['employmentType'] ?? '';
             visibleFields.forEach(field => {
                 html += `<th onclick="sortTable(event)">${field.replace(/_/g, ' ').toUpperCase()}<span class="sort-indicator"></span></th>`;
             });
+            html += '<th class="action-column">ACTIONS</th>';
             html += '</tr></thead><tbody>';
             
-            rows.forEach(row => {
+            rows.forEach((row, index) => {
                 html += '<tr>';
                 visibleFields.forEach(field => {
                     const value = row[field] || '-';
                     html += `<td>${sanitizeValue(value)}</td>`;
                 });
+                // Add action buttons
+                html += `<td class="action-column">
+                    <div class="action-buttons-cell">
+                        <button class="btn-icon view" title="View Record" onclick="viewRecord(${index})">
+                            <i class='bx bx-show'></i>
+                        </button>
+                        <button class="btn-icon edit" title="Edit Record" onclick="openEditModal(${index})">
+                            <i class='bx bx-edit'></i>
+                        </button>
+                        <button class="btn-icon assign" title="Assign Manager" onclick="openAssignManagerModal(${index})">
+                            <i class='bx bx-user-check'></i>
+                        </button>
+                        <button class="btn-icon delete" title="Delete Record" onclick="deleteRecord(${index})">
+                            <i class='bx bx-trash'></i>
+                        </button>
+                    </div>
+                </td>`;
                 html += '</tr>';
             });
             
@@ -1645,6 +1772,241 @@ $employmentType = $_GET['employmentType'] ?? '';
         function sortTable(event) {
             alert('Column sorting coming soon');
         }
+
+        // ===== EDIT RECORD FUNCTIONS =====
+        function openEditModal(rowIndex) {
+            const rows = window.allReportData;
+            if (!rows || !rows[rowIndex]) {
+                alert('Record not found');
+                return;
+            }
+            
+            const record = rows[rowIndex];
+            window.editingRecordIndex = rowIndex;
+            window.editingRecord = {...record};
+            
+            // Get visible fields
+            const visibleFields = Array.from(document.querySelectorAll('.report-field-visible:checked'))
+                .map(cb => cb.dataset.field);
+            
+            // Build form
+            let formHTML = '';
+            visibleFields.forEach(field => {
+                const value = record[field] || '';
+                const label = field.replace(/_/g, ' ').toUpperCase();
+                
+                formHTML += `
+                    <div class="modal-form-group">
+                        <label>${label}</label>
+                        <input type="text" data-field="${field}" value="${escapeHtml(value)}" placeholder="${label}">
+                    </div>
+                `;
+            });
+            
+            document.getElementById('edit-form-container').innerHTML = formHTML;
+            showModal('edit-modal');
+        }
+
+        function saveEditRecord() {
+            const formInputs = document.querySelectorAll('#edit-form-container input');
+            const updatedRecord = {};
+            
+            formInputs.forEach(input => {
+                const field = input.dataset.field;
+                updatedRecord[field] = input.value;
+            });
+            
+            // Update the record in the data
+            if (window.allReportData && window.editingRecordIndex !== undefined) {
+                window.allReportData[window.editingRecordIndex] = updatedRecord;
+                
+                // Refresh the table display
+                displayReportData(window.allReportData);
+                
+                // Close modal
+                closeModal('edit-modal');
+                
+                // Show success message
+                alert('Record updated successfully');
+                
+                // TODO: Send update to server/API
+                console.log('Updated record:', updatedRecord);
+            }
+        }
+
+        function viewRecord(rowIndex) {
+            const rows = window.allReportData;
+            if (!rows || !rows[rowIndex]) {
+                alert('Record not found');
+                return;
+            }
+            
+            const record = rows[rowIndex];
+            let viewHTML = '<div style="margin-bottom: 1rem;">';
+            
+            Object.keys(record).forEach(field => {
+                const label = field.replace(/_/g, ' ').toUpperCase();
+                const value = record[field] || '-';
+                viewHTML += `
+                    <div style="margin-bottom: 0.75rem;">
+                        <strong style="color: var(--text-dark); display: block; margin-bottom: 0.25rem;">${label}</strong>
+                        <div style="color: var(--text-light); padding: 0.5rem; background: var(--light); border-radius: 4px;">${escapeHtml(value)}</div>
+                    </div>
+                `;
+            });
+            
+            viewHTML += '</div>';
+            
+            const modal = document.getElementById('edit-modal');
+            const originalContent = document.getElementById('edit-form-container').innerHTML;
+            document.getElementById('edit-form-container').innerHTML = viewHTML;
+            
+            modal.querySelector('.modal-title').innerText = 'View Record';
+            const saveBtn = modal.querySelector('.btn-primary');
+            saveBtn.innerText = '✕ Close';
+            saveBtn.onclick = function() {
+                document.getElementById('edit-form-container').innerHTML = originalContent;
+                modal.querySelector('.modal-title').innerText = 'Edit Record';
+                saveBtn.innerText = '✓ Save Changes';
+                saveBtn.onclick = saveEditRecord;
+                closeModal('edit-modal');
+            };
+            
+            showModal('edit-modal');
+        }
+
+        function deleteRecord(rowIndex) {
+            if (confirm('Are you sure you want to delete this record?')) {
+                const rows = window.allReportData;
+                if (rows && rows[rowIndex]) {
+                    rows.splice(rowIndex, 1);
+                    displayReportData(rows);
+                    alert('Record deleted successfully');
+                    // TODO: Send delete to server/API
+                    console.log('Deleted record at index:', rowIndex);
+                }
+            }
+        }
+
+        function escapeHtml(unsafe) {
+            if (!unsafe) return '';
+            return String(unsafe)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // ===== ASSIGN MANAGER FUNCTIONS =====
+        function openAssignManagerModal(rowIndex) {
+            const rows = window.allReportData;
+            if (!rows || !rows[rowIndex]) {
+                alert('Record not found');
+                return;
+            }
+            
+            const record = rows[rowIndex];
+            window.assigningManagerRecordIndex = rowIndex;
+            window.assigningManagerRecord = {...record};
+            
+            // Get employee name/id for display
+            const employeeName = record.first_name && record.last_name 
+                ? record.first_name + ' ' + record.last_name 
+                : record.employee_id || 'Unknown';
+            
+            // Build form with manager selection
+            let formHTML = `
+                <div class="modal-form-group">
+                    <label><strong>Employee:</strong></label>
+                    <div style="color: var(--text-light); padding: 0.75rem; background: var(--light); border-radius: 4px; margin-bottom: 1rem;">
+                        ${escapeHtml(employeeName)}
+                    </div>
+                </div>
+                
+                <div class="modal-form-group">
+                    <label>Select Manager</label>
+                    <select id="manager-selector" style="padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; width: 100%;">
+                        <option value="">-- No Manager --</option>
+                    </select>
+                    <small style="color: var(--text-light); margin-top: 0.5rem; display: block;">Choose from available managers</small>
+                </div>
+
+                <div class="modal-form-group">
+                    <label>Notes (Optional)</label>
+                    <textarea id="manager-assignment-notes" placeholder="Add any notes about this assignment..." style="padding: 0.75rem; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; width: 100%; min-height: 80px; font-family: inherit;"></textarea>
+                </div>
+            `;
+            
+            document.getElementById('assign-manager-form-container').innerHTML = formHTML;
+            
+            // Load managers from API or use sample data
+            loadManagersDropdown();
+            
+            showModal('assign-manager-modal');
+        }
+
+        function loadManagersDropdown() {
+            // Sample managers data - in production, fetch from API
+            const managers = [
+                { id: 1, name: 'Roberto Tan', department: 'Finance' },
+                { id: 2, name: 'Ma. Teresa Domingo', department: 'Human Resources' },
+                { id: 3, name: 'Pedro Villanueva', department: 'Laboratory' },
+                { id: 4, name: 'Jo Santos', department: 'Nursing' }
+            ];
+            
+            const selector = document.getElementById('manager-selector');
+            if (selector) {
+                managers.forEach(manager => {
+                    const option = document.createElement('option');
+                    option.value = manager.id;
+                    option.textContent = manager.name + ' (' + manager.department + ')';
+                    selector.appendChild(option);
+                });
+            }
+        }
+
+        function saveManagerAssignment() {
+            const managerId = document.getElementById('manager-selector')?.value;
+            const notes = document.getElementById('manager-assignment-notes')?.value || '';
+            
+            if (!managerId) {
+                alert('Please select a manager');
+                return;
+            }
+            
+            // Get the manager name from the selector
+            const selectorElement = document.getElementById('manager-selector');
+            const managerName = selectorElement.options[selectorElement.selectedIndex].text;
+            
+            // Update the record with manager information
+            if (window.allReportData && window.assigningManagerRecordIndex !== undefined) {
+                const updatedRecord = window.allReportData[window.assigningManagerRecordIndex];
+                updatedRecord.manager_id = managerId;
+                updatedRecord.manager_name = managerName;
+                updatedRecord.manager_assignment_notes = notes;
+                updatedRecord.manager_assigned_date = new Date().toISOString().split('T')[0];
+                
+                // Refresh the table display
+                displayReportData(window.allReportData);
+                
+                // Close modal
+                closeModal('assign-manager-modal');
+                
+                // Show success message
+                alert('Manager assigned successfully! (' + managerName + ')');
+                
+                // TODO: Send assignment to server/API
+                console.log('Manager assignment saved:', {
+                    recordIndex: window.assigningManagerRecordIndex,
+                    managerId: managerId,
+                    managerName: managerName,
+                    notes: notes,
+                    assignmentDate: updatedRecord.manager_assigned_date
+                });
+            }
+        }
+
 
         // ===== INITIALIZE =====
         function initializePage() {

@@ -1608,6 +1608,84 @@ $notifications = 3;
     <p>Loading...</p>
   </div>
 
+  <!-- Global New Enrollment Modal -->
+  <div id="newEnrollmentModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5);">
+    <div class="modal-content" style="background-color: white; margin: 10% auto; padding: 2rem; border-radius: 8px; width: 90%; max-width: 650px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);">
+      
+      <!-- Modal Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="margin: 0; font-size: 20px; font-weight: 600; color: #111827;">+ New Enrollment</h2>
+        <button onclick="globalCloseEnrollmentModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">&times;</button>
+      </div>
+
+      <!-- Modal Body -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+        
+        <!-- Employee Selection -->
+        <div style="grid-column: 1 / -1;">
+          <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+            Employee <span style="color: #ef4444;">*</span>
+          </label>
+          <select id="enrollmentEmployeeSelect" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+            <option value="">-- Select Employee --</option>
+          </select>
+          <p style="font-size: 12px; color: #6b7280; margin-top: 0.25rem; margin-bottom: 0;">Choose an employee</p>
+          <div id="enrollmentSelectedEmployeeDisplay" style="display: none; margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 4px; color: #1e40af; font-size: 13px;"></div>
+        </div>
+
+        <!-- HMO Provider -->
+        <div>
+          <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+            HMO Provider <span style="color: #ef4444;">*</span>
+          </label>
+          <select id="enrollmentProviderSelect" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+            <option value="">-- Select Provider --</option>
+          </select>
+          <p style="font-size: 12px; color: #6b7280; margin-top: 0.25rem; margin-bottom: 0;">Select an active provider</p>
+        </div>
+
+        <!-- Plan -->
+        <div>
+          <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+            Plan <span style="color: #ef4444;">*</span>
+          </label>
+          <select id="enrollmentPlanSelect" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+            <option value="">-- Select Plan --</option>
+          </select>
+          <p style="font-size: 12px; color: #6b7280; margin-top: 0.25rem; margin-bottom: 0;">Available plans from selected provider</p>
+        </div>
+
+        <!-- Coverage Type -->
+        <div>
+          <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+            Coverage Type <span style="color: #ef4444;">*</span>
+          </label>
+          <select id="enrollmentCoverageType" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+            <option value="">-- Select Coverage --</option>
+            <option value="employee_only">Employee Only</option>
+            <option value="with_dependents">With Dependents</option>
+          </select>
+          <p style="font-size: 12px; color: #6b7280; margin-top: 0.25rem; margin-bottom: 0;">Enrollment coverage scope</p>
+        </div>
+
+        <!-- Effective Date -->
+        <div>
+          <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+            Effective Date <span style="color: #ef4444;">*</span>
+          </label>
+          <input type="date" id="enrollmentEffectiveDate" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+          <p style="font-size: 12px; color: #6b7280; margin-top: 0.25rem; margin-bottom: 0;">Enrollment start date</p>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div style="display: flex; gap: 0.75rem; margin-top: 2rem; justify-content: flex-end;">
+        <button onclick="globalCloseEnrollmentModal()" class="btn" style="padding: 0.75rem 1.5rem; border: 1px solid #d1d5db; background: white; color: #374151; border-radius: 6px; font-weight: 500; cursor: pointer; font-size: 14px;">Cancel</button>
+        <button id="enrollmentSubmitBtn" onclick="globalSubmitNewEnrollment()" class="btn btn-primary" style="padding: 0.75rem 1.5rem; background: #1e40af; color: white; border: none; border-radius: 6px; font-weight: 500; cursor: pointer; font-size: 14px;">Create Enrollment</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ===== SIDEBAR & NAVIGATION =====
     function toggleSidebar() {
@@ -2288,6 +2366,188 @@ $notifications = 3;
         if (query.length > 2) {
           console.log('Searching for:', query);
         }
+      });
+    }
+
+    // ===== GLOBAL ENROLLMENT MODAL FUNCTIONS =====
+    function globalCloseEnrollmentModal() {
+      const modal = document.getElementById('newEnrollmentModal');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    }
+
+    function openAddEnrollmentModal() {
+      const modal = document.getElementById('newEnrollmentModal');
+      if (!modal) {
+        alert('Error: Enrollment modal not found.');
+        return;
+      }
+      
+      modal.style.display = 'block';
+      
+      // Reset form
+      const resetElements = [
+        'enrollmentEmployeeSelect',
+        'enrollmentProviderSelect',
+        'enrollmentPlanSelect',
+        'enrollmentCoverageType',
+        'enrollmentEffectiveDate'
+      ];
+      
+      resetElements.forEach(id => {
+        const elem = document.getElementById(id);
+        if (elem) elem.value = '';
+      });
+      
+      const displayElem = document.getElementById('enrollmentSelectedEmployeeDisplay');
+      if (displayElem) displayElem.style.display = 'none';
+      
+      // Load employees into dropdown
+      fetch('modules/hmo/api.php?action=getEmployees')
+        .then(response => response.json())
+        .then(data => {
+          console.log('Employee API Response:', data);
+          const select = document.getElementById('enrollmentEmployeeSelect');
+          if (!select) return;
+          select.innerHTML = '<option value="">-- Select Employee --</option>';
+          if (data.success && data.data && data.data.length > 0) {
+            data.data.forEach(employee => {
+              const option = document.createElement('option');
+              option.value = employee.id;
+              option.text = `${employee.employee_name} (${employee.employee_id})`;
+              option.dataset.name = employee.employee_name;
+              option.dataset.code = employee.employee_id;
+              select.appendChild(option);
+            });
+            console.log('Loaded ' + data.data.length + ' employees');
+          } else {
+            console.log('No employee data received:', data);
+          }
+        })
+        .catch(error => console.error('Error loading employees:', error));
+      
+      // Load providers
+      fetch('modules/hmo/api.php?action=getProviders')
+        .then(response => response.json())
+        .then(data => {
+          const select = document.getElementById('enrollmentProviderSelect');
+          if (!select) return;
+          select.innerHTML = '<option value="">-- Select Provider --</option>';
+          if (data.success && data.data) {
+            data.data.forEach(provider => {
+              if (provider.provider_status === 'Active') {
+                select.innerHTML += `<option value="${provider.id}">${provider.provider_name}</option>`;
+              }
+            });
+          }
+        });
+      
+      // Setup employee selection
+      const employeeSelect = document.getElementById('enrollmentEmployeeSelect');
+      if (employeeSelect) {
+        employeeSelect.addEventListener('change', function() {
+          const selectedOption = this.options[this.selectedIndex];
+          const displayDiv = document.getElementById('enrollmentSelectedEmployeeDisplay');
+          if (this.value) {
+            if (displayDiv) {
+              displayDiv.innerHTML = `✓ ${selectedOption.dataset.name} (${selectedOption.dataset.code})`;
+              displayDiv.style.display = 'block';
+            }
+          } else {
+            if (displayDiv) displayDiv.style.display = 'none';
+          }
+        });
+      }
+      
+      // Setup provider change
+      const providerSelect = document.getElementById('enrollmentProviderSelect');
+      if (providerSelect) {
+        providerSelect.addEventListener('change', function() {
+          const providerId = this.value;
+          const planSelect = document.getElementById('enrollmentPlanSelect');
+          if (!planSelect) return;
+          
+          planSelect.innerHTML = '<option value="">-- Select Plan --</option>';
+          if (!providerId) return;
+          
+          fetch('modules/hmo/api.php?action=getPlansByProvider&provider_id=' + providerId)
+            .then(response => response.json())
+            .then(data => {
+              if (data.success && data.data) {
+                data.data.forEach(plan => {
+                  planSelect.innerHTML += `<option value="${plan.id}">${plan.plan_name}</option>`;
+                });
+              }
+            });
+        });
+      }
+    }
+
+    function globalSubmitNewEnrollment() {
+      const employeeElem = document.getElementById('enrollmentEmployeeSelect');
+      const providerElem = document.getElementById('enrollmentProviderSelect');
+      const planElem = document.getElementById('enrollmentPlanSelect');
+      const coverageElem = document.getElementById('enrollmentCoverageType');
+      const dateElem = document.getElementById('enrollmentEffectiveDate');
+      const submitBtn = document.getElementById('enrollmentSubmitBtn');
+      
+      if (!employeeElem || !providerElem || !planElem || !coverageElem || !dateElem) {
+        alert('Error: Form elements not found.');
+        return;
+      }
+      
+      const employeeId = employeeElem.value;
+      const providerId = providerElem.value;
+      const planId = planElem.value;
+      const coverageType = coverageElem.value;
+      const effectiveDate = dateElem.value;
+      
+      if (!employeeId || !providerId || !planId || !coverageType || !effectiveDate) {
+        alert('Please fill all required fields');
+        return;
+      }
+      
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating...';
+      }
+      
+      fetch('modules/hmo/api.php?action=createEnrollment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employee_id: employeeId,
+          plan_id: planId,
+          coverage_type: coverageType,
+          effective_date: effectiveDate
+        })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Create Enrollment';
+        }
+        
+        if (data.success) {
+          alert('Enrollment created successfully');
+          globalCloseEnrollmentModal();
+          // Reload current page
+          if (typeof loadTabData === 'function') {
+            loadTabData('active');
+          }
+        } else {
+          alert('Error: ' + (data.error || 'Failed to create enrollment'));
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Create Enrollment';
+        }
+        alert('Error creating enrollment. Please try again.');
       });
     }
   </script>

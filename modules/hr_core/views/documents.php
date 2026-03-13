@@ -519,10 +519,21 @@
     window.openGlobalBulkUploadModal = function() {
       // Fetch all employees first
       fetch('modules/hr_core/api.php?action=getAllEmployees')
-        .then(response => response.json())
+        .then(response => {
+          console.log('getAllEmployees response status:', response.status);
+          return response.json();
+        })
         .then(data => {
-          if (!data.success || !data.data.employees) {
-            alert('Failed to load employees');
+          console.log('getAllEmployees response data:', data);
+          if (!data.success) {
+            console.error('API error:', data);
+            alert('Failed to load employees: ' + (data.message || 'Unknown error'));
+            return;
+          }
+          
+          if (!data.data || !data.data.employees) {
+            console.error('Invalid data structure:', data);
+            alert('Failed to load employees: Invalid response');
             return;
           }
 
@@ -1050,9 +1061,19 @@
 
     window.openDocumentModal = function(employeeId) {
       fetch('modules/hr_core/api.php?action=getAllEmployees')
-        .then(res => res.json())
+        .then(res => {
+          console.log('openDocumentModal response status:', res.status);
+          return res.json();
+        })
         .then(data => {
-          const employeeOptions = (data.data || []).map(emp => `<option value="${emp.employee_id}">${emp.first_name} ${emp.last_name} (${emp.employee_code})</option>`).join('');
+          console.log('openDocumentModal response data:', data);
+          if (!data.success || !data.data || !data.data.employees) {
+            alert('Failed to load employees: ' + (data.message || 'Invalid response'));
+            return;
+          }
+          
+          const employees = data.data.employees;
+          const employeeOptions = employees.map(emp => `<option value="${emp.employee_id}">${emp.first_name} ${emp.last_name} (${emp.employee_code})</option>`).join('');
           
           const content = `
             <form id="documentCrudForm" onsubmit="window.submitDocumentForm(event)">
@@ -1108,8 +1129,8 @@
           }
         })
         .catch(error => {
-          console.error('Error:', error);
-          alert('Failed to load employees');
+          console.error('Fetch error:', error);
+          alert('Failed to load employees: ' + error.message);
         });
     };
 
@@ -1213,9 +1234,19 @@
             const doc = data.data;
             
             fetch('modules/hr_core/api.php?action=getAllEmployees')
-              .then(res => res.json())
+              .then(res => {
+                console.log('editDocument getAllEmployees response status:', res.status);
+                return res.json();
+              })
               .then(empData => {
-                const employeeOptions = (empData.data || []).map(emp => `<option value="${emp.employee_id}" ${emp.employee_id == doc.employee_id ? 'selected' : ''}>${emp.first_name} ${emp.last_name} (${emp.employee_code})</option>`).join('');
+                console.log('editDocument getAllEmployees response data:', empData);
+                if (!empData.success || !empData.data || !empData.data.employees) {
+                  alert('Failed to load employees: ' + (empData.message || 'Invalid response'));
+                  return;
+                }
+                
+                const employees = empData.data.employees;
+                const employeeOptions = employees.map(emp => `<option value="${emp.employee_id}" ${emp.employee_id == doc.employee_id ? 'selected' : ''}>${emp.first_name} ${emp.last_name} (${emp.employee_code})</option>`).join('');
                 
                 const content = `
                   <form id="documentCrudForm" onsubmit="window.submitDocumentForm(event, ${id})">
@@ -1257,6 +1288,10 @@
                   </form>
                 `;
                 window.showDocumentModal('Edit Document', content);
+              })
+              .catch(error => {
+                console.error('Error loading employees:', error);
+                alert('Failed to load employees: ' + error.message);
               });
           }
         })

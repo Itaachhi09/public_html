@@ -1157,46 +1157,80 @@
 </div>
 
 <!-- New Enrollment Modal -->
-<div id="newEnrollmentModal" class="modal">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3 style="margin: 0;">Create New Enrollment</h3>
-      <button class="close-btn" onclick="closeModal('newEnrollmentModal')">&times;</button>
+<div id="newEnrollmentModal" class="modal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5);">
+  <div class="modal-content" style="background-color: white; margin: 10% auto; padding: 2rem; border-radius: 8px; width: 90%; max-width: 650px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);">
+    
+    <!-- Modal Header -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+      <h2 style="margin: 0; font-size: 20px; font-weight: 600; color: #111827;">+ New Enrollment</h2>
+      <button onclick="closeModal('newEnrollmentModal')" style="background: none; border: none; font-size: 24px; cursor: pointer; color: #6b7280;">&times;</button>
     </div>
 
-    <div class="form-group">
-      <label class="form-label">Employee</label>
-      <input type="text" id="employeeSearch" class="form-control" placeholder="Search employee...">
-      <input type="hidden" id="selectedEmployeeId">
-      <div id="employeeSearchResults" style="max-height: 150px; overflow-y: auto; border: 1px solid #d1d5db; border-radius: 4px; margin-top: 0.5rem; display: none;"></div>
+    <!-- Modal Body -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+      
+      <!-- Employee Selection -->
+      <div style="grid-column: 1 / -1;">
+        <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+          Employee <span style="color: #ef4444;">*</span>
+        </label>
+        <div style="position: relative;">
+          <input type="text" id="enrollmentEmployeeSearch" class="form-control" placeholder="Search by name or ID..." style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;" autocomplete="off">
+          <input type="hidden" id="enrollmentSelectedEmployeeId">
+          <div id="enrollmentEmployeeResults" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #d1d5db; border-top: none; border-radius: 0 0 6px 6px; max-height: 200px; overflow-y: auto; z-index: 1001;"></div>
+        </div>
+        <div id="enrollmentSelectedEmployeeDisplay" style="display: none; margin-top: 0.5rem; padding: 0.5rem 0.75rem; background: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 4px; color: #1e40af; font-size: 13px;"></div>
+      </div>
+
+      <!-- HMO Provider -->
+      <div>
+        <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+          HMO Provider <span style="color: #ef4444;">*</span>
+        </label>
+        <select id="enrollmentProviderSelect" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+          <option value="">-- Select Provider --</option>
+        </select>
+        <p style="font-size: 12px; color: #6b7280; margin-top: 0.25rem; margin-bottom: 0;">Select an active provider</p>
+      </div>
+
+      <!-- Plan -->
+      <div>
+        <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+          Plan <span style="color: #ef4444;">*</span>
+        </label>
+        <select id="enrollmentPlanSelect" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+          <option value="">-- Select Plan --</option>
+        </select>
+        <p style="font-size: 12px; color: #6b7280; margin-top: 0.25rem; margin-bottom: 0;">Available plans from selected provider</p>
+      </div>
+
+      <!-- Coverage Type -->
+      <div>
+        <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+          Coverage Type <span style="color: #ef4444;">*</span>
+        </label>
+        <select id="enrollmentCoverageType" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+          <option value="">-- Select Coverage --</option>
+          <option value="employee_only">Employee Only</option>
+          <option value="with_dependents">With Dependents</option>
+        </select>
+        <p style="font-size: 12px; color: #6b7280; margin-top: 0.25rem; margin-bottom: 0;">Enrollment coverage scope</p>
+      </div>
+
+      <!-- Effective Date -->
+      <div>
+        <label style="display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 0.5rem;">
+          Effective Date <span style="color: #ef4444;">*</span>
+        </label>
+        <input type="date" id="enrollmentEffectiveDate" class="form-control" style="width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;">
+        <p style="font-size: 12px; color: #6b7280; margin-top: 0.25rem; margin-bottom: 0;">Enrollment start date</p>
+      </div>
     </div>
 
-    <div class="form-group">
-      <label class="form-label">HMO Provider</label>
-      <select id="providerSelect" class="form-control"></select>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Plan</label>
-      <select id="planSelect" class="form-control"></select>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Coverage Type</label>
-      <select id="coverageTypeSelect" class="form-control">
-        <option value="employee_only">Employee Only</option>
-        <option value="with_dependents">With Dependents</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label class="form-label">Effective Date</label>
-      <input type="date" id="enrollmentEffectiveDate" class="form-control">
-    </div>
-
-    <div style="display: flex; gap: 0.5rem;">
-      <button class="btn btn-primary btn-sm" onclick="submitNewEnrollment()">Create Enrollment</button>
-      <button class="btn btn-secondary btn-sm" onclick="closeModal('newEnrollmentModal')">Cancel</button>
+    <!-- Modal Footer -->
+    <div style="display: flex; gap: 0.75rem; margin-top: 2rem; justify-content: flex-end;">
+      <button onclick="closeModal('newEnrollmentModal')" class="btn" style="padding: 0.75rem 1.5rem; border: 1px solid #d1d5db; background: white; color: #374151; border-radius: 6px; font-weight: 500; cursor: pointer; font-size: 14px;">Cancel</button>
+      <button id="enrollmentSubmitBtn" onclick="submitNewEnrollment()" class="btn btn-primary" style="padding: 0.75rem 1.5rem; background: #1e40af; color: white; border: none; border-radius: 6px; font-weight: 500; cursor: pointer; font-size: 14px;">Create Enrollment</button>
     </div>
   </div>
 </div>
@@ -1782,29 +1816,33 @@
     });
   }
 
-  function openAddEnrollmentModal() {
-    openModal('newEnrollmentModal');
-    // Load providers
-    fetch('modules/hmo/api.php?action=getProviders')
-      .then(response => response.json())
-      .then(data => {
-        const select = document.getElementById('providerSelect');
-        select.innerHTML = '<option value="">Select provider...</option>';
-        if (data.success && data.data) {
-          data.data.forEach(provider => {
-            select.innerHTML += `<option value="${provider.id}">${provider.provider_name}</option>`;
-          });
-        }
-      });
+  
+  function selectEnrollmentEmployee(employeeId, employeeName, employeeId2) {
+    // Delegate to global function if it exists
+    if (typeof window.selectEnrollmentEmployee === 'function' && window.selectEnrollmentEmployee !== selectEnrollmentEmployee) {
+      window.selectEnrollmentEmployee(employeeId, employeeName, employeeId2);
+    }
+    // Otherwise just update the dropdown
+    const select = document.getElementById('enrollmentEmployeeSelect');
+    if (select) {
+      select.value = employeeId;
+      select.dispatchEvent(new Event('change'));
+    }
   }
 
-  function openAddDependentModal() {
-    openModal('addDependentModal');
+  function submitNewEnrollment() {
+    // Delegate to global function in dashboard.php
+    if (typeof window.globalSubmitNewEnrollment === 'function') {
+      window.globalSubmitNewEnrollment();
+    } else {
+      alert('Error: Global submit function not found. Please refresh the page.');
+    }
   }
 
   function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
+      modal.style.display = 'none';
       modal.classList.remove('show');
       modal.classList.remove('active');
     }
@@ -1813,8 +1851,13 @@
   function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
+      modal.style.display = 'block';
       modal.classList.add('show');
     }
+  }
+
+  function openAddDependentModal() {
+    openModal('addDependentModal');
   }
 
   function submitAddDependent() {
@@ -1852,14 +1895,6 @@
     });
   }
 
-  function submitNewEnrollment() {
-    alert('Create new enrollment coming soon');
-  }
-
-  // ============================================
-  // Search & Filtering
-  // ============================================
-
   function filterEnrollments() {
     const searchValue = document.getElementById('search-employee').value.toLowerCase();
     const providerValue = document.getElementById('filter-provider').value;
@@ -1887,17 +1922,23 @@
   // ============================================
 
   function updateCounts() {
-    document.getElementById('count-active').textContent = (allEnrollments.active || []).length;
-    document.getElementById('count-pending').textContent = (allEnrollments.pending || []).length;
-    document.getElementById('count-waiting').textContent = (allEnrollments.waiting || []).length;
-    document.getElementById('count-suspended').textContent = (allEnrollments.suspended || []).length;
-    document.getElementById('count-terminated').textContent = (allEnrollments.terminated || []).length;
+    // Safely update count elements if they exist
+    const updateElement = (id, count) => {
+      const elem = document.getElementById(id);
+      if (elem) elem.textContent = count;
+    };
+    
+    updateElement('count-active', (allEnrollments.active || []).length);
+    updateElement('count-pending', (allEnrollments.pending || []).length);
+    updateElement('count-waiting', (allEnrollments.waiting || []).length);
+    updateElement('count-suspended', (allEnrollments.suspended || []).length);
+    updateElement('count-terminated', (allEnrollments.terminated || []).length);
 
-    // Update stat cards
-    document.getElementById('activeCount').textContent = (allEnrollments.active || []).length;
-    document.getElementById('pendingCount').textContent = (allEnrollments.pending || []).length;
-    document.getElementById('waitingCount').textContent = (allEnrollments.waiting || []).length;
-    document.getElementById('suspendedCount').textContent = (allEnrollments.suspended || []).length;
+    // Update stat cards if they exist
+    updateElement('activeCount', (allEnrollments.active || []).length);
+    updateElement('pendingCount', (allEnrollments.pending || []).length);
+    updateElement('waitingCount', (allEnrollments.waiting || []).length);
+    updateElement('suspendedCount', (allEnrollments.suspended || []).length);
   }
 
   // ============================================
@@ -1983,3 +2024,4 @@
       });
     };
 </script>
+</div>

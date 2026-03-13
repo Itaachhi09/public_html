@@ -1168,7 +1168,7 @@
     return badges[lowerStatus] || 'badge-active';
   }
 
-  function createActionButtons(providerId, context = 'all') {
+  function createActionButtons(providerId, context = 'all', providerStatus = 'Active') {
     const buttons = [];
 
     buttons.push(`
@@ -1189,12 +1189,13 @@
       </div>
     `);
 
+    const isInactive = (providerStatus || '').toLowerCase() === 'inactive';
     buttons.push(`
       <div class="action-tooltip">
-        <button class="btn-icon" onclick="event.stopPropagation(); deactivateProvider(${providerId})" title="Deactivate Provider">
-          ⊘
+        <button class="btn-icon" onclick="event.stopPropagation(); toggleProviderStatus(${providerId}, '${isInactive ? 'Active' : 'Inactive'}')" title="${isInactive ? 'Activate' : 'Deactivate'} Provider">
+          ${isInactive ? '✓' : '⊘'}
         </button>
-        <span class="tooltip-text">Disable</span>
+        <span class="tooltip-text">${isInactive ? 'Activate' : 'Disable'}</span>
       </div>
     `);
 
@@ -1244,7 +1245,7 @@
                   </span>
                 </td>
                 <td style="text-align: center;">
-                  ${createActionButtons(provider.id, 'all')}
+                  ${createActionButtons(provider.id, 'all', provider.provider_status)}
                 </td>
               </tr>
             `;
@@ -1311,7 +1312,7 @@
                   <span class="badge badge-active">✓ Active</span>
                 </td>
                 <td style="text-align: center;">
-                  ${createActionButtons(provider.id, 'active')}
+                  ${createActionButtons(provider.id, 'active', provider.provider_status)}
                 </td>
               </tr>
             `;
@@ -1380,7 +1381,7 @@
                   <span class="badge badge-expiring">⏱ Expiring</span>
                 </td>
                 <td style="text-align: center;">
-                  ${createActionButtons(provider.id, 'expiring')}
+                  ${createActionButtons(provider.id, 'expiring', provider.provider_status)}
                 </td>
               </tr>
             `;
@@ -1444,7 +1445,7 @@
                   <span class="badge badge-expired">✕ Expired</span>
                 </td>
                 <td style="text-align: center;">
-                  ${createActionButtons(provider.id, 'expired')}
+                  ${createActionButtons(provider.id, 'expired', provider.provider_status)}
                 </td>
               </tr>
             `;
@@ -1811,19 +1812,24 @@
     alert('Renew contract for provider ' + id + ' coming soon');
   }
 
-  function deactivateProvider(id) {
+  function toggleProviderStatus(id, newStatus) {
     try {
-      if (!confirm('Are you sure you want to deactivate this provider?')) {
+      const action = newStatus.toLowerCase() === 'active' ? 'activate' : 'deactivate';
+      const message = newStatus.toLowerCase() === 'active' 
+        ? 'Are you sure you want to activate this provider?' 
+        : 'Are you sure you want to deactivate this provider?';
+      
+      if (!confirm(message)) {
         return;
       }
 
-      fetch(`modules/hmo/api.php?action=deleteProvider&id=${id}`, {
-        method: 'GET'
+      fetch(`modules/hmo/api.php?action=updateProviderStatus&id=${id}&status=${encodeURIComponent(newStatus)}`, {
+        method: 'POST'
       })
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          alert('Provider deactivated successfully');
+          alert(`Provider ${action}d successfully`);
           loadAllProviders();
         } else {
           alert('Error: ' + data.error);
@@ -1831,12 +1837,16 @@
       })
       .catch(error => {
         console.error('Error:', error);
-        alert('Failed to deactivate provider');
+        alert(`Failed to ${action} provider`);
       });
     } catch (error) {
-      console.error('Error in deactivateProvider:', error);
-      alert('An error occurred while deactivating the provider');
+      console.error('Error in toggleProviderStatus:', error);
+      alert('An error occurred while updating the provider');
     }
+  }
+
+  function deactivateProvider(id) {
+    toggleProviderStatus(id, 'Inactive');
   }
 
   // Load providers on page load - wrap in DOM ready

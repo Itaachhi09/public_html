@@ -369,6 +369,124 @@ require __DIR__ . '/partials/header.php';
   font-size: 13px;
   color: #1e40af;
 }
+
+/* ===== NEW CONTRACT MODAL ===== */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay.active {
+  display: flex;
+}
+
+.modal-box {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 600px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-close:hover {
+  color: #1f2937;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 16px 24px;
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.modal-body .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.modal-body .form-row.full {
+  grid-template-columns: 1fr;
+}
+
+.modal-body .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-body .form-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.modal-body .required {
+  color: #ef4444;
+}
+
+.modal-body .form-input,
+.modal-body .form-select {
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.modal-body .form-input:focus,
+.modal-body .form-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
 </style>
 
 <?php if (!empty($_GET['msg']) || !empty($_GET['err'])): ?>
@@ -393,7 +511,7 @@ require __DIR__ . '/partials/header.php';
       <p>Manage compensation contracts and employee assignments</p>
     </div>
     <div class="header-actions">
-      <button onclick="toggleForm('add-contract-form'); return false;">+ New Contract</button>
+      <button onclick="openNewContractModal(); return false;">+ New Contract</button>
     </div>
   </div>
 
@@ -514,7 +632,7 @@ require __DIR__ . '/partials/header.php';
   <div class="section-card">
     <div class="section-card-header">
       <h3 class="section-card-title">Employee Assignments</h3>
-      <button class="btn btn-primary btn-sm" onclick="toggleForm('add-assignment-form'); return false;">+ Assign Employee</button>
+      <button class="btn btn-primary btn-sm" onclick="openAssignEmployeeModal(); return false;">+ Assign Employee</button>
     </div>
 
     <div class="filter-tabs">
@@ -621,6 +739,121 @@ require __DIR__ . '/partials/header.php';
 
 </div>
 
+<!-- NEW CONTRACT MODAL -->
+<div class="modal-overlay" id="newContractModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 class="modal-title">+ New Pay Contract</h2>
+      <button class="modal-close" onclick="closeNewContractModal()">&times;</button>
+    </div>
+    <form id="newContractForm" method="post" action="<?php echo htmlspecialchars($handlerUrl); ?>">
+      <input type="hidden" name="action" value="create_contract">
+      
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Code <span class="required">*</span></label>
+            <input type="text" name="code" required class="form-input" placeholder="ER_DOCTOR_2026" maxlength="50">
+            <small style="color: #6b7280; font-size: 12px;">Unique contract identifier</small>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Name <span class="required">*</span></label>
+            <input type="text" name="name" required class="form-input" placeholder="ER Doctor Contract" maxlength="255">
+            <small style="color: #6b7280; font-size: 12px;">Contract description</small>
+          </div>
+        </div>
+
+        <div class="form-row full">
+          <div class="form-group">
+            <label class="form-label">Pay Grade <span class="required">*</span></label>
+            <select name="pay_grade_id" required class="form-select">
+              <option value="">-- Select Pay Grade --</option>
+              <?php foreach ($payGrades as $pg): ?>
+              <option value="<?php echo (int)$pg['id']; ?>"><?php echo htmlspecialchars($pg['name']); ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Start Date <span class="required">*</span></label>
+            <input type="date" name="start_date" required class="form-input">
+          </div>
+          <div class="form-group">
+            <label class="form-label">End Date <span class="required">*</span></label>
+            <input type="date" name="end_date" required class="form-input">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm" onclick="closeNewContractModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Create Contract</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ASSIGN EMPLOYEE MODAL -->
+<div class="modal-overlay" id="assignEmployeeModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2 class="modal-title">+ Assign Employee to Contract</h2>
+      <button class="modal-close" onclick="closeAssignEmployeeModal()">&times;</button>
+    </div>
+    <form id="assignEmployeeForm" method="post" action="<?php echo htmlspecialchars($handlerUrl); ?>">
+      <input type="hidden" name="action" value="assign_employee">
+      
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Employee <span class="required">*</span></label>
+            <select name="employee_id" required class="form-select">
+              <option value="">-- Select Employee --</option>
+              <?php foreach ($employees as $emp): ?>
+              <option value="<?php echo (int)$emp['employee_id']; ?>"><?php echo htmlspecialchars($emp['employee_code'] . ' – ' . $emp['last_name'] . ', ' . $emp['first_name']); ?></option>
+              <?php endforeach; ?>
+            </select>
+            <small style="color: #6b7280; font-size: 12px;">Choose an employee to assign</small>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Contract <span class="required">*</span></label>
+            <select name="contract_id" required class="form-select">
+              <option value="">-- Select Contract --</option>
+              <?php foreach ($activeContracts as $c): ?>
+              <option value="<?php echo (int)$c['id']; ?>"><?php echo htmlspecialchars($c['name']); ?></option>
+              <?php endforeach; ?>
+              <?php if (empty($activeContracts)): ?>
+              <option value="" disabled>No active contracts available</option>
+              <?php endif; ?>
+            </select>
+            <small style="color: #6b7280; font-size: 12px;">Select an active contract</small>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Effective From <span class="required">*</span></label>
+            <input type="date" name="effective_from" required class="form-input">
+            <small style="color: #6b7280; font-size: 12px;">Assignment start date</small>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Effective To (Optional)</label>
+            <input type="date" name="effective_to" class="form-input">
+            <small style="color: #6b7280; font-size: 12px;">Leave blank for ongoing assignment</small>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm" onclick="closeAssignEmployeeModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary btn-sm">Assign Employee</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 function toggleForm(formId) {
     const form = document.getElementById(formId);
@@ -681,6 +914,54 @@ function performCompSearch(){
         }
     });
 }
+
+// ===== NEW CONTRACT MODAL FUNCTIONS =====
+function openNewContractModal() {
+    const modal = document.getElementById('newContractModal');
+    if (modal) {
+        modal.classList.add('active');
+        // Reset form
+        document.getElementById('newContractForm').reset();
+    }
+}
+
+function closeNewContractModal() {
+    const modal = document.getElementById('newContractModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+// Close modal when clicking outside
+document.getElementById('newContractModal')?.addEventListener('click', function(event) {
+    if (event.target === this) {
+        closeNewContractModal();
+    }
+});
+
+// ===== ASSIGN EMPLOYEE MODAL FUNCTIONS =====
+function openAssignEmployeeModal() {
+    const modal = document.getElementById('assignEmployeeModal');
+    if (modal) {
+        modal.classList.add('active');
+        // Reset form
+        document.getElementById('assignEmployeeForm').reset();
+    }
+}
+
+function closeAssignEmployeeModal() {
+    const modal = document.getElementById('assignEmployeeModal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+}
+
+// Close modal when clicking outside
+document.getElementById('assignEmployeeModal')?.addEventListener('click', function(event) {
+    if (event.target === this) {
+        closeAssignEmployeeModal();
+    }
+});
 </script>
 
 <?php require __DIR__ . '/partials/footer.php'; ?>

@@ -1346,6 +1346,82 @@
 
   <!-- Side Modal for Provider Details -->
 
+  <!-- Provider Details Modal -->
+  <div class="modal-overlay" id="providerDetailsOverlay" onclick="closeProviderDetailsModal()"></div>
+  <div class="side-modal" id="providerDetailsModal">
+    <div class="modal-header">
+      <h2 id="detailsProviderName" style="margin: 0; font-size: 18px; font-weight: 600;">—</h2>
+      <button class="modal-close" onclick="closeProviderDetailsModal()">✕</button>
+    </div>
+    <div class="modal-content">
+      <!-- Provider Code -->
+      <div class="modal-detail">
+        <div class="modal-detail-title">Provider Code</div>
+        <div class="modal-detail-content">
+          <span id="detailsProviderCode">—</span>
+        </div>
+      </div>
+
+      <!-- Provider Type -->
+      <div class="modal-detail">
+        <div class="modal-detail-title">Provider Type</div>
+        <div class="modal-detail-content">
+          <span id="detailsProviderType">—</span>
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div class="modal-detail">
+        <div class="modal-detail-title">Status</div>
+        <div class="modal-detail-content">
+          <span id="detailsProviderStatus" class="badge">—</span>
+        </div>
+      </div>
+
+      <!-- Address -->
+      <div class="modal-detail">
+        <div class="modal-detail-title">Head Office Address</div>
+        <div class="modal-detail-content">
+          <span id="detailsProviderAddress">—</span>
+        </div>
+      </div>
+
+      <!-- Contact Information -->
+      <div class="modal-detail">
+        <div class="modal-detail-title">Contact Information</div>
+        <div class="modal-detail-content">
+          <div style="margin-bottom: 8px;">
+            <strong>Email:</strong> <span id="detailsProviderEmail">—</span>
+          </div>
+          <div>
+            <strong>Phone:</strong> <span id="detailsProviderPhone">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Contract Information -->
+      <div class="modal-detail">
+        <div class="modal-detail-title">Contract Information</div>
+        <div class="modal-detail-content">
+          <div style="margin-bottom: 8px;">
+            <strong>Start Date:</strong> <span id="detailsContractStart">—</span>
+          </div>
+          <div>
+            <strong>End Date:</strong> <span id="detailsContractEnd">—</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Primary Contact -->
+      <div class="modal-detail">
+        <div class="modal-detail-title">Primary Contact Person</div>
+        <div class="modal-detail-content">
+          <span id="detailsContactPerson">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="modal-overlay" onclick="closeSideModal()"></div>
   <div class="side-modal" id="side-modal">
     <div class="modal-header">
@@ -1473,12 +1549,118 @@
     document.getElementById('modal-overlay').classList.remove('active');
   }
 
+  function closeProviderDetailsModal() {
+    const modal = document.getElementById('providerDetailsModal');
+    const overlay = document.getElementById('providerDetailsOverlay');
+    if (modal) modal.classList.remove('active');
+    if (overlay) overlay.classList.remove('active');
+  }
+
   function viewProviderModal(providerId) {
-    const provider = allProviders.find(p => p.id === providerId);
-    if (provider) {
-      populateSideModal(provider);
-      document.getElementById('side-modal').classList.add('active');
-      document.getElementById('modal-overlay').classList.add('active');
+    try {
+      providerId = parseInt(providerId, 10);
+      console.log('=== viewProviderModal called ===');
+      console.log('Fetching detailed provider info for ID:', providerId);
+      console.log('Available providers in cache:', allProviders?.length || 0);
+      
+      // Try to get from allProviders first - compare as numbers
+      let provider = allProviders && allProviders.find(p => parseInt(p.id, 10) === providerId);
+      
+      if (provider) {
+        console.log('✓ Found provider in allProviders:', provider);
+        populateProviderDetailsModal(provider);
+        
+        // Show provider details modal
+        const modal = document.getElementById('providerDetailsModal');
+        const overlay = document.getElementById('providerDetailsOverlay');
+        if (modal) modal.classList.add('active');
+        if (overlay) overlay.classList.add('active');
+      } else {
+        // Fetch from API if not in cache
+        console.log('✗ Provider not in cache or cache not loaded, fetching from API...');
+        console.log('Calling API: modules/hmo/api.php?action=getProviderDetails&provider_id=' + providerId);
+        
+        fetch(`modules/hmo/api.php?action=getProviderDetails&provider_id=${providerId}`, {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json'
+          }
+        })
+          .then(response => {
+            console.log('✓ API response received, status:', response.status, response.statusText);
+            if (!response.ok) {
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.text(); // Get as text first to see exactly what we got
+          })
+          .then(responseText => {
+            console.log('Raw API response:', responseText);
+            try {
+              const data = JSON.parse(responseText);
+              console.log('Parsed API Response:', data);
+              console.log('data.success:', data.success);
+              console.log('data.data:', data.data);
+              
+              if (data.success && data.data) {
+                const providerData = data.data.provider || data.data;
+                console.log('✓ Provider data extracted:', providerData);
+                populateProviderDetailsModal(providerData);
+                
+                // Show provider details modal
+                const modal = document.getElementById('providerDetailsModal');
+                const overlay = document.getElementById('providerDetailsOverlay');
+                if (modal) modal.classList.add('active');
+                if (overlay) overlay.classList.add('active');
+              } else {
+                console.error('✗ API Error - success is false or data is missing:', data);
+                alert('Error: ' + (data.error || 'Could not load provider details'));
+              }
+            } catch (parseError) {
+              console.error('✗ Failed to parse JSON response:', parseError);
+              console.log('Response text was:', responseText);
+              alert('Error: Invalid server response');
+            }
+          })
+          .catch(error => {
+            console.error('✗ Fetch error:', error);
+            alert('Error loading provider details: ' + error.message);
+          });
+      }
+    } catch (error) {
+      console.error('✗ Error in viewProviderModal:', error);
+      alert('Error: ' + error.message);
+    }
+  }
+
+  function populateProviderDetailsModal(provider) {
+    try {
+      // Format dates
+      const formatDate = (dateStr) => {
+        if (!dateStr) return '—';
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      };
+
+      // Populate provider details
+      document.getElementById('detailsProviderName').textContent = provider.provider_name || '—';
+      document.getElementById('detailsProviderCode').textContent = provider.provider_code || '—';
+      document.getElementById('detailsProviderType').textContent = provider.provider_type || '—';
+      document.getElementById('detailsProviderAddress').textContent = provider.head_office_address || '—';
+      document.getElementById('detailsProviderEmail').textContent = provider.contact_email || '—';
+      document.getElementById('detailsProviderPhone').textContent = provider.contact_phone || '—';
+      document.getElementById('detailsContactPerson').textContent = provider.primary_contact_person || '—';
+      document.getElementById('detailsContractStart').textContent = formatDate(provider.contract_start_date);
+      document.getElementById('detailsContractEnd').textContent = formatDate(provider.contract_end_date);
+      
+      // Set status badge
+      const statusElement = document.getElementById('detailsProviderStatus');
+      const statusValue = (provider.provider_status || 'Active').toLowerCase();
+      statusElement.textContent = provider.provider_status || 'Active';
+      statusElement.className = 'badge badge-' + (statusValue === 'active' ? 'active' : statusValue === 'inactive' ? 'inactive' : 'suspended');
+      
+      console.log('Provider details modal populated');
+    } catch (error) {
+      console.error('Error populating provider details:', error);
     }
   }
 
@@ -1652,7 +1834,9 @@
   }
 
   // Close modal when clicking outside
-  const planViewModal = document.getElementById('planViewModal');
+  if (typeof planViewModal === 'undefined') {
+    var planViewModal = document.getElementById('planViewModal');
+  }
   if (planViewModal) {
     planViewModal.addEventListener('click', function(e) {
       if (e.target === this) {
@@ -1756,7 +1940,9 @@
       
       // Load providers for dropdown
       if (provider_id_select && provider_id_select.options.length === 1) {  // Only load if not already loaded
-        fetch('modules/hmo/api.php?action=getProviders')
+        fetch('modules/hmo/api.php?action=getProviders', {
+          credentials: 'include'
+        })
           .then(response => response.json())
           .then(data => {
             if (data.success && data.data.length > 0) {
@@ -1843,7 +2029,9 @@
       
       // Load providers for dropdown
       if (provider_id_select) {
-        fetch('modules/hmo/api.php?action=getProviders')
+        fetch('modules/hmo/api.php?action=getProviders', {
+          credentials: 'include'
+        })
           .then(response => response.json())
           .then(data => {
             if (data.success && data.data.length > 0) {
@@ -1988,7 +2176,7 @@
             <td style="text-align: center;">
               <div class="actions-cell">
                 <div class="action-tooltip">
-                  <button class="btn-icon" onclick="event.stopPropagation(); viewProviderModal(${provider.id})" title="View Provider">
+                  <button class="btn-icon" onclick="event.stopPropagation(); viewProviderModal(${provider.id})" title="View Details">
                     👁️
                   </button>
                   <span class="tooltip-text">View</span>
@@ -2078,7 +2266,9 @@
       </tr>
     `;
     
-    fetch('modules/hmo/api.php?action=getPlans')
+    fetch('modules/hmo/api.php?action=getPlans', {
+      credentials: 'include'
+    })
       .then(response => response.json())
       .then(data => {
         if (data.success && data.data.length > 0) {
@@ -2127,15 +2317,21 @@
     `;
     
     // First fetch all providers
-    fetch('modules/hmo/api.php?action=getProviders')
+    fetch('modules/hmo/api.php?action=getProviders', {
+      credentials: 'include'
+    })
       .then(response => response.json())
       .then(providerData => {
+        console.log('Provider data loaded:', providerData);
         if (!providerData.success) throw new Error('Failed to fetch providers');
         
         allProviders = providerData.data || [];
+        console.log('allProviders populated with:', allProviders.length, 'providers');
         
         // Then fetch all plans
-        return fetch('modules/hmo/api.php?action=getPlans');
+        return fetch('modules/hmo/api.php?action=getPlans', {
+          credentials: 'include'
+        });
       })
       .then(response => response.json())
       .then(planData => {
@@ -2184,7 +2380,9 @@
       </tr>
     `;
     
-    fetch('modules/hmo/api.php?action=getPlans')
+    fetch('modules/hmo/api.php?action=getPlans', {
+      credentials: 'include'
+    })
       .then(response => response.json())
       .then(data => {
         if (data.success && data.data.length > 0) {
@@ -2243,7 +2441,9 @@
   }
 
   function loadStats() {
-    fetch('modules/hmo/api.php?action=getPlans')
+    fetch('modules/hmo/api.php?action=getPlans', {
+      credentials: 'include'
+    })
       .then(response => response.json())
       .then(data => {
         if (data.success && data.data.length > 0) {
@@ -2267,12 +2467,13 @@
   function initializePlans() {
     console.log('initializePlans called');
     // Restore previously selected tab or default to 'by-provider'
-    const savedTab = localStorage.getItem('selectedPlanTab') || 'by-provider';
+    let savedTab = window.savedPlanTab || localStorage.getItem('selectedPlanTab') || 'by-provider';
+    window.savedPlanTab = undefined; // Clear temporary storage
     
     // Hide all tabs first
-    const activeTab = document.getElementById('active-tab');
-    const byProviderTab = document.getElementById('by-provider-tab');
-    const byCoverageTab = document.getElementById('by-coverage-tab');
+    let activeTab = document.getElementById('active-tab');
+    let byProviderTab = document.getElementById('by-provider-tab');
+    let byCoverageTab = document.getElementById('by-coverage-tab');
     if (activeTab) activeTab.style.display = 'none';
     if (byProviderTab) byProviderTab.style.display = 'none';
     if (byCoverageTab) byCoverageTab.style.display = 'none';
@@ -2281,9 +2482,9 @@
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     
     // Show selected tab
-    const selectedTab = document.getElementById(savedTab + '-tab');
+    let selectedTab = document.getElementById(savedTab + '-tab');
     if (selectedTab) selectedTab.style.display = 'block';
-    const tabBtn = document.querySelector(`.tab-btn[onclick="switchPlanTab(event, '${savedTab}')"]`);
+    let tabBtn = document.querySelector(`.tab-btn[onclick="switchPlanTab(event, '${savedTab}')"]`);
     if (tabBtn) tabBtn.classList.add('active');
     
     // Load data for the tab
@@ -2298,6 +2499,85 @@
     // Always load stats for counters
     loadStats();
   }
+
+  // Deactivate Provider Function (from Plans view)
+  window.deactivateProvider = function(providerId) {
+    try {
+      if (!providerId) {
+        console.error('No provider ID provided');
+        return;
+      }
+
+      if (confirm('Are you sure you want to deactivate this provider?')) {
+        fetch(`modules/hmo/api.php?action=updateProvider&id=${providerId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            provider_status: 'Inactive'
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            alert('Provider deactivated successfully');
+            // Reload the current tab
+            const currentTab = document.querySelector('.tab-btn.active');
+            if (currentTab) {
+              const tabName = currentTab.textContent.toLowerCase().split(' ')[0];
+              if (tabName === 'provider') {
+                loadPlansByProvider();
+              } else if (tabName === 'active') {
+                loadActivePlans();
+              } else if (tabName === 'coverage') {
+                loadPlansByCoverage();
+              }
+            }
+          } else {
+            alert('Error: ' + (data.error || 'Failed to deactivate provider'));
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Error deactivating provider');
+        });
+      }
+    } catch (error) {
+      console.error('Error in deactivateProvider:', error);
+      alert('Error: ' + error.message);
+    }
+  };
+
+  // Edit Provider Function (from Plans view)
+  window.editProviderFromPlanModal = function(providerId) {
+    try {
+      console.log('Opening edit provider dialog from plans view for ID:', providerId);
+      
+      // Fetch provider details
+      fetch(`modules/hmo/api.php?action=getProviderDetails&provider_id=${providerId}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success && data.data) {
+            const provider = data.data.provider || data.data;
+            
+            // Show an alert directing user to HMO Providers module
+            alert('Please navigate to HMO Providers module to edit this provider.');
+            // Optionally redirect to providers page
+            // window.location.href = '?module=hmo&section=providers';
+          } else {
+            alert('Error: Could not load provider details');
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching provider:', error);
+          alert('Error loading provider details');
+        });
+    } catch (error) {
+      console.error('Error in editProviderFromPlanModal:', error);
+      alert('Error: ' + error.message);
+    }
+  };
   
   // Initialize on page load
   setTimeout(() => {

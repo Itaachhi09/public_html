@@ -313,35 +313,40 @@
 
     .side-modal {
       position: fixed;
-      right: -420px;
-      top: 0;
-      width: 420px;
-      height: 100vh;
+      left: 50%;
+      top: 50%;
+      width: 520px;
+      max-height: 90vh;
       background: white;
-      box-shadow: -2px 0 8px rgba(0, 0, 0, 0.15);
-      transition: right 0.3s ease;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease;
       display: flex;
       flex-direction: column;
       z-index: 101;
       overflow: hidden;
+      transform: translate(-50%, -50%) scale(0.95);
+      opacity: 0;
+      border-radius: 8px;
     }
 
     .side-modal.active {
-      right: 0;
+      transform: translate(-50%, -50%) scale(1);
+      opacity: 1;
     }
 
     .modal-header {
-      padding: 20px;
-      border-bottom: 1px solid #e5e7eb;
+      padding: 24px;
+      border-bottom: 1px solid #f0f0f0;
       display: flex;
       justify-content: space-between;
       align-items: center;
       flex-shrink: 0;
+      background: #fafbfc;
     }
 
     .modal-title {
-      font-size: 16px;
-      font-weight: 600;
+      font-size: 18px;
+      font-weight: 700;
       color: #1f2937;
       margin: 0;
     }
@@ -349,7 +354,45 @@
     .modal-body {
       flex: 1;
       overflow-y: auto;
-      padding: 20px;
+      padding: 28px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: #4b5563;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      color: #1f2937;
+      background: #ffffff;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .form-group input:read-only {
+      background-color: #f9fafb;
+      color: #6b7280;
+      cursor: default;
     }
 
     .modal-section {
@@ -375,28 +418,67 @@
     }
 
     .close-btn {
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
       border: none;
-      background: #f3f4f6;
+      background: transparent;
       border-radius: 6px;
       cursor: pointer;
-      font-size: 18px;
-      color: #6b7280;
+      font-size: 20px;
+      color: #9ca3af;
       transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .close-btn:hover {
-      background: #e5e7eb;
+      background: #f3f4f6;
       color: #1f2937;
     }
 
     .modal-actions {
-      padding: 20px;
-      border-top: 1px solid #e5e7eb;
+      padding: 20px 28px;
+      border-top: 1px solid #f0f0f0;
       display: flex;
       gap: 12px;
       flex-shrink: 0;
+      background: #fafbfc;
+    }
+
+    .modal-actions button {
+      padding: 10px 18px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      flex: 1;
+    }
+
+    .modal-actions button.btn-primary {
+      background: #3b82f6;
+      color: white;
+      border-color: #3b82f6;
+    }
+
+    .modal-actions button.btn-primary:hover {
+      background: #2563eb;
+      border-color: #2563eb;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    .modal-actions button.btn-secondary {
+      background: #10b981;
+      color: white;
+      border-color: #10b981;
+    }
+
+    .modal-actions button.btn-secondary:hover {
+      background: #059669;
+      border-color: #059669;
+      box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
     }
   </style>
 
@@ -626,53 +708,68 @@
   // ============================================
 
   function viewDocumentDetails(documentId) {
-    const document = allDocuments.find(d => d.id === documentId);
-    if (!document) {
+    const doc = allDocuments.find(d => d.id === documentId);
+    if (!doc) {
       console.error('Document not found:', documentId);
       return;
     }
 
-    const modal = document.getElementById('document-modal');
-    const overlay = document.getElementById('modal-overlay');
-    const title = document.getElementById('modal-title');
-    const body = document.getElementById('modal-body');
+    const modal = window.document.getElementById('document-modal');
+    const overlay = window.document.getElementById('modal-overlay');
+    const title = window.document.getElementById('modal-title');
+    const body = window.document.getElementById('modal-body');
 
     if (!modal || !overlay || !title || !body) {
       console.error('Modal elements not found');
       return;
     }
 
-    title.textContent = document.name || 'Document Details';
+    title.textContent = doc.name || 'Document Details';
     body.innerHTML = `
       <div class="form-group">
         <label>Document Name</label>
-        <input type="text" value="${document.name || 'N/A'}" readonly>
+        <input type="text" value="${doc.name || 'N/A'}" readonly>
       </div>
       <div class="form-group">
         <label>Document Type</label>
-        <input type="text" value="${(document.document_type || 'N/A').toUpperCase()}" readonly>
+        <input type="text" value="${(doc.document_type || 'N/A').toUpperCase()}" readonly>
       </div>
       <div class="form-group">
         <label>Holder Name</label>
-        <input type="text" value="${document.holder_name || 'N/A'}" readonly>
+        <input type="text" value="${doc.holder_name || 'N/A'}" readonly>
       </div>
       <div class="form-group">
         <label>Expiry Date</label>
-        <input type="text" value="${document.expiry_date ? formatDate(document.expiry_date) : 'N/A'}" readonly>
+        <input type="text" value="${doc.expiry_date ? formatDate(doc.expiry_date) : 'N/A'}" readonly>
       </div>
       <div class="form-group">
         <label>Status</label>
-        <input type="text" value="${(document.status || 'N/A').toUpperCase()}" readonly>
+        <input type="text" value="${(doc.status || 'N/A').toUpperCase()}" readonly>
       </div>
       <div class="form-group">
         <label>Upload Date</label>
-        <input type="text" value="${document.created_at ? formatDate(document.created_at) : 'N/A'}" readonly>
-      </div>
-      <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-        <button class="btn btn-primary" style="flex: 1;" onclick="downloadDocument(${document.id})">⬇️ Download</button>
-        <button class="btn btn-secondary" style="flex: 1;" onclick="closeDocumentModal()">Close</button>
+        <input type="text" value="${doc.created_at ? formatDate(doc.created_at) : 'N/A'}" readonly>
       </div>
     `;
+
+    const buttonDiv = document.createElement('div');
+    buttonDiv.style.cssText = 'display: flex; gap: 12px; margin-top: 24px;';
+    
+    const downloadBtn = document.createElement('button');
+    downloadBtn.className = 'btn btn-primary';
+    downloadBtn.style.cssText = 'flex: 1; padding: 10px 18px; border: 1px solid #3b82f6; background: #3b82f6; color: white; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s;';
+    downloadBtn.innerHTML = '⬇️ Download';
+    downloadBtn.onclick = () => downloadDocument(doc.id);
+
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'btn btn-secondary';
+    closeBtn.style.cssText = 'flex: 1; padding: 10px 18px; border: 1px solid #10b981; background: #10b981; color: white; border-radius: 6px; font-weight: 600; cursor: pointer; transition: all 0.2s;';
+    closeBtn.innerHTML = 'Close';
+    closeBtn.onclick = closeDocumentModal;
+
+    buttonDiv.appendChild(downloadBtn);
+    buttonDiv.appendChild(closeBtn);
+    body.appendChild(buttonDiv);
 
     overlay.classList.add('active');
     modal.classList.add('active');

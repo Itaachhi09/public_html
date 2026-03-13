@@ -1217,6 +1217,55 @@ class HMOController extends BaseController {
     }
 
     /**
+     * Search employees by name or ID
+     */
+    /**
+     * Get all employees for dropdown
+     */
+    public function getEmployees() {
+        try {
+            $query = "SELECT employee_id as id, employee_id, employee_code, 
+                             CONCAT(first_name, ' ', last_name) as employee_name 
+                      FROM employees 
+                      WHERE employment_status = 'Active'
+                      ORDER BY first_name, last_name ASC";
+            
+            $stmt = $this->db->prepare($query);
+            $stmt->execute();
+            $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return ['success' => true, 'data' => $employees ? $employees : []];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    public function searchEmployees($search_term) {
+        try {
+            if (empty($search_term)) {
+                return ['success' => false, 'error' => 'Search term required'];
+            }
+
+            $search_term = '%' . $search_term . '%';
+            
+            $query = "SELECT employee_id as id, employee_id, employee_code,
+                             CONCAT(first_name, ' ', last_name) as employee_name 
+                      FROM employees 
+                      WHERE (CONCAT(first_name, ' ', last_name) LIKE ? OR employee_id LIKE ? OR employee_code LIKE ?)
+                      AND employment_status = 'Active'
+                      LIMIT 10";
+            
+            $stmt = $this->db->prepare($query);
+            $stmt->execute([$search_term, $search_term, $search_term]);
+            $employees = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            return ['success' => true, 'data' => $employees ? $employees : []];
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
      * Get claim detail
      */
     public function getClaimDetail($claim_id) {
@@ -1567,13 +1616,41 @@ class HMOController extends BaseController {
     public function deleteProvider($id) {
         try {
             $id = intval($id);
-            $query = "DELETE FROM hmo_providers WHERE id = ?";
+            // Perform soft delete by updating status to 'Inactive' instead of hard delete
+            // This preserves data integrity and respects foreign key constraints
+            $query = "UPDATE hmo_providers SET provider_status = 'Inactive' WHERE id = ?";
             $stmt = $this->db->prepare($query);
             
             if ($stmt->execute([$id])) {
-                return ['success' => true, 'message' => 'Provider deleted successfully'];
+                return ['success' => true, 'message' => 'Provider deactivated successfully'];
             } else {
-                return ['success' => false, 'error' => 'Failed to delete provider'];
+                return ['success' => false, 'error' => 'Failed to deactivate provider'];
+            }
+        } catch (Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Update provider status (Active/Inactive)
+     */
+    public function updateProviderStatus($id, $status) {
+        try {
+            $id = intval($id);
+            $validStatuses = ['Active', 'Inactive', 'Suspended', 'Expired'];
+            
+            // Validate status
+            if (!in_array($status, $validStatuses)) {
+                return ['success' => false, 'error' => 'Invalid status. Valid statuses are: ' . implode(', ', $validStatuses)];
+            }
+            
+            $query = "UPDATE hmo_providers SET provider_status = ? WHERE id = ?";
+            $stmt = $this->db->prepare($query);
+            
+            if ($stmt->execute([$status, $id])) {
+                return ['success' => true, 'message' => 'Provider status updated successfully'];
+            } else {
+                return ['success' => false, 'error' => 'Failed to update provider status'];
             }
         } catch (Exception $e) {
             return ['success' => false, 'error' => $e->getMessage()];

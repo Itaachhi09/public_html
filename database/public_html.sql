@@ -18,7 +18,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `hr4_payroll`
+-- Database: `public_html`
 --
 
 -- --------------------------------------------------------
@@ -4056,7 +4056,7 @@ ALTER TABLE `hmo_billing_discrepancies`
 -- Constraints for table `hmo_billing_reconciliation`
 --
 ALTER TABLE `hmo_billing_reconciliation`
-  ADD CONSTRAINT `hmo_billing_reconciliation_ibfk_1` FOREIGN KEY (`provider_id`) REFERENCES `hmo_providers` (`id`);
+  ADD CONSTRAINT `hmo_billing_reconciliation_ibfk_1` FOREIGN KEY (`provider_id`) REFERENCES `hmo_providers` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `hmo_claims`
