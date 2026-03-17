@@ -10,9 +10,9 @@ date_default_timezone_set('Asia/Manila');
 
 class Database {
     private $host = 'localhost';
-    private $db_name = 'public_html';
-    private $username = 'root';
-    private $password = '';
+    private $db_name = 'hr4_payroll';
+    private $username = 'hr4_admin_payroll';
+    private $password = 'admin';
     private $conn;
     private static $instance = null;
 
